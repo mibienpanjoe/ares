@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mishkan://templates/team-report.schema.json",
+  "title": "MISHKAN Team Reporter Milestone Output",
+  "description": "Structured summary surfaced by a Team Reporter at milestone (design §15).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "team",
+    "sprint",
+    "milestone",
+    "tasks_completed",
+    "tasks_in_progress",
+    "tasks_blocked",
+    "research_calls",
+    "decisions_made",
+    "security_findings",
+    "cognee_writes",
+    "flags"
+  ],
+  "properties": {
+    "team": { "type": "string" },
+    "sprint": { "type": "string", "pattern": "^S[0-9]+$" },
+    "milestone": { "type": "string", "pattern": "^M[0-9]+$" },
+    "reporter": { "type": "string", "description": "Reporter agent alias" },
+    "tasks_completed": { "type": "array", "items": { "type": "string" } },
+    "tasks_in_progress": { "type": "array", "items": { "type": "string" } },
+    "tasks_blocked": { "type": "array", "items": { "type": "string" } },
+    "research_calls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolved", "partial", "blocked", "library_hits"],
+      "properties": {
+        "resolved": { "type": "integer", "minimum": 0 },
+        "partial": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "library_hits": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "decisions_made": { "type": "array", "items": { "type": "string" } },
+    "security_findings": { "type": "array", "items": { "type": "string" } },
+    "cognee_writes": { "type": "integer", "minimum": 0 },
+    "flags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Items needing Nehemiah/Bezalel attention"
+    },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

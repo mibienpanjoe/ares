@@ -1,0 +1,25 @@
+# Real engineer profile — local only, never published (ship profile.example.md)
+docs/engineer/profile.md
+docs/engineer/profile-readable.md
+
+# Secrets
+**/.env
+**/*.env
+!**/.env.example
+**/*.enc
+**/secrets/
+
+# Cognee + runtime data
+**/cognee/curated-resources.jsonl
+payload/mishkan/profile.md
+**/.cognee_system/
+
+# Observability / audit runtime output
+**/logs/
+**/*.jsonl
+**/dep-audit-*.json
+**/aggregate-*.json
+
+# Node / build
+node_modules/
+dist/

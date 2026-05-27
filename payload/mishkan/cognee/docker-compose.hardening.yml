@@ -1,0 +1,16 @@
+# MISHKAN — cognee-mcp hardening overlay (Migdal rule: re-applied on EVERY recreate).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d
+#
+# Forbids privilege escalation and drops all Linux capabilities. The root fs is
+# left writable because uv/python write caches at runtime; /tmp is tmpfs. Tighten
+# further per the CIS Docker Benchmark once the runtime write paths are confirmed.
+
+services:
+  cognee-mcp:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp
+    # cognee_data volume remains writable (declared in base compose).

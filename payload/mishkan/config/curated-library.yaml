@@ -1,0 +1,113 @@
+# MISHKAN curated library — per-team vetted references, ingested into Cognee as
+# CuratedResource nodes (ontology: type=CuratedResource). Specific to Y4NN's
+# actual stack. Distinct from the research pipeline: the pipeline finds new
+# things; this library holds proven things agents load without searching.
+# Seeded by scripts/seed-curated-library.sh once Cognee is running.
+
+chosheb:   # Design
+  - { name: "NN/g — 10 Usability Heuristics", url: "https://www.nngroup.com/articles/ten-usability-heuristics/", problem_class: "heuristic-evaluation" }
+  - { name: "Laws of UX", url: "https://lawsofux.com/", problem_class: "cognitive-load-decision-architecture" }
+  - { name: "Refactoring UI", url: "https://www.refactoringui.com/", problem_class: "visual-design-heuristics" }
+  - { name: "Material Design 3", url: "https://m3.material.io/", problem_class: "design-system-reference" }
+  - { name: "Apple HIG", url: "https://developer.apple.com/design/human-interface-guidelines/", problem_class: "platform-native-design" }
+  - { name: "WCAG 2.2 Quick Reference", url: "https://www.w3.org/WAI/WCAG22/quickref/", problem_class: "accessibility-checklist" }
+  - { name: "Inclusive Components", url: "https://inclusive-components.design/", problem_class: "accessible-component-patterns" }
+  - { name: "IBM Carbon Design System", url: "https://carbondesignsystem.com/", problem_class: "design-system-architecture" }
+
+panim:   # Frontend
+  - { name: "MDN Web Docs", url: "https://developer.mozilla.org/", problem_class: "web-platform-reference" }
+  - { name: "React docs", url: "https://react.dev/", problem_class: "react-patterns" }
+  - { name: "TanStack docs hub", url: "https://tanstack.com/", problem_class: "data-fetching-routing" }
+  - { name: "TanStack Router v1", url: "https://tanstack.com/router/latest", problem_class: "routing" }
+  - { name: "Vite docs", url: "https://vitejs.dev/", problem_class: "build-tooling" }
+  - { name: "pnpm docs", url: "https://pnpm.io/", problem_class: "package-management" }
+  - { name: "Vercel docs", url: "https://vercel.com/docs", problem_class: "frontend-deployment" }
+  - { name: "TailwindCSS docs", url: "https://tailwindcss.com/docs", problem_class: "styling-system" }
+  - { name: "Nuxt 3 docs", url: "https://nuxt.com/docs", problem_class: "vue-ssr" }
+  - { name: "Storybook docs", url: "https://storybook.js.org/docs", problem_class: "component-isolation" }
+  - { name: "web.dev Core Web Vitals", url: "https://web.dev/articles/vitals", problem_class: "performance-budgets" }
+  - { name: "WAI-ARIA APG", url: "https://www.w3.org/WAI/ARIA/apg/", problem_class: "accessible-js-components" }
+  - { name: "Can I Use", url: "https://caniuse.com/", problem_class: "browser-compatibility" }
+  - { name: "Patterns.dev", url: "https://www.patterns.dev/", problem_class: "frontend-patterns" }
+
+yasad:   # Backend
+  - { name: "FastAPI docs", url: "https://fastapi.tiangolo.com/", problem_class: "python-api-framework" }
+  - { name: "Pydantic v2 docs", url: "https://docs.pydantic.dev/latest/", problem_class: "data-validation" }
+  - { name: "asyncpg docs", url: "https://magicstack.github.io/asyncpg/current/", problem_class: "async-postgres-driver" }
+  - { name: "Alembic docs", url: "https://alembic.sqlalchemy.org/en/latest/", problem_class: "schema-migrations" }
+  - { name: "SQLAlchemy 2.0 async", url: "https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html", problem_class: "async-orm" }
+  - { name: "Hono docs", url: "https://hono.dev/", problem_class: "ts-edge-api" }
+  - { name: "NestJS docs", url: "https://docs.nestjs.com/", problem_class: "ts-enterprise-api" }
+  - { name: "Fastify docs", url: "https://fastify.dev/docs/latest/", problem_class: "ts-api-framework" }
+  - { name: "PostgreSQL docs", url: "https://www.postgresql.org/docs/current/", problem_class: "relational-db" }
+  - { name: "Use the Index, Luke", url: "https://use-the-index-luke.com/", problem_class: "sql-indexing" }
+  - { name: "MongoDB docs", url: "https://www.mongodb.com/docs/", problem_class: "document-db" }
+  - { name: "DynamoDB developer guide", url: "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/", problem_class: "key-value-db" }
+  - { name: "LangChain Python docs", url: "https://python.langchain.com/docs/introduction/", problem_class: "llm-orchestration" }
+  - { name: "LangGraph docs", url: "https://langchain-ai.github.io/langgraph/", problem_class: "stateful-ai-workflows" }
+  - { name: "HuggingFace Hub docs", url: "https://huggingface.co/docs/hub/", problem_class: "model-hub" }
+  - { name: "OpenRouter docs", url: "https://openrouter.ai/docs", problem_class: "model-routing" }
+  - { name: "Docker Model Runner docs", url: "https://docs.docker.com/ai/model-runner/", problem_class: "local-inference" }
+  - { name: "ChromaDB docs", url: "https://docs.trychroma.com/", problem_class: "vector-db" }
+  - { name: "Google AIP", url: "https://google.aip.dev/", problem_class: "api-design-standard" }
+  - { name: "OpenAPI 3.1 spec", url: "https://spec.openapis.org/oas/v3.1.0", problem_class: "api-contract" }
+  - { name: "AsyncAPI spec", url: "https://www.asyncapi.com/docs/reference/specification/latest", problem_class: "event-contract" }
+  - { name: "Twelve-Factor App", url: "https://12factor.net/", problem_class: "saas-app-design" }
+  - { name: "Martin Fowler", url: "https://martinfowler.com/", problem_class: "enterprise-patterns" }
+  - { name: "Designing Data-Intensive Applications", url: "https://dataintensive.net/", problem_class: "distributed-data" }
+
+mishmar:   # Security
+  - { name: "OWASP Top 10", url: "https://owasp.org/Top10/", problem_class: "web-app-risk" }
+  - { name: "OWASP API Security Top 10 2023", url: "https://owasp.org/API-Security/editions/2023/en/0x00-header/", problem_class: "api-risk" }
+  - { name: "OWASP ASVS", url: "https://owasp.org/www-project-application-security-verification-standard/", problem_class: "verification-standard" }
+  - { name: "OWASP Cheat Sheet Series", url: "https://cheatsheetseries.owasp.org/", problem_class: "secure-coding-lookup" }
+  - { name: "MITRE ATT&CK", url: "https://attack.mitre.org/", problem_class: "adversary-tactics" }
+  - { name: "MITRE CWE Top 25", url: "https://cwe.mitre.org/top25/", problem_class: "code-weakness-patterns" }
+  - { name: "NVD / CVE", url: "https://nvd.nist.gov/", problem_class: "vulnerability-data" }
+  - { name: "OSV.dev", url: "https://osv.dev/", problem_class: "dependency-vulnerabilities" }
+  - { name: "SLSA Framework", url: "https://slsa.dev/", problem_class: "supply-chain-security" }
+  - { name: "Keycloak documentation", url: "https://www.keycloak.org/documentation", problem_class: "identity-provider" }
+  - { name: "Keycloak hardening guide", url: "https://www.keycloak.org/server/hardening", problem_class: "identity-hardening" }
+  - { name: "SOPS documentation", url: "https://getsops.io/docs/", problem_class: "secret-management" }
+  - { name: "age encryption", url: "https://age-encryption.org/", problem_class: "encryption" }
+  - { name: "STRIDE threat modeling", url: "https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats", problem_class: "threat-modelling" }
+  - { name: "NIST SSDF SP 800-218", url: "https://csrc.nist.gov/Projects/ssdf", problem_class: "secure-sdlc" }
+  - { name: "CIS Benchmarks", url: "https://www.cisecurity.org/cis-benchmarks", problem_class: "hardening-baselines" }
+  - { name: "Traefik security docs", url: "https://doc.traefik.io/traefik/https/tls/", problem_class: "tls-ingress-security" }
+
+migdal:   # Infrastructure
+  - { name: "Docker Compose docs", url: "https://docs.docker.com/compose/", problem_class: "container-orchestration" }
+  - { name: "Docker networking docs", url: "https://docs.docker.com/network/", problem_class: "container-networking" }
+  - { name: "Docker security docs", url: "https://docs.docker.com/engine/security/", problem_class: "container-security" }
+  - { name: "Traefik v3 docs", url: "https://doc.traefik.io/traefik/", problem_class: "reverse-proxy" }
+  - { name: "GitLab CI/CD docs", url: "https://docs.gitlab.com/ee/ci/", problem_class: "ci-cd-pipeline" }
+  - { name: "GitLab CI variables", url: "https://docs.gitlab.com/ee/ci/variables/", problem_class: "ci-secrets" }
+  - { name: "GitLab protected branches", url: "https://docs.gitlab.com/ee/user/project/protected_branches.html", problem_class: "deploy-gating" }
+  - { name: "Ansible docs", url: "https://docs.ansible.com/", problem_class: "config-management" }
+  - { name: "Kubernetes docs", url: "https://kubernetes.io/docs/home/", problem_class: "k8s-orchestration" }
+  - { name: "Terraform best practices", url: "https://www.terraform-best-practices.com/", problem_class: "iac-patterns" }
+  - { name: "CIS Kubernetes Benchmark", url: "https://www.cisecurity.org/benchmark/kubernetes", problem_class: "k8s-hardening" }
+  - { name: "AWS Well-Architected", url: "https://aws.amazon.com/architecture/well-architected/", problem_class: "cloud-architecture-review" }
+  - { name: "GCP Architecture Framework", url: "https://cloud.google.com/architecture/framework", problem_class: "cloud-architecture-review" }
+  - { name: "CNCF Landscape", url: "https://landscape.cncf.io/", problem_class: "cloud-native-tooling" }
+  - { name: "OpenTelemetry docs", url: "https://opentelemetry.io/docs/", problem_class: "observability-instrumentation" }
+  - { name: "Prometheus docs", url: "https://prometheus.io/docs/", problem_class: "metrics" }
+  - { name: "Grafana docs", url: "https://grafana.com/docs/", problem_class: "dashboards" }
+  - { name: "Loki docs", url: "https://grafana.com/docs/loki/latest/", problem_class: "log-aggregation" }
+  - { name: "Sentry docs", url: "https://docs.sentry.io/", problem_class: "error-tracking" }
+  - { name: "Google SRE Book", url: "https://sre.google/sre-book/table-of-contents/", problem_class: "sre-foundation" }
+  - { name: "Google SRE Workbook", url: "https://sre.google/workbook/table-of-contents/", problem_class: "sre-practice" }
+  - { name: "NIST CSF 2.0", url: "https://www.nist.gov/cyberframework", problem_class: "security-posture" }
+
+sefer:   # Documentation
+  - { name: "Diátaxis Framework", url: "https://diataxis.fr/", problem_class: "doc-architecture" }
+  - { name: "Google Dev Documentation Style Guide", url: "https://developers.google.com/style", problem_class: "technical-writing-style" }
+  - { name: "MADR ADR template", url: "https://adr.github.io/madr/", problem_class: "adr-format" }
+  - { name: "C4 Model", url: "https://c4model.com/", problem_class: "architecture-diagrams" }
+  - { name: "Keep a Changelog", url: "https://keepachangelog.com/en/1.1.0/", problem_class: "changelog-convention" }
+  - { name: "Semantic Versioning 2.0", url: "https://semver.org/", problem_class: "versioning" }
+  - { name: "Conventional Commits", url: "https://www.conventionalcommits.org/en/v1.0.0/", problem_class: "commit-convention" }
+  - { name: "OpenAPI → API docs", url: "https://spec.openapis.org/oas/v3.1.0", problem_class: "api-documentation" }
+  - { name: "Stripe API docs (quality benchmark)", url: "https://docs.stripe.com/api", problem_class: "api-doc-quality-bar" }
+  - { name: "Docusaurus", url: "https://docusaurus.io/", problem_class: "docs-site-generator" }
+  - { name: "Write the Docs", url: "https://www.writethedocs.org/guide/", problem_class: "docs-workflow" }

@@ -1,0 +1,6 @@
+{
+  "_comment": "MISHKAN project-level local overrides. Seeded by /mishkan-init into <project>/.claude/settings.local.json. GITIGNORED. Y4NN's per-project local allow-list goes here.",
+  "permissions": {
+    "allow": []
+  }
+}

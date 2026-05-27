@@ -1,0 +1,29 @@
+{
+  "_comment": "MISHKAN hook fragment merged into ~/.claude/settings.json by the installer. {{MISHKAN}} is replaced with the resolved absolute path to ~/.claude/mishkan at install time. The installer merges these entries, preserving any existing hooks (e.g. a Bash command-validator or a finish sound).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "bash {{MISHKAN}}/hooks/pre-tool-security.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash {{MISHKAN}}/hooks/post-tool-observe.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "bash {{MISHKAN}}/hooks/stop-reporter.sh" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+# MISHKAN model routing — Claude tiers only (decision D-002, no local models).
+# Hierarchy: agent frontmatter `model:` overrides this file; this file overrides
+# the settings.json default. Three tiers: opus, sonnet, haiku.
+#
+# Rationale per tier:
+#   opus   — orchestration, team leadership, knowledge publication (judgement-heavy)
+#   sonnet — anything that WRITES code/config into the codebase (precision matters
+#            on Y4NN's code) + senior specialists + research clarify/formulate/research
+#   haiku  — agents that do NOT write code: QA (evaluate-only), Reporters
+#            (collect-only), pure advisors (Deborah, Rehum), research
+#            summarise/evaluate/report. Cost-sensitive, no precision risk to code.
+
+defaults:
+  unlisted_agent: sonnet   # any agent not named here falls back to sonnet
+
+agents:
+  # Orchestration
+  nehemiah: opus
+  bezalel: opus
+
+  # Research pipeline
+  jakin: sonnet
+  ezra: sonnet
+  caleb: sonnet
+  shaphan: haiku
+  shemaiah: haiku
+  baruch: haiku
+
+  # Mishmar (Security)
+  phinehas: opus      # lead
+  ira: sonnet
+  benaiah: sonnet
+  joab: sonnet
+  hushai: sonnet
+  maaseiah: haiku     # reporter
+
+  # Yasad (Backend)
+  zerubbabel: opus    # lead
+  nathan: sonnet      # architecture
+  zadok: sonnet       # contracts / design system
+  hizkiah: sonnet     # implementation — writes backend code
+  shallum: sonnet     # databases
+  uriah: haiku        # QA
+  igal: haiku         # reporter
+
+  # Chosheb (Design)
+  aholiab: opus       # lead
+  hiram: sonnet       # writes prototype code
+  deborah: haiku      # advisory only, no code
+  elasah: haiku       # reporter
+
+  # Panim (Frontend)
+  huram: opus         # lead
+  oholiab: sonnet     # design system expert
+  salma: sonnet       # writes frontend code
+  obed: sonnet        # writes asset-pipeline config
+  asaph: sonnet       # remediates markup
+  jahaziel: haiku     # QA — evaluate only
+  ahikam: haiku       # reporter
+
+  # Migdal (Infrastructure)
+  eliashib: opus      # lead
+  meshullam: sonnet   # infra design
+  palal: sonnet       # writes system configs/scripts
+  meremoth: sonnet    # writes CI/pipeline code
+  hanun: sonnet       # writes hardening/observability config
+  rehum: haiku        # advisor — no code
+  zaccur: haiku       # reporter
+
+  # Sefer (Documentation)
+  jehoshaphat: opus   # lead
+  seraiah: sonnet
+  joah: sonnet
+  shevna: haiku
+  jehonathan: opus    # knowledge publication
+  huldah: haiku       # reporter
+
+# Tier totals: opus=9, sonnet=22, haiku=14  (45 agents)
+# Principle: any agent that writes code/config into the codebase runs on Sonnet
+# (precision on Y4NN's code). Haiku only for evaluate/collect/advise roles.

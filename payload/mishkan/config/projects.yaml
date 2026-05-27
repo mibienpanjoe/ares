@@ -1,0 +1,38 @@
+# MISHKAN project registry — portable, NOT machine-bound.
+# The cross-project dependency audit discovers projects rather than hardcoding
+# paths. Resolution order:
+#   1. $MISHKAN_WORKSPACE env var, if set
+#   2. workspace_root below, if set (supports ~ and $HOME)
+#   3. the current working directory's parent
+# Under the resolved workspace root, every git repository is treated as a project
+# (excluding the dirs below). Set explicit `project_roots` only to override
+# discovery. Ship with discovery on and no hardcoded paths.
+
+workspace_root: ""          # e.g. "~/Projects" — empty = auto (env or cwd parent)
+
+project_roots: []           # explicit override; empty = discover git repos under workspace_root
+
+# Manifest/lockfile filenames the audit looks for in each project (recursively,
+# excluding the dirs below).
+manifest_globs:
+  - package.json
+  - pnpm-lock.yaml
+  - requirements*.txt
+  - pyproject.toml
+  - poetry.lock
+  - uv.lock
+  - go.mod
+  - Cargo.toml
+  - composer.json
+  - composer.lock
+  - pom.xml
+  - build.gradle
+
+exclude_dirs:
+  - node_modules
+  - vendor
+  - .git
+  - dist
+  - build
+  - .venv
+  - target

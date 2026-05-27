@@ -1,0 +1,18 @@
+{
+  "_comment": "MISHKAN MCP template. /mishkan-init copies this to the project root as .mcp.json. Declares the cognee knowledge-graph MCP server. DEFAULT below = HTTP transport to the local cognee-mcp container on :7777 (run ~/.claude/mishkan/cognee/). For the zero-container stdio alternative, replace the cognee entry with the _stdio_alternative block: it launches cognee-mcp directly via uv (set the absolute path to a cloned cognee-mcp and LLM_API_KEY). Refs: https://docs.cognee.ai/cognee-mcp/mcp-local-setup",
+  "mcpServers": {
+    "cognee": {
+      "type": "http",
+      "url": "http://localhost:7777/mcp"
+    }
+  },
+  "_stdio_alternative": {
+    "cognee": {
+      "command": "uv",
+      "args": ["--directory", "/absolute/path/to/cognee/cognee-mcp", "run", "cognee-mcp"],
+      "env": {
+        "LLM_API_KEY": "${LLM_API_KEY}"
+      }
+    }
+  }
+}

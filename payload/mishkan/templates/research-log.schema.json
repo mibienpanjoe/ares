@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mishkan://templates/research-log.schema.json",
+  "title": "MISHKAN Research Log Entry",
+  "description": "Contract produced by any agent invoking the research pipeline (design §14).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "agent",
+    "team",
+    "sprint",
+    "trigger",
+    "query_intent",
+    "tools_invoked",
+    "research_output_summary",
+    "applied_to_task",
+    "outcome",
+    "knowledge_graph_write",
+    "curated_library_match"
+  ],
+  "properties": {
+    "agent": { "type": "string", "description": "Alias of the calling agent" },
+    "team": { "type": "string", "description": "Team name or 'orchestration' / 'research'" },
+    "sprint": { "type": "string", "pattern": "^S[0-9]+$" },
+    "trigger": { "type": "string", "enum": ["faced_problem", "requested"] },
+    "query_intent": { "type": "string", "description": "What the agent was trying to find out" },
+    "tools_invoked": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Pipeline agents/tools used (Jakin, Ezra, Caleb, Shaphan, Shemaiah, Baruch)"
+    },
+    "research_output_summary": { "type": "string", "description": "Compressed result. Full output lives in Cognee." },
+    "applied_to_task": { "type": "string", "description": "Task reference (T-N) or 'exploration'" },
+    "outcome": { "type": "string", "enum": ["resolved", "partial", "blocked"] },
+    "knowledge_graph_write": { "type": "boolean", "description": "Was a Cognee node written" },
+    "curated_library_match": { "type": "boolean", "description": "True if solved via curated library, not web pipeline" },
+    "cognee_node_id": { "type": ["string", "null"], "description": "ID of the written Cognee node, if any" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

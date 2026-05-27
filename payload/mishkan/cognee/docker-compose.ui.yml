@@ -1,0 +1,105 @@
+# MISHKAN — Cognee UI / Graph Explorer overlay (OPTIONAL · profile: ui).
+# Adds the Cognee web UI so you can visualise the graph your agents build.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.hardening.yml \
+#                  -f docker-compose.ui.yml --profile ui up -d --build
+#
+# WHY a shared backend: cognee-mcp (agents) and the UI's cognee backend only see
+# the SAME graph if they share a persistent store. Default file backends (sqlite/
+# lancedb/networkx) are per-process silos. So this overlay runs Neo4j as the shared
+# graph backend and points BOTH cognee-mcp and the UI backend at it. Set in .env:
+#   GRAPH_DATABASE_PROVIDER=neo4j
+#   GRAPH_DATABASE_URL=bolt://neo4j:7687
+#   GRAPH_DB_USERNAME=neo4j
+#   GRAPH_DB_PASSWORD=<sops>
+#
+# BUILD CONTEXTS: the UI backend + frontend build from a CLONED cognee repo.
+# Set COGNEE_SRC=/abs/path/to/cloned/cognee in .env. Confirm the backend server
+# entrypoint, the cognee-frontend Dockerfile path, and exact env keys against
+# https://docs.cognee.ai and the repo docker-compose.yml. The Cognee UI is marked
+# "work in progress" upstream.
+#
+# Ports stay in a local, non-clashing range and 127.0.0.1-bound.
+
+services:
+  neo4j:
+    image: neo4j:5.26
+    container_name: mishkan-cognee-neo4j
+    restart: unless-stopped
+    profiles: ["ui"]
+    environment:
+      NEO4J_AUTH: ${GRAPH_DB_USERNAME:?}/${GRAPH_DB_PASSWORD:?}
+    ports:
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7716}:7474"   # Neo4j Browser (its own graph view)
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7709}:7687"   # bolt
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cognee_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2g
+
+  cognee-backend:
+    build:
+      context: ${COGNEE_SRC:?set COGNEE_SRC in .env to a cloned cognee repo}
+    image: mishkan/cognee-backend:${COGNEE_MCP_REF:?}
+    container_name: mishkan-cognee-backend
+    restart: unless-stopped
+    profiles: ["ui"]
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      ENVIRONMENT: local
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:${COGNEE_UI_PORT:-7724}}
+    ports:
+      - "127.0.0.1:${COGNEE_BACKEND_PORT:-7737}:8000"
+    networks:
+      - cognee_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 3g
+
+  cognee-frontend:
+    build:
+      context: ${COGNEE_SRC:?set COGNEE_SRC in .env to a cloned cognee repo}/cognee-frontend
+    image: mishkan/cognee-frontend:${COGNEE_MCP_REF:?}
+    container_name: mishkan-cognee-frontend
+    restart: unless-stopped
+    profiles: ["ui"]
+    depends_on:
+      - cognee-backend
+    environment:
+      NEXT_PUBLIC_BACKEND_API_URL: ${NEXT_PUBLIC_BACKEND_API_URL:-http://localhost:${COGNEE_BACKEND_PORT:-7737}}
+    ports:
+      - "127.0.0.1:${COGNEE_UI_PORT:-7724}:3000"
+    networks:
+      - cognee_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+
+volumes:
+  neo4j_data:

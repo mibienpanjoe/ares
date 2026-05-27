@@ -1,0 +1,33 @@
+{
+  "name": "mishkan-harness",
+  "version": "0.1.0",
+  "description": "MISHKAN — a personal advanced SWE R&D harness for Claude Code: 45 biblically-named agents across six teams, deterministic rules + hooks, a shared research pipeline, dependency/supply-chain vetting, and a Cognee-backed knowledge graph. Installs into ~/.claude.",
+  "type": "module",
+  "bin": {
+    "mishkan": "bin/mishkan.js"
+  },
+  "files": [
+    "bin/",
+    "payload/",
+    "docs/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "postpack": "echo 'MISHKAN packed. Install on any machine with: npx mishkan-harness install'"
+  },
+  "keywords": [
+    "claude-code",
+    "agents",
+    "harness",
+    "devsecops",
+    "research",
+    "cognee"
+  ],
+  "author": ">_theY4NN (https://github.com/Y4NN777)",
+  "homepage": "https://github.com/Y4NN777",
+  "license": "MIT",
+  "dependencies": {}
+}

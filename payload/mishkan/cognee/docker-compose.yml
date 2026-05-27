@@ -1,0 +1,60 @@
+# MISHKAN — cognee-mcp knowledge-graph server (local Docker · decision D-001).
+# Runs the official cognee-mcp in HTTP transport on port 7777 (endpoint /mcp).
+# Cognee core is a library; this container exposes it over MCP for Claude Code.
+#
+# Compliant with Migdal rules: built locally from a pinned Dockerfile (no blind
+# pulls, no :latest), SOPS-managed secrets, resource limits, healthcheck, isolated
+# network, 127.0.0.1-bound. Apply the hardening overlay on EVERY recreate:
+#   docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d
+#
+# Port: cognee-mcp listens on 7777 inside the container; COGNEE_PORT (default
+# 7777) sets the host port. (A TCP port must be <= 65535.)
+#
+# Backend stores: cognee uses local backends by default (no extra services).
+# To use PostgreSQL/pgvector or Neo4j instead, set the relevant cognee env vars
+# in .env per https://docs.cognee.ai and add the backend service here.
+
+name: mishkan-cognee
+
+services:
+  cognee-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        COGNEE_MCP_REF: ${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
+        PYTHON_VERSION: 3.12-slim
+    image: mishkan/cognee-mcp:${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
+    container_name: mishkan-cognee-mcp
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # LLM_API_KEY (and any backend provider vars) come from .env (SOPS-managed).
+      COGNEE_PORT: "7777"
+    ports:
+      # host COGNEE_PORT (default 7777) → container 7777. Bound to localhost only.
+      - "127.0.0.1:${COGNEE_PORT:-7777}:7777"
+    volumes:
+      # Cognee's local data (graph/vector/sqlite) when using default backends.
+      - cognee_data:/app/cognee-mcp/.cognee_system
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',7777),2); s.close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - cognee_net
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 3g
+
+volumes:
+  cognee_data:
+
+networks:
+  cognee_net:
+    driver: bridge

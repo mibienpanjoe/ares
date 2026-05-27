@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mishkan://templates/sprint-state.schema.json",
+  "title": "MISHKAN Sprint State",
+  "description": "Project sprint state, loaded on session resume. Lives in project ./CLAUDE.md frontmatter or a sidecar; mirrored to Cognee.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "sprint", "mode", "tasks", "blockers"],
+  "properties": {
+    "project": { "type": "string" },
+    "cognee_namespace": { "type": "string", "description": "Cognee project graph ID" },
+    "sprint": { "type": "string", "pattern": "^S[0-9]+$" },
+    "milestone": { "type": "string", "pattern": "^M[0-9]+$" },
+    "mode": { "type": "string", "enum": ["exploration", "execution"] },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^T-[0-9]+$" },
+          "description": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "in_progress", "blocked", "completed"] },
+          "team": { "type": "string" },
+          "agent": { "type": "string" }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task", "reason"],
+        "properties": {
+          "task": { "type": "string" },
+          "reason": { "type": "string" },
+          "raised_by": { "type": "string" },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+        }
+      }
+    },
+    "open_flags": { "type": "array", "items": { "type": "string" } },
+    "last_updated": { "type": "string", "format": "date-time" }
+  }
+}

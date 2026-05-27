@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mishkan://templates/case-node.schema.json",
+  "title": "MISHKAN Case Node",
+  "description": "Written to Cognee when an agent solves a problem using a curated resource (design §8).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "team", "agent", "problem_class", "resource_applied", "resolution", "outcome", "sprint", "task"],
+  "properties": {
+    "type": { "const": "case" },
+    "team": { "type": "string" },
+    "agent": { "type": "string" },
+    "problem_class": { "type": "string", "description": "Generalised class of problem, not the specific instance" },
+    "resource_applied": { "type": "string", "description": "Curated resource identifier or URL" },
+    "resolution": { "type": "string", "description": "What resolved it" },
+    "outcome": { "type": "string", "enum": ["resolved", "partial", "blocked"] },
+    "sprint": { "type": "string", "pattern": "^S[0-9]+$" },
+    "task": { "type": "string", "pattern": "^T-[0-9]+$" },
+    "blast_radius": { "type": "string", "enum": ["team-level", "cross-harness"], "default": "team-level" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}
