@@ -58,3 +58,14 @@ volumes:
 networks:
   cognee_net:
     driver: bridge
+    # Subnet pinned away from Docker's default 172.18-172.31 auto-allocation pool.
+    # On some hosts the daemon's BoltDB carries orphaned anti-spoofing iptables
+    # rules (nat PREROUTING DROP) for a dead bridge that previously owned a
+    # 172.x subnet; a new bridge auto-allocated into that subnet then has all
+    # inter-container TCP silently dropped (timeout, not refused). Pinning to an
+    # unused subnet sidesteps it durably (survives reboot/firewall reload).
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.51.0.0/16
+          gateway: 172.51.0.1

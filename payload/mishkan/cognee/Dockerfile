@@ -19,18 +19,20 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && pip install --no-cache-dir uv
 
-# Non-root runtime user (least privilege).
-RUN useradd --create-home --uid 10001 cognee
+# Non-root runtime user (least privilege). Own /app BEFORE the heavy steps and
+# run them as `cognee`, so the multi-GB venv is created with correct ownership —
+# avoids a final `chown -R /app` that takes 20+ min over the ML dependency tree.
+RUN useradd --create-home --uid 10001 cognee \
+ && mkdir -p /app && chown cognee:cognee /app
+USER cognee
 WORKDIR /app
 
-# Clone cognee at the pinned ref and install the MCP server's deps.
+# Clone cognee at the pinned ref and install the MCP server's deps (as cognee).
 RUN git clone https://github.com/topoteretes/cognee.git . \
  && git checkout "$COGNEE_MCP_REF"
 WORKDIR /app/cognee-mcp
 RUN uv sync --all-extras
-RUN chown -R cognee:cognee /app
 
-USER cognee
 EXPOSE 7777
 
 # HTTP transport has no plain GET health endpoint (the /mcp endpoint may 405 on

@@ -1,0 +1,108 @@
+# MISHKAN — Cognee FULLY SELF-HOSTED overlay (no external LLM/API).
+# Local Ollama (LLM + embeddings) + SHARED server backends (Neo4j graph,
+# Postgres/pgvector relational+vector) so cognee-mcp (agents) and the Graph
+# Explorer UI both read/write the SAME graph. Nothing leaves the host.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.hardening.yml \
+#                  -f docker-compose.selfhosted.yml up -d --build
+#
+# All cognee config (LLM/embedding/graph/relational/vector) lives in .env so both
+# cognee-mcp and the UI backend share it. Var names per cognee v1.1.0 .env.template.
+# The only credentials are two SELF-CHOSEN LOCAL passwords (Neo4j, Postgres) —
+# no external API keys. SOPS-manage .env.
+#
+# Models (pull once into the ollama volume):
+#   ollama pull nomic-embed-text   # embeddings, 768 dims
+#   ollama pull llama3.2:3b        # LLM (light; LLM_MODEL swappable, e.g. llama3.1:8b)
+
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_VERSION:?set OLLAMA_VERSION in .env to a pinned tag}
+    container_name: mishkan-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - cognee_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 10g
+
+  neo4j:
+    image: neo4j:5.26
+    container_name: mishkan-cognee-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: ${GRAPH_DATABASE_USERNAME:?}/${GRAPH_DATABASE_PASSWORD:?}
+    ports:
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7716}:7474"   # Neo4j Browser
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7709}:7687"   # bolt
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cognee_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2g
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mishkan-cognee-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?}
+      POSTGRES_USER: ${DB_USERNAME:?}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+    volumes:
+      - cognee_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - cognee_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+
+  cognee-mcp:
+    depends_on:
+      ollama:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+volumes:
+  ollama_models:
+  neo4j_data:
+  cognee_pgdata:
