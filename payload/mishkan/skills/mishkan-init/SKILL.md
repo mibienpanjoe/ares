@@ -32,7 +32,9 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
      and seeds the reference library only if empty. Never reseeds a populated box.
    - **Work store (per-project):** seed this project's knowledge into the work box
      (`mishkan-cognee-*` on :7777) from all docs (entities + relationships per
-     `~/.claude/mishkan/ontology.md`), under this project's own dataset.
+     `~/.claude/mishkan/ontology.md`), under this project's own dataset. Always
+     follow `cognify` with `memify(dataset=<project>)` — extraction then
+     enrichment (memify embeds the triplet layer; embeddings-only, no LLM quota).
    If the work stack is not running (`~/.claude/mishkan/cognee/`), skip both
    gracefully and note it — agents still work; persistence resumes when it's up.
 9. **Automated** — write `./CLAUDE.md` from

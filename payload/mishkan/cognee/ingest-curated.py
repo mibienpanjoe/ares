@@ -81,6 +81,11 @@ async def main():
         print(">> status:", getattr(status, "status", status), flush=True)
     await index_graph_edges()
     print(">> SEEDED", flush=True)
+    # Enrichment always follows the build: memify embeds the relationship/triplet
+    # layer into the vector store (default tasks; embeddings-only, no LLM/quota).
+    import cognee
+    await cognee.memify(dataset="curated_library")
+    print(">> MEMIFIED", flush=True)
 
 
 if __name__ == "__main__":
