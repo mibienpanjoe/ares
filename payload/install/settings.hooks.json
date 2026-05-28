@@ -5,7 +5,19 @@
       {
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
-          { "type": "command", "command": "bash {{MISHKAN}}/hooks/pre-tool-security.sh" }
+          {
+            "type": "command",
+            "command": "bash {{MISHKAN}}/hooks/pre-tool-security.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 {{MISHKAN}}/hooks/model-route.py"
+          }
         ]
       }
     ],
@@ -13,7 +25,10 @@
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash {{MISHKAN}}/hooks/post-tool-observe.sh" }
+          {
+            "type": "command",
+            "command": "bash {{MISHKAN}}/hooks/post-tool-observe.sh"
+          }
         ]
       }
     ],
@@ -21,7 +36,10 @@
       {
         "matcher": "",
         "hooks": [
-          { "type": "command", "command": "bash {{MISHKAN}}/hooks/stop-reporter.sh" }
+          {
+            "type": "command",
+            "command": "bash {{MISHKAN}}/hooks/stop-reporter.sh"
+          }
         ]
       }
     ]

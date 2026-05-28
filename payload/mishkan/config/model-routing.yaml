@@ -1,6 +1,11 @@
 # MISHKAN model routing — Claude tiers only (decision D-002, no local models).
-# Hierarchy: agent frontmatter `model:` overrides this file; this file overrides
-# the settings.json default. Three tiers: opus, sonnet, haiku.
+# AUTHORITATIVE: the PreToolUse hook hooks/model-route.py reads this file on
+# every Task/Agent call and injects `model` for any agent LISTED below, which
+# overrides that agent's frontmatter `model:`. So this file is the single source
+# of truth for the 45 MISHKAN agents. Agents NOT listed here (e.g. aiobi-ops,
+# Explore) are left untouched and keep their own frontmatter model. Three tiers:
+# opus, sonnet, haiku. (Edit here, not frontmatter — frontmatter is the fallback
+# used only if the hook is removed.)
 #
 # Rationale per tier:
 #   opus   — orchestration, team leadership, knowledge publication (judgement-heavy)
@@ -11,7 +16,9 @@
 #            summarise/evaluate/report. Cost-sensitive, no precision risk to code.
 
 defaults:
-  unlisted_agent: sonnet   # any agent not named here falls back to sonnet
+  unlisted_agent: sonnet   # documented default tier for a NEW mishkan agent not
+                           # yet added below. NOT hook-enforced on foreign agents
+                           # (they keep their own model). Add new agents to the map.
 
 agents:
   # Orchestration
