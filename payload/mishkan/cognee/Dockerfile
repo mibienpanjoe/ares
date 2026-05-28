@@ -33,6 +33,12 @@ RUN git clone https://github.com/topoteretes/cognee.git . \
 WORKDIR /app/cognee-mcp
 RUN uv sync --all-extras
 
+# Pre-create the persisted-storage root owned by cognee (uid 10001). A named
+# volume mounted here inherits this ownership on first creation, so cognee can
+# write ingested files/system data without a manual chown. DATA_ROOT_DIRECTORY /
+# SYSTEM_ROOT_DIRECTORY (in .env) point under this path so data survives recreate.
+RUN mkdir -p /app/cognee-mcp/.cognee_system
+
 EXPOSE 7777
 
 # HTTP transport has no plain GET health endpoint (the /mcp endpoint may 405 on
