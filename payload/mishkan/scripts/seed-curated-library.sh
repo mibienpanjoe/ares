@@ -14,7 +14,7 @@ MISHKAN="${HOME}/.claude/mishkan"
 LIB="${MISHKAN}/config/curated-library.yaml"
 OUT="${MISHKAN}/cognee/curated-resources.jsonl"
 INGEST="${MISHKAN}/cognee/ingest-curated.py"
-CONTAINER="${COGNEE_CONTAINER:-mishkan-cognee-mcp}"
+CONTAINER="${COGNEE_CONTAINER:-mishkan-curated-mcp}"
 CTR_JSONL="/home/cognee/curated-resources.jsonl"
 CTR_INGEST="/home/cognee/ingest-curated.py"
 

@@ -143,6 +143,30 @@ copy + reference/drift audit; **Seraiah** (Sefer org-layer agent) owns the
 semantic re-derivation of digests drawn from the profile (the user-level
 `CLAUDE.md` non-negotiables, engineering-identity docs) when it materially changes.
 
+## D-007 — Curated library is a separate cognee store from project knowledge (added 2026-05-28)
+
+**Decision:** the cross-project **curated library** lives in its own isolated
+cognee store (`mishkan-curated-*`, MCP alias `cognee-curated`, port 7730),
+physically separate from the **work** store that holds per-project knowledge
+(`mishkan-cognee-*`, MCP alias `cognee`, port 7777). A project's `.mcp.json`
+declares both: `cognee` (read+write its own graph) and `cognee-curated`
+(read-only reference). The per-client memory dataset (`<client>_memory`, e.g.
+`claude_code_memory`) is a legitimate part of the work store — never pruned.
+
+**Why physical, not logical:** project ingestion pulls in code and data that can
+include PII (the aiobi-mail test ingested real Gmail addresses), and with
+`ENABLE_BACKEND_ACCESS_CONTROL=false` all datasets share one Neo4j graph — so
+logical dataset tags alone leave them commingled in one store and one UI. Neo4j
+Community allows only one database per instance, so true graph isolation requires
+a separate Neo4j container. The curated box reuses the shared Ollama and the
+shared Postgres *server* (own database `curated_db`) to keep the cost to one
+small extra Neo4j. The curated library is small and regenerable
+(`seed-curated-library.sh` → the curated box), so the split is cheap to maintain.
+
+**Embeddings caveat (inherited):** the curated box embeds via **local Ollama** —
+bulk seeding bursts embedding calls and cloud free-tier embeddings 429
+(RESOURCE_EXHAUSTED).
+
 ---
 
 *Decisions locked May 2026. Revisit only with a dated amendment below.*

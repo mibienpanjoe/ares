@@ -1,9 +1,13 @@
 {
-  "_comment": "MISHKAN MCP template. /mishkan-init copies this to the project root as .mcp.json. Declares the cognee knowledge-graph MCP server. DEFAULT below = HTTP transport to the local cognee-mcp container on :7777 (run ~/.claude/mishkan/cognee/). For the zero-container stdio alternative, replace the cognee entry with the _stdio_alternative block: it launches cognee-mcp directly via uv (set the absolute path to a cloned cognee-mcp and LLM_API_KEY). Refs: https://docs.cognee.ai/cognee-mcp/mcp-local-setup",
+  "_comment": "MISHKAN MCP template. /mishkan-init copies this to the project root as .mcp.json. TWO physically-separate cognee stores: 'cognee' = the WORK box (this project's own knowledge graph, read+write; mishkan-cognee-* on :7777) and 'cognee-curated' = the shared CURATED reference library (read-mostly, isolated graph; mishkan-curated-* on :7730). Project knowledge and the curated library never mix (decision D-007). Both run from ~/.claude/mishkan/cognee/. For the zero-container stdio alternative, replace an entry with the _stdio_alternative block (set the absolute path to a cloned cognee-mcp and LLM_API_KEY). Refs: https://docs.cognee.ai/cognee-mcp/mcp-local-setup",
   "mcpServers": {
     "cognee": {
       "type": "http",
       "url": "http://localhost:7777/mcp"
+    },
+    "cognee-curated": {
+      "type": "http",
+      "url": "http://localhost:7730/mcp"
     }
   },
   "_stdio_alternative": {

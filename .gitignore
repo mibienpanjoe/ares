@@ -6,6 +6,8 @@ docs/engineer/profile-readable.md
 **/.env
 **/*.env
 !**/.env.example
+**/.env.curated
+!**/.env.curated.example
 **/*.enc
 **/secrets/
 

@@ -18,21 +18,41 @@ cd ~/.claude/mishkan/cognee
 cp .env.example .env
 #    set LLM_API_KEY, set COGNEE_MCP_REF to a pinned cognee git tag/commit, decrypt via sops
 
-# 2. build + start with the hardening overlay (always)
+# 2. build + start the WORK stack with the hardening overlay (always)
 docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
 
 # 3. confirm it's listening on 7777
-nc -z localhost 7777 && echo "cognee-mcp up on :7777"
+nc -z localhost 7777 && echo "cognee-mcp (work) up on :7777"
 
-# 4. seed the curated reference library (96 nodes)
-~/.claude/mishkan/scripts/seed-curated-library.sh
+# 4. bring up the CURATED box (isolated reference library — decision D-007)
+cp .env.curated.example .env.curated   # fill secrets; create the DB once:
+docker exec mishkan-cognee-pg psql -U cognee -d cognee_db -c "CREATE DATABASE curated_db OWNER cognee;"
+docker compose --env-file .env.curated -f docker-compose.curated.yml up -d
+nc -z localhost 7730 && echo "cognee-mcp (curated) up on :7730"
+
+# 5. seed the curated reference library (96 nodes) INTO the curated box
+~/.claude/mishkan/scripts/seed-curated-library.sh   # targets mishkan-curated-mcp
 ```
+
+## Two stores (decision D-007)
+
+| Store | Containers | Port | Holds | MCP alias |
+|---|---|---|---|---|
+| **work** | `mishkan-cognee-*` | 7777 | per-project knowledge + `<client>_memory` | `cognee` (read+write) |
+| **curated** | `mishkan-curated-*` | 7730 | the cross-project reference library only | `cognee-curated` (read) |
+
+The curated library is **physically isolated** in its own Neo4j so project data
+(which can contain PII) never mixes with it. The curated box reuses the shared
+Ollama and the shared Postgres *server* (own database `curated_db`). The
+per-client memory dataset (e.g. `claude_code_memory`) is part of the **work**
+store and must not be pruned.
 
 ## How agents reach it
 
 Claude Code connects via the project's `.mcp.json` (seeded by `/mishkan-init`
-from `~/.claude/mishkan/templates/mcp.json`). The default entry is HTTP transport
-to `http://localhost:7777/mcp`. A **zero-container stdio alternative** is included
+from `~/.claude/mishkan/templates/mcp.json`), which declares **both** stores:
+`cognee` → work (`http://localhost:7777/mcp`) and `cognee-curated` → curated
+(`http://localhost:7730/mcp`). A **zero-container stdio alternative** is included
 in that template (`_stdio_alternative`): it launches `cognee-mcp` directly via
 `uv --directory <path-to-cognee-mcp> run cognee-mcp` with `LLM_API_KEY` — no
 container, no port. Use whichever fits.
