@@ -25,10 +25,16 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
    `/plan` first.
 7. **Jehoshaphat** (Sefer) — scaffold `docs/README.md`, `docs/adr/`,
    `docs/runbooks/` (stub runbooks per team). `/plan` first.
-8. **Automated** — seed the Cognee graph from all docs (entities + relationships
-   per `~/.claude/mishkan/ontology.md`). Establish the project's Cognee namespace.
-   If the Cognee container is not running (`~/.claude/mishkan/cognee/`), skip
-   gracefully and note it — agents still work; graph persistence resumes when it's up.
+8. **Automated** — Cognee setup (two physically-separate stores, decision D-007):
+   - **Curated box (global singleton):** run
+     `bash ~/.claude/mishkan/scripts/ensure-curated-box.sh`. It is idempotent —
+     creates `curated_db`, brings up the curated box (`mishkan-curated-*` on :7730),
+     and seeds the reference library only if empty. Never reseeds a populated box.
+   - **Work store (per-project):** seed this project's knowledge into the work box
+     (`mishkan-cognee-*` on :7777) from all docs (entities + relationships per
+     `~/.claude/mishkan/ontology.md`), under this project's own dataset.
+   If the work stack is not running (`~/.claude/mishkan/cognee/`), skip both
+   gracefully and note it — agents still work; persistence resumes when it's up.
 9. **Automated** — write `./CLAUDE.md` from
    `~/.claude/mishkan/templates/project-CLAUDE.md`, fill placeholders, set Sprint
    S0. Copy `~/.claude/mishkan/templates/settings.json` → `.claude/settings.json`,
@@ -43,7 +49,8 @@ docs/{PRD,SRS,CONTRACT,ARCHITECTURE,THREAT_MODEL,README}.md
 docs/adr/  docs/runbooks/  docs/diagrams/C4/
 ./CLAUDE.md  (sprint S0)
 .claude/settings.json  .claude/rules/{common,frontend,backend,infrastructure,documentation}/
-Cognee namespace seeded
+.mcp.json  (cognee = work store, cognee-curated = reference)
+Cognee: curated box ensured (:7730) + this project's dataset seeded in work (:7777)
 ```
 
 ## Constraints
