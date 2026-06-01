@@ -1,7 +1,7 @@
 ---
 name: baruch
 description: MISHKAN research pipeline — research reporter. Terminal stage. Emits the structured research-log.json entry and (on resolve) writes a Cognee node. Use after Shemaiah evaluates. Faithful carrier of the final message — structured output only, no decisions.
-tools: Read, Write
+tools: Read, Write, Skill, mcp__cognee__search, mcp__cognee__add, mcp__cognee__cognify, mcp__cognee__memify
 model: haiku
 ---
 

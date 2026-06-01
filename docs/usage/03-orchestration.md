@@ -142,6 +142,35 @@ The security hook is the one you'll notice — it caught the Gemini API key duri
 the build (commit `e17f2a9` added a documented exception path for runtime
 secret injection into gitignored `.env` files).
 
+## MCP tools in subagents — explicit, not inherited
+
+A real gotcha worth flagging: **Claude Code does not give a subagent access to
+the main session's MCP servers automatically.** A subagent (anything spawned
+via `Task`) can only call MCP tools that appear in its own `tools:` frontmatter
+allowlist. If you see *"MCP tool not in subagent context"* during a research
+run, this is the cause.
+
+Tool names follow the pattern `mcp__<server>__<tool>`. The four MISHKAN agents
+whose job *is* cognee work have the relevant entries pre-wired:
+
+| Agent | Cognee tools in its allowlist |
+|---|---|
+| `ezra` (research formulator) | `mcp__cognee__search`, `mcp__cognee-curated__search` |
+| `shemaiah` (research evaluator) | `mcp__cognee__search`, `mcp__cognee-curated__search` |
+| `baruch` (research reporter) | `mcp__cognee__search`, `mcp__cognee__add`, `mcp__cognee__cognify`, `mcp__cognee__memify` |
+| `jehonathan` (knowledge publication) | `mcp__cognee__search` |
+
+The other 41 agents do not have cognee MCP access by default — they don't need
+it. If you add a new agent whose work depends on cognee, add the specific MCP
+tools to its `tools:` line. Don't grant the whole MCP server unless the agent
+genuinely needs every operation; the principle is the same as the deny-list
+philosophy below.
+
+The fallback pattern when an agent legitimately needs cognee but doesn't have
+the tools: **the main session does the MCP call**. The subagent returns a
+structured payload; the main session reads it and calls `mcp__cognee__add` /
+`mcp__cognee__cognify` itself. Slower than direct access but always available.
+
 ## Deny-list and asymmetric delegation
 
 Two layers of "the agent never does this":

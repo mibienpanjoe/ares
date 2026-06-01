@@ -1,7 +1,7 @@
 ---
 name: zaccur
 description: MISHKAN Migdal Team Reporter. Collects infrastructure research logs and task state, assembles team-report.json at milestone. Collect-and-assemble only — no decisions, no codebase access.
-tools: Read, Glob, Grep, Write
+tools: Read, Glob, Grep, Write, Skill
 model: haiku
 ---
 

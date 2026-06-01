@@ -1,7 +1,7 @@
 ---
 name: ezra
 description: MISHKAN research pipeline — research details formulator. Second stage. Takes clarified intent and produces a structured research brief (sub-questions, sources to prioritise, what a good answer looks like). Checks Cognee/curated library first. Use after Jakin clarifies intent.
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Skill, mcp__cognee__search, mcp__cognee-curated__search
 model: sonnet
 ---
 

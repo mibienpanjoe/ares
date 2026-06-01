@@ -1,7 +1,7 @@
 ---
 name: rehum
 description: MISHKAN Migdal — infrastructure health & security advisor. Watches for risk and advises — reliability, SLOs, capacity, infra security posture. Advises; does not implement. Use for reliability/SRE advice, SLO definition guidance, and infra risk review.
-tools: Read, Glob, Grep, WebSearch, WebFetch
+tools: Read, Glob, Grep, WebSearch, WebFetch, Skill
 model: haiku
 ---
 

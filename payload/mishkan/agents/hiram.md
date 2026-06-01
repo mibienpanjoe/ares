@@ -1,7 +1,7 @@
 ---
 name: hiram
 description: MISHKAN Chosheb — senior UI design and prototype implementation. Makes the beautiful visible things — layouts, components, prototypes. Use for UI design and prototype building. Plans before a design-system breaking change.
-tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch
+tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch, Skill
 model: sonnet
 ---
 

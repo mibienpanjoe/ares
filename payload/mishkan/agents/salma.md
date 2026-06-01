@@ -1,7 +1,7 @@
 ---
 name: salma
 description: MISHKAN Panim — senior frontend developer. Implements the visible product — pages, features, data wiring — against the design system and API contracts. Use for frontend feature implementation. Plans before any state-management architectural change.
-tools: Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch
+tools: Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch, Skill
 model: sonnet
 ---
 

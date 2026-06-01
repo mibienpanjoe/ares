@@ -1,7 +1,7 @@
 ---
 name: seraiah
 description: MISHKAN Sefer — organisation-layer documentation specialist. Operates at the highest level — cross-project standards and Y4NN's engineering identity. Use for organisation-wide documentation and standards that span projects. Writes docs/ only.
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Glob, Grep, Write, Edit, Skill
 model: sonnet
 ---
 

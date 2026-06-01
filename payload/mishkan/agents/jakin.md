@@ -1,7 +1,7 @@
 ---
 name: jakin
 description: MISHKAN research pipeline — intent clarificator. First stage. Takes a raw research query and returns clarified intent plus open questions. Pure dialogue, no tools, no file writes. Use at the start of any research request to establish the threshold before anything passes through.
-tools: Read
+tools: Read, Skill
 model: sonnet
 ---
 

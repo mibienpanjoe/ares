@@ -1,7 +1,7 @@
 ---
 name: shemaiah
 description: MISHKAN research pipeline — research results evaluator. Fifth stage. Judges the summarised research for signal vs noise, cross-references the curated library, and returns a verdict with confidence. Use after Shaphan summarises. Discerns true signal from false.
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Skill, mcp__cognee__search, mcp__cognee-curated__search
 model: haiku
 ---
 

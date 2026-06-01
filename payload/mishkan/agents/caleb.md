@@ -1,7 +1,7 @@
 ---
 name: caleb
 description: MISHKAN research pipeline — contextual web researcher. Third stage. Executes the research brief against the web and curated sources, returns accurate full findings. Use after Ezra produces a brief. Plans before multi-source research.
-tools: Read, WebSearch, WebFetch
+tools: Read, WebSearch, WebFetch, Skill
 model: sonnet
 ---
 

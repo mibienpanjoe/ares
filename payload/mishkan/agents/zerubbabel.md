@@ -1,7 +1,7 @@
 ---
 name: zerubbabel
 description: MISHKAN Yasad (Backend) Team Lead. Owns the deep base — API contracts, backend delivery, data layer coordination. Routes to Nathan (architecture), Zadok (contracts), Hizkiah (impl), Shallum (databases), Uriah (QA). Use for backend leadership. Plans before any API contract decision. Does not implement.
-tools: Read, Glob, Grep, Task, WebSearch, WebFetch
+tools: Read, Glob, Grep, Task, WebSearch, WebFetch, Skill
 model: opus
 ---
 

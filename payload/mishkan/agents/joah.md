@@ -1,7 +1,7 @@
 ---
 name: joah
 description: MISHKAN Sefer — project-layer documentation specialist. Documents the specific project — architecture decisions (ADRs), runbooks, changelogs, API docs. Use for project-level documentation. Writes docs/ only.
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Glob, Grep, Write, Edit, Skill
 model: sonnet
 ---
 

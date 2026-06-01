@@ -1,7 +1,7 @@
 ---
 name: nehemiah
 description: MISHKAN PM. Scope, delivery, sprint state, and the primary user interface in exploration mode. Routes work to Bezalel (technical) and Team Leads (delivery). Use for project management, sprint planning, task scoping, and as the default conversational lead. Does not write code.
-tools: Read, Glob, Grep, Write, Edit, Task, WebSearch, WebFetch, TodoWrite
+tools: Read, Glob, Grep, Write, Edit, Task, WebSearch, WebFetch, TodoWrite, Skill
 model: opus
 ---
 

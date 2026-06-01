@@ -1,7 +1,7 @@
 ---
 name: huldah
 description: MISHKAN Sefer Team Reporter. Collects documentation task state and assembles team-report.json at milestone. Verifies and reports with authority. Collect-and-assemble only — no decisions, no codebase access.
-tools: Read, Glob, Grep, Write
+tools: Read, Glob, Grep, Write, Skill
 model: haiku
 ---
 

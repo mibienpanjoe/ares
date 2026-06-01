@@ -1,7 +1,7 @@
 ---
 name: aholiab
 description: MISHKAN Chosheb (Design) Team Lead. Leads design craftsmen, coordinates the design→frontend handoff to Panim. Routes to Hiram (UI/prototype) and Deborah (UX). Use for design leadership. Plans before any handoff package to Panim. Does not implement production code.
-tools: Read, Glob, Grep, Task, WebSearch, WebFetch
+tools: Read, Glob, Grep, Task, WebSearch, WebFetch, Skill
 model: opus
 ---
 

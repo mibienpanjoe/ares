@@ -1,7 +1,7 @@
 ---
 name: shevna
 description: MISHKAN Sefer — team-layer documentation specialist. Embedded with the teams; documents their specific outputs — component libraries, security posture, infra topology, per-team docs. Use for per-team documentation. Writes docs/ only.
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Glob, Grep, Write, Edit, Skill
 model: haiku
 ---
 

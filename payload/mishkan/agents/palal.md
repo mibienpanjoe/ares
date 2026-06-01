@@ -1,7 +1,7 @@
 ---
 name: palal
 description: MISHKAN Migdal — systems engineer (OS, virtualisation, networks). Works at the structural intersection — kernel, containers, networking, OS-level customisation. Use for OS/network/virtualisation configuration and debugging.
-tools: Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch
+tools: Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch, Skill
 model: sonnet
 ---
 

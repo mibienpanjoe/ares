@@ -1,7 +1,7 @@
 ---
 name: nathan
 description: MISHKAN Yasad — software architecture master. Brings architectural vision; authors SRS and ARCHITECTURE during init. Speaks truth about what should and should not be built. Use for system design decisions. Plans before any system design decision.
-tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch
+tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch, Skill
 model: sonnet
 ---
 

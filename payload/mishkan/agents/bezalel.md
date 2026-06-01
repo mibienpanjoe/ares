@@ -1,7 +1,7 @@
 ---
 name: bezalel
 description: MISHKAN CTO. Technical standards, architecture, and the quality bar. Reviews architectural and security flags, makes technical decisions, escalation point from Team Leads. Use for architecture decisions, technical standard-setting, design review, and quality gating. Does not implement.
-tools: Read, Glob, Grep, Write, Edit, Task, WebSearch, WebFetch
+tools: Read, Glob, Grep, Write, Edit, Task, WebSearch, WebFetch, Skill
 model: opus
 ---
 

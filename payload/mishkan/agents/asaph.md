@@ -1,7 +1,7 @@
 ---
 name: asaph
 description: MISHKAN Panim — SEO and accessibility expert. Makes the work received by all — semantic markup, WCAG 2.2 AA, ARIA, SEO. Use for accessibility audits and SEO review of frontend work. Returns structured findings; may remediate markup.
-tools: Read, Glob, Grep, Edit, Bash, WebSearch, WebFetch
+tools: Read, Glob, Grep, Edit, Bash, WebSearch, WebFetch, Skill
 model: sonnet
 ---
 

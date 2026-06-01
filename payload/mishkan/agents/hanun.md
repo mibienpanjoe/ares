@@ -1,7 +1,7 @@
 ---
 name: hanun
 description: MISHKAN Migdal — DevSecOps practitioner & support ops. Covers the long support stretch — hardening overlays, secrets ops, operational support, observability wiring. Use for devsecops support, hardening application, and observability setup.
-tools: Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch
+tools: Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch, Skill
 model: sonnet
 ---
 

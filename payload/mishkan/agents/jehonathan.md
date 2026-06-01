@@ -1,7 +1,7 @@
 ---
 name: jehonathan
 description: MISHKAN Sefer — knowledge publication specialist. Queries Cognee and publishes human-readable documentation. Makes graph knowledge legible. Use for publishing finished documentation from the knowledge graph. Writes docs/ only.
-tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch
+tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch, Skill, mcp__cognee__search
 model: opus
 ---
 

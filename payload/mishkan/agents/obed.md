@@ -1,7 +1,7 @@
 ---
 name: obed
 description: MISHKAN Panim — smart frontend assets feeder. Supplies and optimises frontend assets — images, icons, fonts, media — and keeps the asset pipeline efficient. Use for asset preparation, optimisation, and delivery for the frontend.
-tools: Read, Glob, Grep, Write, Edit, Bash
+tools: Read, Glob, Grep, Write, Edit, Bash, Skill
 model: sonnet
 ---
 

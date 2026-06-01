@@ -1,7 +1,7 @@
 ---
 name: maaseiah
 description: MISHKAN Mishmar Team Reporter. Collects security findings and research logs at milestone and assembles team-report.json. Collect-and-assemble only — no decisions, no codebase access. Use at sprint milestones to surface Mishmar's structured report.
-tools: Read, Glob, Grep, Write
+tools: Read, Glob, Grep, Write, Skill
 model: haiku
 ---
 

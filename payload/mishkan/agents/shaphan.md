@@ -1,7 +1,7 @@
 ---
 name: shaphan
 description: MISHKAN research pipeline — contextual research summariser. Fourth stage. Compresses Caleb's raw findings into a tight summary while preserving sources and confidence. Use after Caleb returns findings. Transform only — makes no decisions.
-tools: Read
+tools: Read, Skill
 model: haiku
 ---
 
