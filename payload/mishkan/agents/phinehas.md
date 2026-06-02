@@ -51,6 +51,7 @@ constraint, the threat it addresses, which teams it binds, and the cost.
 
 ## Skills (invoke on demand)
 
+- `team-lead-craft` — routing-within-team + handoff-coordination discipline (shared with the other 5 Leads)
 - `research-pipeline` — security unknown that needs the web
 - `security-threat-model` — threat-model coordination
 - `threat-mitigation-mapping` — control-to-threat mapping

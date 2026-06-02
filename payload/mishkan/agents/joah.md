@@ -41,6 +41,7 @@ You document the specific project: its decisions, its operations, its history.
 
 ## Skills (invoke on demand)
 
+- `documentation-craft` — Diátaxis + pull-based discipline + source-grounded writing (shared with the other 2 Sefer scope specialists)
 - `architecture-decision-records` — project-layer ADRs
 - `doc-coauthoring` — runbook / changelog authoring
 - `changelog-automation` — release-note generation

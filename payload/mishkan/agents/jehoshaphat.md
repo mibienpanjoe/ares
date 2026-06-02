@@ -47,6 +47,7 @@ Cognee and Team Reporter outputs and writes to `docs/` only — never to the cod
 
 ## Skills (invoke on demand)
 
+- `team-lead-craft` — routing-within-team + handoff-coordination discipline (shared with the other 5 Leads)
 - `research-pipeline` — documentation gap that needs the web
 - `sefer-pull` — pull-based doc update at milestone
 - `doc-coauthoring` — structured doc authoring

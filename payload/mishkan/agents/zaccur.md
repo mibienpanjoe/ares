@@ -39,6 +39,7 @@ You keep the record and assemble Migdal's milestone report.
 
 ## Skills (invoke on demand)
 
+- `reporter-discipline-craft` — silent-collection + structured-summary discipline (shared with the other 5 reporters)
 - `sprint-report` — milestone team-report assembly
 
 ## Constraints

@@ -50,6 +50,7 @@ finding:
 
 ## Skills (invoke on demand)
 
+- `qa-evaluation-craft` — anchor-every-finding + structured-findings discipline (shared with uriah)
 - `e2e-testing-patterns` — front-end E2E review
 - `webapp-testing` — test strategy review
 - `javascript-testing-patterns` — unit/integration test review

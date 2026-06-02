@@ -46,6 +46,7 @@ handed off, the design decisions and their rationale, and what is out of scope.
 
 ## Skills (invoke on demand)
 
+- `team-lead-craft` — routing-within-team + handoff-coordination discipline (shared with the other 5 Leads)
 - `research-pipeline` — design pattern or platform-spec unknown
 - `design-system-patterns` — design-system architecture decisions
 - `accessibility-compliance` — a11y constraint review

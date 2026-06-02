@@ -47,6 +47,7 @@ why this shape, what consumes it, what is out of scope.
 
 ## Skills (invoke on demand)
 
+- `team-lead-craft` — routing-within-team + handoff-coordination discipline (shared with the other 5 Leads)
 - `research-pipeline` — back-end unknown that needs the web
 - `fastapi-templates` — API scaffolding decisions
 - `openapi-spec-generation` — contract authoring

@@ -39,6 +39,7 @@ You embed with the teams and document what they produce.
 
 ## Skills (invoke on demand)
 
+- `documentation-craft` — Diátaxis + pull-based discipline + source-grounded writing (shared with the other 2 Sefer scope specialists)
 - `doc-coauthoring` — team-layer doc authoring
 
 ## Constraints

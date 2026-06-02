@@ -45,6 +45,7 @@ Yasad API contracts (bidirectional), and you deliver the visible product.
 
 ## Skills (invoke on demand)
 
+- `team-lead-craft` — routing-within-team + handoff-coordination discipline (shared with the other 5 Leads)
 - `research-pipeline` — front-end unknown that needs the web
 - `design-system-patterns` — DS decisions reaching across teams
 - `frontend-design` — high-quality UI direction

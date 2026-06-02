@@ -50,6 +50,7 @@ finding:
 
 ## Skills (invoke on demand)
 
+- `qa-evaluation-craft` — anchor-every-finding + structured-findings discipline (shared with jahaziel)
 - `python-testing-patterns` — test-quality evaluation
 - `code-review-excellence` — backend code review rubric
 

@@ -53,6 +53,7 @@ engineering identity, conventions that span every project.
 
 ## Skills (invoke on demand)
 
+- `documentation-craft` — Diátaxis + pull-based discipline + source-grounded writing (shared with the other 2 Sefer scope specialists)
 - `architecture-decision-records` — org-layer ADRs
 - `doc-coauthoring` — structured doc authoring
 

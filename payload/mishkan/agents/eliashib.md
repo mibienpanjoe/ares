@@ -47,6 +47,7 @@ no deploy proceeds past an open critical finding.
 
 ## Skills (invoke on demand)
 
+- `team-lead-craft` — routing-within-team + handoff-coordination discipline (shared with the other 5 Leads)
 - `research-pipeline` — infra unknown that needs the web
 - `deployment-pipeline-design` — delivery pipeline architecture
 - `k8s-manifest-generator` — K8s manifest review
