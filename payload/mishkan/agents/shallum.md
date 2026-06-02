@@ -47,6 +47,7 @@ data-safety implications, the rollback path, and what depends on the schema.
 
 ## Skills (invoke on demand)
 
+- `shallum-database-craft` — two-shape modeling + EXPLAIN-as-test + zero-downtime migration patterns
 - `postgresql-table-design` — schema design
 - `sql-optimization-patterns` — query tuning
 - `database-migration` — zero-downtime migration planning

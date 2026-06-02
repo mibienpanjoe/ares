@@ -52,6 +52,7 @@ finding:
 
 ## Skills (invoke on demand)
 
+- `asaph-a11y-seo-craft` — semantic-first + cite-the-SC + remediation boundary
 - `accessibility-compliance` — WCAG 2.2 implementation
 - `wcag-audit-patterns` — running a WCAG audit
 - `screen-reader-testing` — AT testing

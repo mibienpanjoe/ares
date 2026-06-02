@@ -41,6 +41,7 @@ prepared, optimised, delivered.
 
 ## Skills (invoke on demand)
 
+- `obed-asset-pipeline-craft` — format selection + responsive images + CWV budget discipline
 - `web-component-design` — asset packaging into components
 
 ## Constraints

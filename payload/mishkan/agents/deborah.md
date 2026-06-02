@@ -42,6 +42,7 @@ emotional response, trust.
 
 ## Skills (invoke on demand)
 
+- `deborah-ux-craft` — cognitive + emotional + inclusive lenses; advisory-only
 - `accessibility-compliance` — cognitive/ergonomic accessibility review
 - `interaction-design` — feedback patterns and motion semantics
 - `visual-design-foundations` — hierarchy and legibility

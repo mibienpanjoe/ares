@@ -44,6 +44,7 @@ component contracts, or shared visual primitives).
 
 ## Skills (invoke on demand)
 
+- `hiram-ui-craft` — UI design + prototype handoff discipline (the depth lives here)
 - `frontend-design` — production-grade UI work
 - `design-system-patterns` — tokens, theming, component patterns
 - `visual-design-foundations` — typography, hierarchy, layout

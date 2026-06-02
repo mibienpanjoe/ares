@@ -45,6 +45,7 @@ Plan before any **state-management architectural change**.
 
 ## Skills (invoke on demand)
 
+- `salma-frontend-implementation-craft` — TanStack + tokens + state-management discipline (the depth lives here)
 - `react-modernization` — React refactors and patterns
 - `nextjs-app-router-patterns` — Next.js App Router work
 - `responsive-design` — responsive layouts

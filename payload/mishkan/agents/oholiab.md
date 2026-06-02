@@ -45,6 +45,7 @@ Plan before a **design-system or state-management architectural change**.
 
 ## Skills (invoke on demand)
 
+- `oholiab-design-system-craft` — tokens + components + theming + cost-of-extension (the depth lives here)
 - `design-system-patterns` — DS architecture and tokens
 - `tailwind-design-system` — Tailwind tokenisation
 - `web-component-design` — component contracts
