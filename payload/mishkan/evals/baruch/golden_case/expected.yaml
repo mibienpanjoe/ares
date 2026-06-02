@@ -1,0 +1,35 @@
+# Golden case expectations — semantic assertions on Baruch's output.
+#
+# Format: each non-blank, non-comment line is `<jq filter>: <expected JSON>`.
+# The expected side is canonical JSON (string, number, true, false, array).
+# Fields like timestamp and the exact cognee_node_id value are don't-care;
+# the structural and semantic claims below must hold.
+
+# Identity transcription (from input.yaml verbatim where applicable)
+.agent: "hizkiah"
+.team: "yasad"
+.sprint: "S2"
+.trigger: "faced_problem"
+.applied_to_task: "T-12"
+
+# Outcome carries Shemaiah's verdict verbatim
+.outcome: "resolved"
+
+# Cross-harness scope + resolved => cognee write
+.knowledge_graph_write: true
+.curated_library_match: false
+
+# When a node was written, cognee_node_id is a non-empty string
+.cognee_node_id | type: "string"
+.cognee_node_id | length > 0: true
+
+# Stages actually invoked are recorded faithfully (no over- or under-listing)
+.tools_invoked | sort: ["baruch","caleb","ezra","jakin","shaphan","shemaiah"]
+
+# query_intent carries Jakin's clarified intent (key phrase must survive)
+.query_intent | contains("asyncpg"): true
+.query_intent | contains("mid-transaction"): true
+
+# research_output_summary preserves the source attribution from Shaphan
+.research_output_summary | contains("InterfaceError"): true
+.research_output_summary | contains("asyncpg"): true

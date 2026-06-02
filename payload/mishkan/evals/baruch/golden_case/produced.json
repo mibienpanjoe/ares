@@ -1,0 +1,15 @@
+{
+  "agent": "hizkiah",
+  "team": "yasad",
+  "sprint": "S2",
+  "trigger": "faced_problem",
+  "query_intent": "How asyncpg handles connection loss mid-transaction; recovery semantics, observable error class, and whether the transaction is automatically retried.",
+  "tools_invoked": ["jakin", "ezra", "caleb", "shaphan", "shemaiah", "baruch"],
+  "research_output_summary": "asyncpg raises InterfaceError or ConnectionDoesNotExistError on network loss mid-transaction. The transaction is NOT auto-retried; the pool acquires a fresh connection on next use. Application must catch and decide. Sources: magicstack/asyncpg docs and issue #847. Confidence: high.",
+  "applied_to_task": "T-12",
+  "outcome": "resolved",
+  "knowledge_graph_write": true,
+  "curated_library_match": false,
+  "cognee_node_id": "node_01HZ7K3X9Y00000000000000",
+  "timestamp": "2026-06-02T14:00:00Z"
+}

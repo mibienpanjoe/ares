@@ -1,0 +1,15 @@
+{
+  "agent": "salma",
+  "team": "panim",
+  "sprint": "S2",
+  "trigger": "faced_problem",
+  "query_intent": "Whether TanStack Query v5 useQuery still exposes onSuccess and onError callbacks.",
+  "tools_invoked": ["jakin", "ezra", "baruch"],
+  "research_output_summary": "TanStack Query v5 removed onSuccess, onError, and onSettled from useQuery (Oct 2023). Migration: use useEffect keyed on data/error or a mutation observer pattern. Source: TanStack v5 migration guide.",
+  "applied_to_task": "T-19",
+  "outcome": "resolved",
+  "knowledge_graph_write": false,
+  "curated_library_match": true,
+  "cognee_node_id": null,
+  "timestamp": "2026-06-02T14:05:00Z"
+}

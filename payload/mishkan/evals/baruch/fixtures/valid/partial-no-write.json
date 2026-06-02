@@ -1,0 +1,14 @@
+{
+  "agent": "salma",
+  "team": "panim",
+  "sprint": "S2",
+  "trigger": "faced_problem",
+  "query_intent": "Whether Next.js 15 App Router supports streaming + Server Actions + dynamic imports in combination, and what the documented interaction is.",
+  "tools_invoked": ["jakin", "ezra", "caleb", "shaphan", "shemaiah", "baruch"],
+  "research_output_summary": "Streaming + Server Actions documented separately; dynamic imports under React 19 documented separately. Three-way combination not covered in v15 docs as of search date; vercel/examples #3104 shows it works but relies on cache-control choices. Confidence: medium. Gap: official documentation of combined behaviour.",
+  "applied_to_task": "T-22",
+  "outcome": "partial",
+  "knowledge_graph_write": false,
+  "curated_library_match": false,
+  "cognee_node_id": null
+}

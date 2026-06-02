@@ -1,0 +1,15 @@
+{
+  "agent": "hizkiah",
+  "team": "yasad",
+  "sprint": "S2",
+  "trigger": "faced_problem",
+  "query_intent": "asyncpg recovery question",
+  "tools_invoked": ["jakin", "ezra", "caleb", "shaphan", "shemaiah", "baruch"],
+  "research_output_summary": "summary",
+  "applied_to_task": "T-12",
+  "outcome": "maybe",
+  "knowledge_graph_write": true,
+  "curated_library_match": false,
+  "cognee_node_id": "node_01HZ7K3X9Y00000000000000",
+  "timestamp": "2026-06-02T14:00:00Z"
+}

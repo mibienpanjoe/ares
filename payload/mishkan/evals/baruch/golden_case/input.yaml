@@ -1,0 +1,47 @@
+# Golden case input — what Baruch receives as upstream context.
+#
+# Scenario: Hizkiah hit an asyncpg unknown; the pipeline ran all six
+# stages; Shemaiah resolved with high confidence; the learning is
+# cross-harness (every asyncpg-using project cares).
+#
+# This file documents the input Baruch would see. The eval does NOT
+# run Baruch live (that would require an LLM call); it asserts that
+# a Baruch output produced from this input passes the schema +
+# matches the semantic expectations in expected.yaml.
+
+calling_agent:
+  alias: hizkiah
+  team: yasad
+
+sprint: S2
+trigger: faced_problem
+applied_to_task: T-12
+
+jakin_clarified_intent: |
+  How asyncpg handles connection loss mid-transaction; recovery
+  semantics, observable error class, and whether the transaction
+  is automatically retried.
+
+ezra_brief:
+  curated_library_match: false
+
+shaphan_summary: |
+  asyncpg raises InterfaceError or ConnectionDoesNotExistError on
+  network loss mid-transaction. The transaction is NOT auto-retried;
+  the pool acquires a fresh connection on next use. Application must
+  catch and decide. Sources: magicstack/asyncpg docs and issue #847.
+  Confidence: high.
+
+shemaiah_verdict:
+  outcome: resolved
+  confidence: high
+  curated_library_agreement: not_covered
+  cross_harness_promotion_recommended: true
+
+stages_invoked_actually:
+  - jakin
+  - ezra
+  - caleb
+  - shaphan
+  - shemaiah
+  - baruch
