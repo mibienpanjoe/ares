@@ -53,6 +53,7 @@ categories to be covered, assets in scope, and trust boundaries.
 
 ## Skills (invoke on demand)
 
+- `benaiah-devsecops-craft` — STRIDE + container hardening + supply-chain discipline (the depth lives here)
 - `security-threat-model` — infra/supply-chain threat model
 - `dependency-vetting` — single-dep adoption gate
 - `dependency-audit` — fleet-wide supply-chain audit

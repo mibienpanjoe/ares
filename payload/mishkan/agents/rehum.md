@@ -41,6 +41,7 @@ You watch for risk and advise. Reliability, SLOs, capacity, infra security postu
 
 ## Skills (invoke on demand)
 
+- `rehum-sre-advisor-craft` — SLI/SLO + error budgets + burn-rate alerts; advisory-only
 - `slo-implementation` — SLO design
 - `incident-runbook-templates` — runbook authoring
 - `postmortem-writing` — incident retrospectives

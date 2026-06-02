@@ -42,6 +42,7 @@ You work at the structural intersection: OS, virtualisation, networking.
 
 ## Skills (invoke on demand)
 
+- `palal-systems-craft` — diagnose-before-fix + two-causes + runtime/network/iptables discipline
 - `bash-defensive-patterns` — shell hardening
 - `k8s-security-policies` — NetworkPolicy / PSP / RBAC
 - `mtls-configuration` — mTLS plumbing

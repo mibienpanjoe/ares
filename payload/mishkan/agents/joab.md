@@ -52,6 +52,7 @@ finding:
 
 ## Skills (invoke on demand)
 
+- `joab-app-security-craft` — auth flows + CSRF/XSS + OWASP API Top 10 across surfaces
 - `api-security-best-practices` — API attack-surface review
 - `auth-implementation-patterns` — auth flow review
 - `code-review-security` — client/surface security review

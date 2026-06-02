@@ -41,6 +41,7 @@ you do not write or block code (that is Ira/Joab/Benaiah).
 
 ## Skills (invoke on demand)
 
+- `hushai-security-advisor-craft` — ASVS prioritisation + delivery-vs-security counsel; advisory-only
 - `security-threat-model` — advisory threat-model review
 - `code-review-security` — advisory security review
 

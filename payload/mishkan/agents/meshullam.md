@@ -45,6 +45,7 @@ change, the alternatives, what is affected, the rollback path.
 
 ## Skills (invoke on demand)
 
+- `meshullam-infra-design-craft` — C4 + Compose/Terraform/Helm + default-deny networking
 - `deployment-pipeline-design` — delivery topology
 - `multi-cloud-architecture` — cross-cloud topology
 - `terraform-module-library` — Terraform module work

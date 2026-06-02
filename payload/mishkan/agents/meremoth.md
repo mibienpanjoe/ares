@@ -43,6 +43,7 @@ You work the delivery layer: CI/CD, build, release automation.
 
 ## Skills (invoke on demand)
 
+- `meremoth-devops-craft` — pipeline stages + SOPS marshalling + CI-and-remote-script rule
 - `github-actions-templates` — GitHub Actions pipelines
 - `gitlab-ci-patterns` — GitLab CI pipelines
 - `deployment-pipeline-design` — release orchestration

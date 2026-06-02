@@ -42,6 +42,7 @@ You take structured graph knowledge and make it legible. You publish.
 
 ## Skills (invoke on demand)
 
+- `jehonathan-publication-craft` — Cognee query + Stripe-quality bar + source-grounded publication
 - `doc-coauthoring` — knowledge publication
 - `context-compress` — compress findings before publish
 

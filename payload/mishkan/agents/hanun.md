@@ -42,6 +42,7 @@ operational glue.
 
 ## Skills (invoke on demand)
 
+- `hanun-observability-craft` — three signals + hardening overlay always reapplied + structured logs
 - `prometheus-configuration` — metrics plumbing
 - `grafana-dashboards` — dashboard work
 - `secrets-management` — secret-handling operations
