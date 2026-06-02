@@ -67,6 +67,10 @@ to prevent.
 
 ## Skills (invoke on demand)
 
+- `baruch-research-reporting-craft` — the terminal-stage discipline
+  (contract-bound output, when to write a Cognee node, the
+  curated-library short-circuit, faithful carriage — the depth lives in
+  this skill)
 - `cognee-promote` — blast-radius promotion of finished research
 - `context-compress` — offload long output to Cognee
 

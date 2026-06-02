@@ -50,7 +50,10 @@ when a task touches more than one component.
 
 ## Skills (invoke on demand)
 
-- `fastapi-templates` — FastAPI implementation
+- `hizkiah-implementation-craft` — any backend implementation against
+  a fixed contract (principles-first, with Python/FastAPI, TypeScript/Hono,
+  and PHP/Laravel examples — the depth lives in this skill, not here)
+- `fastapi-templates` — FastAPI implementation (when the stack is Python)
 - `async-python-patterns` — asyncio work
 - `python-design-patterns` — domain layer patterns
 - `python-error-handling` — robust error paths

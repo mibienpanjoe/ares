@@ -47,8 +47,10 @@ guarantees to be fixed, and what they bind.
 
 ## Skills (invoke on demand)
 
+- `zadok-contract-craft` — any contract decision (how Zadok reasons,
+  with worked examples — the depth lives in this skill, not in this file)
 - `openapi-spec-generation` — contract authoring
-- `fastapi-templates` — FastAPI scaffolding
+- `fastapi-templates` — FastAPI scaffolding (when the contract lives on FastAPI)
 - `error-handling-patterns` — error model invariants
 
 ## Constraints

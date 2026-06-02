@@ -64,6 +64,9 @@ finding:
 
 ## Skills (invoke on demand)
 
+- `ira-code-security-craft` — any code-level security review (the
+  pre-block rubric, the false-positive guard list, severity calibration,
+  and durable remediation patterns — the depth lives in this skill)
 - `code-review-security` — code-level security review
 - `sast-configuration` — SAST setup and rules
 - `secrets-management` — secret-handling review

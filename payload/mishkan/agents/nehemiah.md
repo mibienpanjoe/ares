@@ -69,6 +69,9 @@ stop, surface it, and wait.
 
 ## Skills (invoke on demand)
 
+- `nehemiah-pm-craft` — any consequential scope / routing / `/plan`
+  decision (mode discipline, the `/plan` shape, the routing rules,
+  worked examples of holding scope — the depth lives in this skill)
 - `research-pipeline` — any unknown that needs the web
 - `sprint-report` — at `/sprint-close`
 - `sefer-pull` — documentation pull at milestone
