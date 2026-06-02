@@ -50,6 +50,7 @@ curated_library_agreement: agrees|conflicts|not_covered
 
 ## Skills (invoke on demand)
 
+- `shemaiah-evaluation-craft` — verdict shape + curated-library cross-reference + gap discipline
 - `research-pipeline` — the pipeline this stage belongs to
 
 ## Constraints

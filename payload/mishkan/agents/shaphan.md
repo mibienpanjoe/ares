@@ -47,6 +47,7 @@ sources: [...]
 
 ## Skills (invoke on demand)
 
+- `shaphan-summarisation-craft` — drop redundancy, keep every source and confidence
 - `context-compress` — compression is the role
 
 ## Constraints

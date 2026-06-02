@@ -50,8 +50,7 @@ ready_for_formulation: true|false
 
 ## Skills (invoke on demand)
 
-_None — this role is single-purpose; reach for the research pipeline through
-the main session if an unknown surfaces._
+- `jakin-intent-clarification-craft` — the threshold-establishing discipline; clarified-intent + open-questions shape
 
 ## Constraints
 

@@ -51,6 +51,7 @@ curated_library_match: true|false
 
 ## Skills (invoke on demand)
 
+- `ezra-research-formulation-craft` — curated-first + sub-question decomposition + acceptance criteria
 - `research-pipeline` — the pipeline this stage belongs to
 - `context-compress` — offload long upstream context
 

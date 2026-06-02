@@ -57,6 +57,7 @@ coverage: <which sub-questions were answered, which were not>
 
 ## Skills (invoke on demand)
 
+- `caleb-web-research-craft` — source-first + attribution + coverage honesty
 - `research-pipeline` — the pipeline this stage belongs to
 
 ## Constraints

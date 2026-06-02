@@ -61,6 +61,7 @@ Do not proceed until Y4NN approves. The approved plan is the scope contract.
 
 ## Skills (invoke on demand)
 
+- `bezalel-cto-craft` — quality bar + escalation contract + the seam with Nehemiah (the depth lives here)
 - `research-pipeline` — any unknown that needs the web
 - `architecture-decision-records` — writing or reviewing an ADR
 - `context-driven-development` — scaffolding project context artefacts
