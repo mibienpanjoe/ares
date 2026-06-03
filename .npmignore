@@ -1,0 +1,5 @@
+docs/engineer/profile.md
+docs/engineer/profile-readable.md
+**/.env
+**/*.enc
+**/secrets/
