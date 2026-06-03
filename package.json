@@ -27,7 +27,17 @@
     "cognee"
   ],
   "author": ">_theY4NN (https://github.com/Y4NN777)",
-  "homepage": "https://github.com/Y4NN777",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Y4NN777/mishkan-cc-harness.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Y4NN777/mishkan-cc-harness/issues"
+  },
+  "homepage": "https://github.com/Y4NN777/mishkan-cc-harness#readme",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {}
 }
