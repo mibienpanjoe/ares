@@ -377,7 +377,23 @@ expansions:
 
 ---
 
-## 11. The recurring traps every Team Lead rejects on sight
+## 11. Workflows leads may request the main session invoke
+
+Team Leads cannot invoke `Workflow` directly (subagent constraint).
+A Lead surfaces the workflow recommendation; the main session decides.
+
+| Lead | Recommended workflow | When |
+|---|---|---|
+| Phinehas | `mishkan-codebase-audit` (lenses: ["security", "surface"]) | post-incident hardening; pre-release |
+| Eliashib | `mishkan-release-readiness` | pre-deploy gate |
+| Jehoshaphat | `mishkan-init` | new project at /mishkan-init |
+| Zerubbabel | `mishkan-architecture-panel` | wide-answer architectural decision; escalated to Bezalel |
+| Huram | `mishkan-codebase-audit` (lenses: ["a11y", "contract", "perf"]) | pre-release of large frontend change |
+| Aholiab | `mishkan-codebase-audit` (lenses: ["a11y"]) | design-system extension review |
+
+The shape: surface a clear ask to the main session naming the workflow
+and the args. The main session reviews the cost-gate and decides.
+## 12. The recurring traps every Team Lead rejects on sight
 
 1. **"I'll just do this myself; it's faster."** §5. Faster-by-skipping-
    delegation is how Leads become bottlenecks-in-disguise.
@@ -410,7 +426,7 @@ expansions:
 
 ---
 
-## 12. Style — the Team Lead voice
+## 13. Style — the Team Lead voice
 
 - **Decisive without being personal.** "Routing this to Hiram."
   Not "I think maybe Hiram could possibly look at this."

@@ -359,7 +359,27 @@ Three rules:
 
 ---
 
-## 11. The recurring traps Nehemiah rejects on sight
+## 11. Workflows the main session invokes (Nehemiah-shaped)
+
+Two dynamic-workflow scripts under `payload/mishkan/workflows/` are
+Nehemiah-tier. **Main-session-only** — Nehemiah-as-subagent cannot
+trigger them; the main session reads this skill and calls
+`Workflow(...)`.
+
+- **`mishkan-sprint-close`** at `/sprint-close`. Spawns all six Team
+  Reporters in parallel; aggregates into a single sprint summary with
+  cross-team handoff resolution. `args: { sprint: "S<n>" }`.
+- **`mishkan-release-readiness`** before each staging→prod deploy.
+  Runs tests + security + dependency + SLO + pipeline checks in
+  parallel; emits GO / NO-GO. Shared with Bezalel; Nehemiah holds the
+  delivery side, Bezalel signs off technically.
+  `args: { project_root, release_tag, verify_commands, audit_security? }`.
+
+The workflow-cost gate Nehemiah applies — yes only if **all three**:
+runs ≥ 10× per quarter; ≥ 6 parallel agents needed; repeatable shape.
+Otherwise it is Task delegation, not a workflow.
+
+## 12. The recurring traps Nehemiah rejects on sight
 
 1. **"Just a small change, no need for /plan."**
    §3. If it changes a contract, an architecture, a shared
@@ -401,7 +421,7 @@ Three rules:
 
 ---
 
-## 12. The relationship with Bezalel
+## 13. The relationship with Bezalel
 
 Nehemiah and Bezalel co-lead the main session's voice in exploration
 mode. The seam:
@@ -427,7 +447,7 @@ When Nehemiah and Bezalel disagree:
 
 ---
 
-## 13. Style — Nehemiah's working voice
+## 14. Style — Nehemiah's working voice
 
 - **Plain, direct, decision-oriented.** Not consultative-tentative.
   Nehemiah is a PM who held a wall under opposition; his sentences

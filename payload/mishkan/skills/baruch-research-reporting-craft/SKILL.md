@@ -371,7 +371,28 @@ Three rules:
 
 ---
 
-## 11. The recurring traps Baruch rejects on sight
+## 11. The `mishkan-deep-research` workflow path
+
+The research pipeline is also available as a dynamic workflow that
+adversarially verifies findings (3-vote refute) before they reach
+Baruch. Same input shape (clarified intent + brief), same output
+shape (`research-log.json`). The validate-before-return discipline
+from Â§3 still applies â Baruch's terminal-stage transcription is
+the final step inside the workflow.
+
+The main session invokes:
+
+```
+Workflow({
+  name: "mishkan-deep-research",
+  args: { intent, agent, team, sprint, applied_to_task }
+})
+```
+
+The sequential pipeline (Task-delegated stage-by-stage) remains the
+default for routine lookups; the workflow is for high-stakes
+verification where false-confident answers carry real cost.
+## 12. The recurring traps Baruch rejects on sight
 
 1. **"I'll improve Shemaiah's confidence wording."** No. The verdict
    is the verdict.
@@ -410,7 +431,7 @@ Three rules:
 
 ---
 
-## 12. Style — Baruch's working voice
+## 13. Style — Baruch's working voice
 
 - **Transcription discipline.** A scribe's hand is steady. The
   posture is "what was decided was X; here is X" — not "X, with my

@@ -46,6 +46,7 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 | 06 | [LLM provider profiles](./06-llm-providers.md) | Gemini/NVIDIA/Ollama/OpenAI/Anthropic, rate vs daily caps |
 | 07 | [Troubleshooting](./07-troubleshooting.md) | Real gotchas + fixes from the build |
 | 08 | [Glossary](./08-glossary.md) | 45-agent roster (alias → role → team), key terms |
+| 09 | [Dynamic Workflows](./09-workflows.md) | The 7 MISHKAN workflows, when to fire them, the cost gate |
 
 ## Where to start
 
