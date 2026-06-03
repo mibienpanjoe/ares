@@ -1,4 +1,4 @@
-# MISHKAN — Agent File Spec (Track 1 conformance)
+# MISHKAN — Agent File Spec
 
 > The shape every agent file under `payload/mishkan/agents/` follows.
 > Conforms to Anthropic's authoritative subagent spec
