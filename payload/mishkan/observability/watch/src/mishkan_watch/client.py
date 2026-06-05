@@ -12,11 +12,26 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 
 DEFAULT_SOCKET = Path(os.path.expanduser("~/.claude/mishkan/run/watch.sock"))
+DEBUG_LOG = Path(os.path.expanduser("~/.claude/mishkan/logs/_tui-debug.log"))
+
+
+def _dlog(msg: str) -> None:
+    """Append-only diagnostic log so we can see what the TUI actually does
+    in production. Fail-open."""
+    try:
+        DEBUG_LOG.parent.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(tz=timezone.utc).strftime("%H:%M:%S.%f")[:-3]
+        with open(DEBUG_LOG, "a") as fh:
+            fh.write(f"[{ts}] {msg}\n")
+    except Exception:
+        return
 
 
 class DaemonClient:
@@ -54,11 +69,14 @@ class DaemonClient:
 
     async def _run_with_backoff(self) -> None:
         delay = 1.0
+        _dlog(f"client._run_with_backoff start socket={self.socket_path}")
         while not self._stop.is_set():
             try:
                 await self._connect_and_read()
+                _dlog("client._connect_and_read returned cleanly")
                 delay = 1.0  # reset on clean exit
             except Exception as e:
+                _dlog(f"client EXCEPTION in connect_and_read: {type(e).__name__}: {e}\n{traceback.format_exc()}")
                 if self._on_status:
                     await self._on_status(f"daemon offline: {e}")
             await asyncio.sleep(delay)
@@ -66,33 +84,48 @@ class DaemonClient:
 
     async def _connect_and_read(self) -> None:
         if not self.socket_path.exists():
+            _dlog(f"client: socket {self.socket_path} MISSING")
             raise FileNotFoundError(f"socket {self.socket_path} not found")
         # The snapshot frame can exceed asyncio's default 64 KB readline
         # limit when many sessions × many recent_events are aggregated.
         # 16 MB is generous enough for any realistic harness state.
+        _dlog("client: opening unix connection limit=16MB")
         self._reader, self._writer = await asyncio.open_unix_connection(
             str(self.socket_path), limit=2 ** 24
         )
+        _dlog("client: connected")
         if self._on_status:
             await self._on_status("connected")
         # Optional: announce subscription. Server accepts and ignores for now.
         try:
             self._writer.write(b'{"op":"subscribe"}\n')
             await self._writer.drain()
-        except Exception:
-            pass
+            _dlog("client: subscribe sent")
+        except Exception as e:
+            _dlog(f"client: subscribe send failed: {e}")
+        frames_seen = {"snapshot": 0, "delta": 0, "heartbeat": 0, "other": 0}
         try:
             while not self._stop.is_set():
                 line = await self._reader.readline()
                 if not line:
+                    _dlog("client: readline got empty (closed)")
                     raise ConnectionError("daemon closed connection")
+                _dlog(f"client: readline got {len(line)} bytes")
                 try:
                     frame = json.loads(line)
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    _dlog(f"client: json decode failed: {e}; head={line[:120]!r}")
                     continue
+                ftype = frame.get("type", "other")
+                frames_seen[ftype] = frames_seen.get(ftype, 0) + 1
+                _dlog(f"client: frame type={ftype} totals={frames_seen}")
                 if self._on_frame:
-                    await self._on_frame(frame)
+                    try:
+                        await self._on_frame(frame)
+                    except Exception as e:
+                        _dlog(f"client: _on_frame raised: {type(e).__name__}: {e}\n{traceback.format_exc()}")
         finally:
+            _dlog(f"client: loop exiting frames_seen={frames_seen}")
             try:
                 if self._writer:
                     self._writer.close()

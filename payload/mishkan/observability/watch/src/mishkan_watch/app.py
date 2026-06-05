@@ -19,7 +19,7 @@ from textual.containers import Container
 from textual.widgets import Footer, Header, Static, TabbedContent, TabPane
 from rich.text import Text
 
-from .client import DEFAULT_SOCKET, DaemonClient
+from .client import DEFAULT_SOCKET, DaemonClient, _dlog
 from .tabs.activity import ActivityTab
 from .tabs.agents import AgentsTab
 from .tabs.knowledge import KnowledgeTab
@@ -94,11 +94,18 @@ class MishkanWatch(App):
         ftype = frame.get("type")
         if ftype == "snapshot":
             state = frame.get("state") or {}
+            sessions_in_snap = len((state or {}).get("sessions") or {})
+            _dlog(f"app: snapshot sessions={sessions_in_snap}")
             self._sync_totals_from_snapshot(state)
-            for tab in self._all_tabs():
+            tabs = self._all_tabs()
+            _dlog(f"app: dispatching snapshot to {len(tabs)} tabs")
+            for tab in tabs:
                 try:
                     tab.apply_snapshot(state)
-                except Exception:
+                    _dlog(f"app: {type(tab).__name__}.apply_snapshot OK")
+                except Exception as e:
+                    import traceback as _tb
+                    _dlog(f"app: {type(tab).__name__}.apply_snapshot FAILED: {e}\n{_tb.format_exc()}")
                     continue
             self._refresh_status_bar()
         elif ftype == "delta":
@@ -107,7 +114,9 @@ class MishkanWatch(App):
             for tab in self._all_tabs():
                 try:
                     tab.apply_event(event)
-                except Exception:
+                except Exception as e:
+                    import traceback as _tb
+                    _dlog(f"app: {type(tab).__name__}.apply_event FAILED for type={event.get('type')}: {e}")
                     continue
             self._refresh_status_bar()
         elif ftype == "heartbeat":
