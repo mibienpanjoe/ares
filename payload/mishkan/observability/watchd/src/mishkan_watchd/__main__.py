@@ -20,7 +20,8 @@ from pathlib import Path
 from .lifecycle import install_systemd_user_unit
 from .server import WatchdServer
 from .state import HarnessState
-from .sources import bus_tail, mcp_probe, session_discover, session_tail, worktree_poll
+from .sources import (bus_tail, cognee_poll, mcp_probe, session_discover,
+                       session_tail, worktree_poll)
 
 
 HOME = Path(os.path.expanduser("~"))
@@ -87,6 +88,7 @@ async def _run(log_dir: Path, projects_dir: Path, socket_path: Path) -> None:
         asyncio.create_task(worktree_poll.run(queue, _project_paths_provider(state)),
                             name="worktree_poll"),
         asyncio.create_task(mcp_probe.run(queue, projects_dir), name="mcp_probe"),
+        asyncio.create_task(cognee_poll.run(queue, projects_dir), name="cognee_poll"),
         asyncio.create_task(session_tail.run(queue, _active_sessions_provider(state)),
                             name="session_tail"),
     ]

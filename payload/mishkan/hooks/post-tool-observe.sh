@@ -212,6 +212,18 @@ case "$tool" in
     bus_emit "$session" "cron_event" "$tool" "$outcome" "$payload"
     ;;
 
+  Workflow)
+    wf_name="$(printf '%s' "$INPUT" | jq -r '.tool_input.name // empty' 2>/dev/null)"
+    wf_script="$(printf '%s' "$INPUT" | jq -r '.tool_input.scriptPath // empty' 2>/dev/null)"
+    run_id="$(printf '%s' "$INPUT" | jq -r '.tool_response.runId? // empty' 2>/dev/null)"
+    if [ -z "$run_id" ]; then
+      run_id="wf-$(date +%s%N 2>/dev/null || date +%s)"
+    fi
+    payload="$(jq -cn --arg n "$wf_name" --arg s "$wf_script" --arg r "$run_id" \
+      '{name:$n, scriptPath:$s, run_id:$r, workflow_id:$r}')"
+    bus_emit "$session" "workflow_start" "$tool" "$outcome" "$payload"
+    ;;
+
 esac
 
 # ---------------------------------------------------------------------------

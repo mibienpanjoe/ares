@@ -140,7 +140,112 @@ Tabs > Tab.-active {
     padding: 0 1;
 }
 
-/* ─── Generic placeholders for stub tabs (Phase 4) ──────────────── */
+/* ─── Tab: Agents ──────────────────────────────────────────────── */
+
+#agents-row {
+    layout: horizontal;
+    height: 100%;
+}
+
+#agents-tree {
+    width: 22%;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#agents-center {
+    width: 53%;
+    layout: vertical;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#agents-errors {
+    width: 25%;
+    layout: vertical;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#agents-table {
+    height: 1fr;
+}
+
+/* ─── Tab: Workflows ───────────────────────────────────────────── */
+
+#workflows-row {
+    layout: horizontal;
+    height: 100%;
+}
+
+#workflows-list {
+    width: 30%;
+    layout: vertical;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#workflows-detail {
+    width: 70%;
+    layout: vertical;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#workflows-listview {
+    height: 1fr;
+}
+
+#workflows-tree {
+    height: 1fr;
+}
+
+/* ─── Tab: Knowledge ───────────────────────────────────────────── */
+
+#knowledge-stores {
+    layout: horizontal;
+    height: 30%;
+}
+
+.cognee-card {
+    width: 50%;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 1 2;
+}
+
+#knowledge-ops {
+    height: 40%;
+    layout: vertical;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#knowledge-mcp {
+    height: 30%;
+    layout: vertical;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#knowledge-ops-table, #knowledge-mcp-table {
+    height: 1fr;
+}
+
+.panel-title {
+    color: $color-dim;
+    text-style: bold;
+    height: 1;
+}
+
+/* ─── Generic placeholders ─────────────────────────────────────── */
 
 .stub {
     content-align: center middle;
