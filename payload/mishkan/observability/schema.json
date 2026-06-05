@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mishkan.dev/observability/schema.json",
+  "title": "MISHKAN observability event",
+  "description": "One NDJSON line per event under ~/.claude/mishkan/logs/<session-id>.jsonl. Discriminated by the `type` field. Backward-compatible with the original post-tool-observe.sh shape: every event still carries `session`, `tool_calls`, `outcome`, `timestamp` so old consumers keep working; new consumers prefer `ts`, `project`, `type`, and the type-specific fields.",
+  "type": "object",
+  "required": ["ts", "session", "type"],
+  "properties": {
+    "ts": {"type": "string", "description": "UTC ISO-8601 with ms precision"},
+    "session": {"type": "string", "description": "Claude Code session id (hook payload)"},
+    "project": {"type": "string", "description": "pwd at emit time (project root if discernible)"},
+    "agent": {"type": ["string", "null"], "description": "subagent name when in a Task call; null for main session"},
+    "subagent_id": {"type": ["string", "null"], "description": "Task tool agentId, when known"},
+    "type": {
+      "type": "string",
+      "enum": [
+        "tool_call", "hook_fire", "agent_spawn", "agent_complete",
+        "inter_agent", "skill_invoke", "plan", "permission",
+        "compaction", "reporter_milestone",
+        "file_change", "error", "worktree_change",
+        "web_query", "mcp_server", "cron_event",
+        "cognee_op", "graphify_scan", "graphify_query",
+        "token_usage",
+        "workflow_start", "workflow_phase", "workflow_agent_call",
+        "workflow_agent_result", "workflow_stage",
+        "workflow_barrier_wait", "workflow_error", "workflow_complete"
+      ]
+    },
+    "tool": {"type": "string"},
+    "outcome": {"type": "string", "enum": ["completed", "blocked", "errored"]},
+    "tokens_in": {"type": "integer", "minimum": 0},
+    "tokens_out": {"type": "integer", "minimum": 0},
+    "duration_ms": {"type": "integer", "minimum": 0},
+    "payload": {"type": "object", "description": "type-specific extras"},
+
+    "tool_calls": {"type": "array", "description": "legacy: array form of `tool` for back-compat", "items": {"type": "string"}},
+    "timestamp": {"type": "string", "description": "legacy: second-precision ISO-8601, kept for back-compat"},
+    "team": {"type": ["string", "null"]},
+    "sprint": {"type": ["string", "null"]},
+    "tokens_input": {"type": "integer", "description": "legacy alias of tokens_in"},
+    "tokens_cached": {"type": "integer"},
+    "tokens_output": {"type": "integer", "description": "legacy alias of tokens_out"},
+    "cost": {"type": "number"},
+    "cognee_writes": {"type": "integer"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"type": {"const": "file_change"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["path", "op"],
+            "properties": {
+              "path": {"type": "string"},
+              "op": {"type": "string", "enum": ["write", "edit", "multiedit"]},
+              "lines_added": {"type": "integer", "minimum": 0},
+              "lines_removed": {"type": "integer", "minimum": 0}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "agent_spawn"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["subagent_type"],
+            "properties": {
+              "subagent_type": {"type": "string"},
+              "description": {"type": "string"},
+              "model": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "hook_fire"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["hook"],
+            "properties": {
+              "hook": {"type": "string", "description": "hook name: ira, model-route, graphify-nudge, trace, observe"},
+              "decision": {"type": "string", "enum": ["allow", "deny", "advise", "ok", "blocked"]},
+              "reason": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "skill_invoke"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["skill"],
+            "properties": {
+              "skill": {"type": "string"},
+              "args": {"type": ["string", "null"]}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "plan"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "phase": {"type": "string", "enum": ["enter", "exit"]},
+              "approved": {"type": ["boolean", "null"]},
+              "plan_excerpt": {"type": "string", "description": "first ~200 chars of plan content, when present"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "web_query"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {
+              "kind": {"type": "string", "enum": ["fetch", "search"]},
+              "query": {"type": "string"},
+              "url": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "cron_event"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+              "action": {"type": "string", "enum": ["create", "delete", "list", "fire"]},
+              "cron_id": {"type": ["string", "null"]},
+              "schedule": {"type": ["string", "null"]}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "error"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["message"],
+            "properties": {
+              "message": {"type": "string"},
+              "severity": {"type": "string", "enum": ["warning", "soft", "hard"], "default": "soft"},
+              "context": {"type": "string", "description": "where the error surfaced (tool name, hook name, etc.)"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "permission"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["tool", "decision"],
+            "properties": {
+              "tool": {"type": "string"},
+              "decision": {"type": "string", "enum": ["allow", "deny", "ask"]},
+              "reason": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "token_usage"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string"},
+              "tokens_in": {"type": "integer", "minimum": 0},
+              "tokens_out": {"type": "integer", "minimum": 0},
+              "cache_read": {"type": "integer", "minimum": 0},
+              "cache_write": {"type": "integer", "minimum": 0},
+              "cost_estimate_usd": {"type": "number", "minimum": 0}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -19,6 +19,15 @@
             "command": "python3 {{MISHKAN}}/hooks/model-route.py"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash {{MISHKAN}}/hooks/pre-tool-trace.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [

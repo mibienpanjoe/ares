@@ -23,6 +23,18 @@ VALID = {"opus", "sonnet", "haiku"}
 SUBAGENT_TOOLS = {"Task", "Agent"}
 YAML = os.path.join(os.path.dirname(__file__), "..", "config", "model-routing.yaml")
 
+# Make the observability bus importable; fail-open if it isn't (older harness
+# installs, missing payload, broken path). Never block delegation on a bus
+# import error.
+_BUS_DIR = os.path.join(os.path.dirname(__file__), "..", "observability")
+if _BUS_DIR not in sys.path:
+    sys.path.insert(0, _BUS_DIR)
+try:
+    from bus import emit as _bus_emit  # type: ignore
+except Exception:
+    def _bus_emit(*_args, **_kwargs):  # noqa: ANN001
+        return None
+
 
 def parse_routing(path):
     """Minimal YAML reader for this file's shape (no external deps).
@@ -59,6 +71,7 @@ def main():
 
     tool = payload.get("tool_name", "")
     tin = payload.get("tool_input")
+    session = payload.get("session_id", "unknown")
     if tool not in SUBAGENT_TOOLS or not isinstance(tin, dict):
         return
 
@@ -75,6 +88,17 @@ def main():
     # Foreign agents (e.g. aiobi-ops, Explore) keep their own frontmatter model —
     # never downgrade them via an unlisted fallback.
     if subagent not in agents:
+        _bus_emit(
+            session,
+            "hook_fire",
+            tool=tool,
+            outcome="completed",
+            payload={
+                "hook": "model-route",
+                "decision": "ok",
+                "reason": f"{subagent} not in routing map (foreign agent kept own model)",
+            },
+        )
         return
     model = agents[subagent]
     if model not in VALID:
@@ -82,6 +106,14 @@ def main():
 
     updated = dict(tin)
     updated["model"] = model
+    _bus_emit(
+        session,
+        "hook_fire",
+        tool=tool,
+        outcome="completed",
+        agent=subagent,
+        payload={"hook": "model-route", "decision": "allow", "reason": f"{subagent} -> {model}"},
+    )
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",

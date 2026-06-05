@@ -17,8 +17,14 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
+# Source observability bus (fail-open if missing).
+MISHKAN_HOME_RES="${MISHKAN_HOME:-$HOME/.claude/mishkan}"
+# shellcheck disable=SC1091
+source "${MISHKAN_HOME_RES}/observability/bus.sh" 2>/dev/null || true
+
 tool_name="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)"
 file_path="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
+session_id="$(printf '%s' "$INPUT" | jq -r '.session_id // "unknown"' 2>/dev/null)"
 
 # Gather the content being written, across Write/Edit/MultiEdit shapes.
 content="$(printf '%s' "$INPUT" | jq -r '
@@ -33,6 +39,10 @@ content="$(printf '%s' "$INPUT" | jq -r '
 
 deny() {
   # PreToolUse deny via structured output.
+  if command -v bus_emit >/dev/null 2>&1; then
+    bus_emit "$session_id" "hook_fire" "$tool_name" "blocked" \
+      "$(jq -cn --arg r "$1" '{hook:"ira", decision:"deny", reason:$r}')"
+  fi
   jq -n --arg reason "$1" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
@@ -145,6 +155,12 @@ fi
 if printf '%s' "$content" | grep -Eiq 'access-control-allow-origin["'"'"'[:space:]]*[:=][[:space:]]*["'"'"']?\*' \
    && printf '%s' "$content" | grep -Eiq 'access-control-allow-credentials["'"'"'[:space:]]*[:=][[:space:]]*["'"'"']?true'; then
   deny "Mishmar/Ira: CORS '*' origin together with credentials:true is forbidden by the CORS spec and leaks credentials. Pin explicit origins. (rules/common/security.md, OWASP API Top 10)"
+fi
+
+# Reached the end with no deny: emit allow hook_fire telemetry.
+if command -v bus_emit >/dev/null 2>&1; then
+  bus_emit "$session_id" "hook_fire" "$tool_name" "completed" \
+    '{"hook":"ira","decision":"allow"}'
 fi
 
 exit 0
