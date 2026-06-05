@@ -30,6 +30,11 @@ class AgentsTab(Container):
         self._history: dict[tuple[str, str], deque[dict[str, Any]]] = {}
         self._errors: deque[dict[str, Any]] = deque(maxlen=50)
         self._selected: Optional[tuple[str, str]] = None  # (session, agent) | None
+        # Per-session current active subagent. None == main. Set on
+        # agent_spawn, cleared on agent_complete. Bus events that carry
+        # agent: null are attributed to this agent so the per-agent view
+        # actually contains the work done while that subagent was alive.
+        self._current_agent: dict[str, Optional[str]] = {}
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="agents-row"):
@@ -54,12 +59,19 @@ class AgentsTab(Container):
 
     def apply_snapshot(self, state: dict[str, Any]) -> None:
         self._state = state
-        # Build history from snapshot's recent_events
+        # Build history from snapshot's recent_events. Walk events in ts
+        # order across all sessions so the per-session current_agent stack
+        # is rebuilt in the order events actually occurred.
         self._history.clear()
         self._errors.clear()
+        self._current_agent.clear()
+        all_events: list[dict[str, Any]] = []
         for sid, sess in (state.get("sessions") or {}).items():
             for ev in (sess.get("recent_events") or []):
-                self._ingest_event(ev)
+                all_events.append(ev)
+        all_events.sort(key=lambda e: e.get("ts") or "")
+        for ev in all_events:
+            self._ingest_event(ev)
         self._rebuild_tree()
         self._render_errors()
         if self._selected:
@@ -75,8 +87,17 @@ class AgentsTab(Container):
             self._render_errors()
         if self._selected:
             sid, agent = self._selected
-            if ev.get("session") == sid and (ev.get("agent") == agent or agent == "(main)"):
-                self._render_history(sid, agent)
+            if ev.get("session") == sid:
+                # An event is "for" the selected agent if it was attributed
+                # to that agent by _ingest_event. Re-derive: explicit agent
+                # tag wins, else the session's current_agent at the moment
+                # this event was processed (already applied just above).
+                explicit = ev.get("agent")
+                effective = explicit or self._current_agent.get(sid) or "(main)"
+                if effective == agent:
+                    # Append-only update — no DataTable.clear + re-fill
+                    # per event. Vastly cheaper for tool-call bursts.
+                    self._append_history_row(ev)
 
     def _mutate_state(self, ev: dict[str, Any]) -> None:
         try:
@@ -107,13 +128,30 @@ class AgentsTab(Container):
     def _ingest_event(self, ev: dict[str, Any]) -> None:
         try:
             sid = ev.get("session")
-            agent = ev.get("agent") or "(main)"
             if not sid:
                 return
-            key = (sid, agent)
+            etype = ev.get("type")
+            explicit = ev.get("agent")
+            # Maintain per-session current_agent so subsequent agent: null
+            # events are attributed correctly. Subagents in Claude Code run
+            # one-at-a-time per parent session in practice, so a flat
+            # "current agent" tracks the common case cleanly.
+            if etype == "agent_spawn":
+                name = explicit or (ev.get("payload") or {}).get("subagent_type")
+                if name:
+                    self._current_agent[sid] = name
+                    tag = name
+                else:
+                    tag = "(main)"
+            elif etype == "agent_complete":
+                self._current_agent.pop(sid, None)
+                tag = explicit or "(main)"
+            else:
+                tag = explicit or self._current_agent.get(sid) or "(main)"
+            key = (sid, tag)
             buf = self._history.setdefault(key, deque(maxlen=50))
             buf.append(ev)
-            if ev.get("type") == "error":
+            if etype == "error":
                 self._errors.append(ev)
         except Exception:
             return
@@ -157,6 +195,7 @@ class AgentsTab(Container):
             self._render_history(sid, agent)
 
     def _render_history(self, sid: str, agent: str) -> None:
+        """Full rebuild — used on selection change and on snapshot."""
         try:
             table = self.query_one("#agents-table", DataTable)
         except Exception:
@@ -164,20 +203,38 @@ class AgentsTab(Container):
         table.clear()
         events = self._history.get((sid, agent), deque())
         for ev in list(events)[-50:]:
-            ts = (ev.get("ts") or "")[11:19]
-            etype = ev.get("type", "?")
-            tool = ev.get("tool") or "-"
-            outcome = ev.get("outcome") or "-"
-            dur = ev.get("duration_ms") or 0
-            style = "red" if outcome == "errored" else (
-                "yellow" if outcome == "blocked" else "white")
-            table.add_row(
-                Text(ts, style="dim"),
-                Text(etype, style=style),
-                Text(str(tool)[:14]),
-                Text(str(outcome)),
-                Text(f"{dur}ms" if dur else "-", style="dim"),
-            )
+            self._add_history_row(table, ev)
+
+    def _append_history_row(self, ev: dict[str, Any]) -> None:
+        """Incremental update — append one row to the existing table."""
+        try:
+            table = self.query_one("#agents-table", DataTable)
+        except Exception:
+            return
+        self._add_history_row(table, ev)
+        # Keep table bounded: drop the oldest row if we exceed 50.
+        try:
+            if table.row_count > 50:
+                first_key = list(table.rows.keys())[0]
+                table.remove_row(first_key)
+        except Exception:
+            pass
+
+    def _add_history_row(self, table: DataTable, ev: dict[str, Any]) -> None:
+        ts = (ev.get("ts") or "")[11:19]
+        etype = ev.get("type", "?")
+        tool = ev.get("tool") or "-"
+        outcome = ev.get("outcome") or "-"
+        dur = ev.get("duration_ms") or 0
+        style = "red" if outcome == "errored" else (
+            "yellow" if outcome == "blocked" else "white")
+        table.add_row(
+            Text(ts, style="dim"),
+            Text(etype, style=style),
+            Text(str(tool)[:14]),
+            Text(str(outcome)),
+            Text(f"{dur}ms" if dur else "-", style="dim"),
+        )
 
     def _render_errors(self) -> None:
         try:
