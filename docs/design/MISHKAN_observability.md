@@ -793,7 +793,103 @@ Runtime data:
 
 All runtime paths already gitignored under `**/logs/`, `**/*.jsonl`.
 
-## 10. Phasing
+## 10. Installation contract
+
+What the existing `npx mishkan-harness install` ships automatically vs.
+what is opt-in via a separate runtime install. The contract is split by
+**runtime dependency**, not by phase number — anything in pure shell or
+that runs as a one-shot hook is in the Node installer's reach; anything
+that requires Python or a long-running process is opt-in.
+
+### 10.1 Auto-installed (npx mishkan-harness install)
+
+Everything below ships when the engineer runs `npx mishkan-harness install`.
+No additional runtime required.
+
+- **Hook scripts** — `bus.sh`, `pre-tool-trace.sh`, the enriched
+  `post-tool-observe.sh`, the one-line emitter additions in
+  `model-route.py` and `pre-tool-security.sh`. All shell, all already
+  reach `~/.claude/mishkan/hooks/` via the existing payload sync.
+- **Hook fragment merge** into `settings.json` — already handled by the
+  installer's hook-merge step; no new logic needed beyond declaring the
+  new hooks in the fragment.
+- **Token usage parser** (`payload/mishkan/observability/usage_parser.py`)
+  — Python, but invoked one-shot from the PostToolUse hook (not a
+  daemon). Requires Python 3 available; degrades gracefully to a no-op
+  when Python is missing.
+- **Event schema** (`payload/mishkan/observability/schema.json`) — pure
+  reference, no runtime.
+
+Effect: immediately after install, all 25+ event types start landing in
+`~/.claude/mishkan/logs/<session>.jsonl`. The engineer can `tail -f` or
+pipe to `jq` for primitive observability without the daemon or TUI.
+
+### 10.2 Opt-in (uv tool install)
+
+The daemon and TUI require Python 3.11+ with `uv` available. The Node
+installer does NOT bring them up automatically. Two reasons:
+
+1. Node→Python orchestration would force `uv` (or `pip`) as a hard
+   prerequisite on every harness install, even for engineers who don't
+   want the TUI.
+2. The daemon is long-running. Auto-starting it on install would force a
+   lifecycle decision (systemd-user vs. tmux vs. shell autostart) that
+   belongs to the engineer.
+
+The installer ends with a detection + offer flow:
+
+```
+[uv detected] Install observability stack (daemon + TUI)? [Y/n]
+  → uv tool install --from ~/.claude/mishkan/observability/watchd mishkan-watchd
+  → uv tool install --from ~/.claude/mishkan/observability/watch  mishkan-watch
+
+[uv missing] Observability TUI requires uv.
+  Install it: curl -LsSf https://astral.sh/uv/install.sh | sh
+  Then run:   npx mishkan-harness install --observability
+```
+
+The `--observability` flag re-runs only the opt-in step.
+
+### 10.3 Daemon lifecycle
+
+Daemon start is always manual; the installer never starts a long-running
+process. After opt-in install completes:
+
+```
+✓ mishkan-watch installed
+  Start the daemon: mishkan-watchd start
+  Open the TUI:     mishkan-watch
+```
+
+For engineers who want auto-start, a follow-up command:
+
+```
+mishkan-watchd install-service     # generates ~/.config/systemd/user/mishkan-watchd.service
+```
+
+This stays explicit — the engineer chooses whether a daemon lives across
+reboots.
+
+### 10.4 Uninstall
+
+`npx mishkan-harness uninstall` removes the harness payload but does NOT
+touch the `uv tool` installs. Symmetric to install: opt-in remains
+engineer-managed. The uninstaller prints:
+
+```
+Observability stack installed via uv tool — remove manually if desired:
+  uv tool uninstall mishkan-watch mishkan-watchd
+```
+
+### 10.5 Backward compatibility
+
+The Phase 1 hook enrichments are **additive** to the existing
+`post-tool-observe.sh` event shape (§4.4). Any current consumer that
+reads only the original fields continues to work. Older harness installs
+that have not been refreshed still emit valid (sparser) events; the
+daemon handles missing fields by falling back to `null` / `unknown`.
+
+## 11. Phasing
 
 ### Phase 1 — Bus enrichment, cheap event types (target: 1 working session)
 
@@ -864,7 +960,7 @@ the TUI; Phase 2 alone lets `journalctl`-style viewing via a small CLI
 client; Phase 3 ships the live TUI experience; Phase 4 lights up the two
 deeper tabs.
 
-## 11. Honest gaps
+## 12. Honest gaps
 
 - **Token attribution is parsed from session JSONL `usage` blocks** (Phase 1.5)
   — accurate when the model reports usage, `?` when it doesn't. Cache hit
@@ -892,7 +988,7 @@ deeper tabs.
   visibly; if Claude Code changes how compactions are logged, the
   `compaction` event type may go silent until the parser is updated.
 
-## 12. Out of scope (explicit)
+## 13. Out of scope (explicit)
 
 - Prometheus / OpenTelemetry exporters.
 - Persistent metrics store (the bus IS the historical record; rotation is
@@ -909,7 +1005,7 @@ deeper tabs.
   added insight. Activity stream carries summaries + JSONL paths.
 - **GC / Python internals / framework telemetry.** Not our layer.
 
-## 13. References
+## 14. References
 
 - `payload/mishkan/hooks/post-tool-observe.sh` — the existing seed.
 - `payload/mishkan/hooks/model-route.py` — first hook to gain the emitter.
