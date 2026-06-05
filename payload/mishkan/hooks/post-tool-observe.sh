@@ -228,4 +228,14 @@ if [ "$outcome" = "errored" ] || [ "$outcome" = "blocked" ]; then
   bus_emit "$session" "error" "$tool" "$outcome" "$payload"
 fi
 
+# ---------------------------------------------------------------------------
+# Phase 1.5 — token usage parser (best-effort sidecar). Fail-open.
+# Parses the session JSONL `usage` blocks since the tracked byte offset and
+# emits one `token_usage` event per new assistant turn. Synchronous but fast
+# (typical < 50 ms); any error path returns immediately.
+# ---------------------------------------------------------------------------
+if command -v python3 >/dev/null 2>&1 && [ -f "${MISHKAN_HOME_RES}/observability/usage_parser.py" ]; then
+  python3 "${MISHKAN_HOME_RES}/observability/usage_parser.py" "$session" 2>/dev/null || true
+fi
+
 exit 0
