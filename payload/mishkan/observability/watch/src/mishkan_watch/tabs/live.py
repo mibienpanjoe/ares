@@ -140,7 +140,7 @@ class LiveTab(Container):
         self._render_knowledge(state)
 
     def apply_event(self, ev: dict[str, Any]) -> None:
-        # Feed: every event lands here.
+        # Feed: every event lands here. Cheap append, no rebuild.
         try:
             feed = self.query_one("#live-feed", RichLog)
             feed.write(_fmt_event_line(ev))
@@ -149,10 +149,13 @@ class LiveTab(Container):
         # Mirror essential daemon-state mutations so structural panels
         # reflect events that arrive AFTER the initial snapshot.
         self._mutate_state(ev)
-        # Re-render the structural panels on relevant events.
+        # Re-render structural panels ONLY on structural events. tool_call
+        # and token_usage land 10-20/sec in bursts; rebuilding ACTIVE on
+        # every one churned the main event loop. last_tool / last_activity
+        # are nice-to-have but not worth the re-render cost; structural
+        # changes (spawn/complete) are what the panel really shows.
         etype = ev.get("type")
-        if etype in ("agent_spawn", "agent_complete", "tool_call", "token_usage",
-                     "session_start", "session_stop"):
+        if etype in ("agent_spawn", "agent_complete", "session_start", "session_stop"):
             self._render_active(self._state)
         if etype == "worktree_change":
             self._render_worktrees(self._state)

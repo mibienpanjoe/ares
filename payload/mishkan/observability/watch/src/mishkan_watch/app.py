@@ -76,7 +76,11 @@ class MishkanWatch(App):
         yield Footer()
 
     async def on_mount(self) -> None:
-        self.set_interval(1.0, self._refresh_status_bar)
+        # Status bar refresh on a fixed cadence rather than on every event.
+        # In busy periods events fire 10-20/sec; rebuilding the Rich Text
+        # on each was a major source of UI latency. 500 ms ticks feel
+        # live without saturating the loop.
+        self.set_interval(0.5, self._refresh_status_bar)
         self._client = DaemonClient(self._socket_path)
         await self._client.start(self._on_frame, self._on_status)
 
@@ -118,10 +122,10 @@ class MishkanWatch(App):
                     import traceback as _tb
                     _dlog(f"app: {type(tab).__name__}.apply_event FAILED for type={event.get('type')}: {e}")
                     continue
-            self._refresh_status_bar()
+            # Status bar refresh is now driven by the set_interval tick.
+            # On-event refresh removed: it was the main UI-latency culprit.
         elif ftype == "heartbeat":
             self._totals["status"] = "connected"
-            self._refresh_status_bar()
 
     def _all_tabs(self) -> list[Any]:
         out = []
