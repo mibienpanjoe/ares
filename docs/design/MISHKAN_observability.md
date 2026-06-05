@@ -538,6 +538,129 @@ CSS classes + `set_timer` cover every effect below.
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
+**Mockup C — Tab 2: Agents (120 × 40)**
+
+```
+╔═ mishkan-watch ════════╤══════════════════════════════════════════════════════════════╗
+║ ○1 Live  ●2 Agents  ○3 Workflows  ○4 Knowledge  ○5 Activity!       2 sessions  12:03 ║
+╠══ SESSIONS ════════╤══ AGENT HISTORY ══════════════════════════╤══ ERRORS ═══════════╣
+║ ▾ harness          │ time      type        tool/skill   ok ms  tok│ ● bezalel  12:02 ║
+║   ▾ 47a05817…      │ 12:03:22  file_change Edit  +12/-0  ✓   8ms 0│   schema fail   ║
+║     ◉ bezalel  ●   │ 12:03:14  tool_call   Write       … pending  │   field "agent" ║
+║     ● caleb    ●   │ 12:02:33  file_change Write +47/-3 ✓ 280ms 0 │   missing       ║
+║     ○ baruch       │ 12:02:24  hook_fire   ira pre-sec  ✗   3ms 0 │   ─────────     ║
+║     ○ nehemiah     │ 12:02:09  agent_spawn caleb       ✓   0ms 0  │ ● caleb    11:58 ║
+║   ○ ad-008…        │ 12:01:58  hook_fire   ira pre-sec  ✓   2ms 0 │   WebFetch 5xx  ║
+║                    │ 12:01:55  tool_call   Read harness.md ✓ 0  0│   timeout       ║
+║ ▸ aiobi-mail       │ 12:01:42  skill_invoke deep-research ✓ 0   0 │   retry queued  ║
+║   ○ 3f12a8…        │ 12:01:31  plan        Enter   approved 0  0 │   ─────────     ║
+║   (idle)           │ 12:01:18  tool_call   Edit   +3/-1   ✓ 8ms 0│ (no errors      ║
+║                    │ 12:00:55  permission  Bash    allow  ✓ 0  0 │  for the         ║
+║ ▸ aiobi-docs       │ 12:00:42  tool_call   Read   foo.py  ✓ 0  0│  other agents)  ║
+║   (no live agent)  │ 11:59:33  inter_agent caleb→  summary 0  0  │                  ║
+║                    │ ────── older history (scroll) ──────────    │                  ║
+╠════════════════════════════════════════════════════════════════════════════════════════╣
+║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 1 wf       ║
+╠════════════════════════════════════════════════════════════════════════════════════════╣
+║ 1-5 tabs · enter detail · j/k row · tab pane · / filter · q quit · ? help            ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+Color: `◉` selected agent (`$color-focus-ring`), `●` running (`$color-running`),
+`○` idle (`$color-dim`). History rows with `outcome=errored` rendered with
+`$color-error` background at 15%; `outcome=blocked` with `$color-warn`. Errors
+panel right: top-anchored per-agent cards, separator `─────` between cards,
+empty state dim-centered.
+
+**Mockup D — Tab 4: Knowledge (120 × 40)**
+
+```
+╔═ mishkan-watch ════════╤══════════════════════════════════════════════════════════════╗
+║ ○1 Live  ○2 Agents  ○3 Workflows  ●4 Knowledge  ○5 Activity       2 sessions  12:03 ║
+╠══ COGNEE STORES ═══════════════════════════════════════════════════════════════════════╣
+║                                                                                        ║
+║   ╭─ work :7777 ────────────────╮   ╭─ curated :7730 ──────────────╮                  ║
+║   │ ● UP  · 02h14m              │   │ ● UP  · 43h12m               │                  ║
+║   │                             │   │                              │                  ║
+║   │ 1,247 nodes                 │   │   96 nodes                   │                  ║
+║   │ ▁▁▂▃▃▅▆█  +12 last 5min     │   │ ▁▁▁▁▂▂▃▃  +0  last 30min     │                  ║
+║   │ last ingest  12:02:14       │   │ last seed   2026-05-29       │                  ║
+║   │ embeddings: gemini  3072d   │   │ embeddings: ollama  768d     │                  ║
+║   ╰─────────────────────────────╯   ╰──────────────────────────────╯                  ║
+║                                                                                        ║
+╠══ RECENT OPS ═════════════════════════════════════════════════════════════════════════╣
+║ time      store    op      query / path                       ms      Δnodes          ║
+║ 12:03:14  work     search  "graphify token saving"            312     ─               ║
+║ 12:02:38  work     add     ADR D-008 (research-pipe…)         1840    +12             ║
+║ 12:02:04  work     search  "graphify"                         298     ─               ║
+║ 12:01:42  curated  search  "textual TUI patterns"             201     ─               ║
+║ 12:00:55  work     cognify docs/design/MISHKAN_…md             12450  +8              ║
+║ ─── graphify scans/queries ──────────────────────────────────────────────             ║
+║ 11:58:22  harness  scan    full repo                          14200   3892 nodes      ║
+║ 11:55:01  harness  query   "process_payment callers"          45      6 hits          ║
+║                                                                                        ║
+╠══ MCP SERVERS (5) ════════════════════════════════════════════════════════════════════╣
+║ server          status   since      last event                                         ║
+║ cognee-work     ● UP     43h12m     12:03:14 search                                   ║
+║ cognee-curated  ● UP     43h12m     12:01:42 search                                   ║
+║ canva           ✗ DOWN   11:50:22   ─ no event since                                  ║
+║ gmail           ● UP     02h14m     11:32:08 list-comments                            ║
+║ google-drive    ⟳ STALE  ─          12:02:55 last probe ok                           ║
+╠════════════════════════════════════════════════════════════════════════════════════════╣
+║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 1 wf       ║
+╠════════════════════════════════════════════════════════════════════════════════════════╣
+║ 1-5 tabs · enter detail · j/k row · tab pane · / filter · q quit · ? help            ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+Color: store cards bordered in `$color-border-light` when UP, `$color-error`
+when DOWN. Node count in `[bold]` large. Sparkline coloured `$color-accent-2`
+(knowledge domain). Recent ops: `cognify` rows dim, `search` rows normal,
+`add` rows `[bold]` for the writes. MCP table row color from `status`:
+green / red / yellow / dim. `⟳` for STALE (poll deadline missed, not down).
+
+**Mockup E — Tab 5: Activity (120 × 40)**
+
+```
+╔═ mishkan-watch ════════╤══════════════════════════════════════════════════════════════╗
+║ ○1 Live  ○2 Agents  ○3 Workflows  ○4 Knowledge  ●5 Activity!      2 sessions  12:03 ║
+╠══ FILTER ══════════════════════════════════════════════════════════════════════════════╣
+║ / [_____________________]  type: all ▾   agent: all ▾   [clear]            ↓ auto    ║
+╠══ STREAM (unified, all 6 event streams) ══════════════════════════════════════════════╣
+║ 12:03:22  file_change   bezalel  Edit  +12/-0  agents.md                              ║
+║ 12:03:19  hook_fire     ira      pre-sec  ok                                          ║
+║ 12:03:17  mcp_server    canva    DOWN  ─ since 11:50                                  ║
+║ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ║
+║ 12:03:14  error         caleb    schema_fail  field "outcome" missing                 ║
+║ 12:03:11  cron_event    sprint-close   scheduled  next: 14:00                         ║
+║ 12:03:08  web_query     caleb    WebSearch  "MCP protocol spec"                       ║
+║ 12:03:04  compaction    bezalel  88k → 14k  context reset                             ║
+║ 12:03:01  tool_call     bezalel  Write   pending                                      ║
+║ 12:02:56  inter_agent   caleb→bezalel  "analysis complete"                            ║
+║ 12:02:51  agent_spawn   ● levi   launched  wf-D008  phase-2                          ║
+║ 12:02:46  skill_invoke  caleb    deep-research  "graphify"                            ║
+║ 12:02:41  tool_call     caleb    WebFetch  ✓ 1240ms                                   ║
+║ 12:02:38  token_usage   bezalel  12.4k in  380 out  $0.18                             ║
+║ 12:02:33  file_change   bezalel  Write  +47/-3  schema.json                           ║
+║ 12:02:28  plan          bezalel  ExitPlan  approved                                   ║
+║ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ║
+║ ⏸ 12:02:24  permission  bezalel  Bash "rm -rf /tmp/x"  pending                        ║
+║ 12:02:19  worktree+     wf-001   caleb  new                                           ║
+║ 12:02:14  tool_call     caleb    WebFetch  pending                                    ║
+║ ─── older (scroll up) ─────────────────────────────────────────────────              ║
+╠════════════════════════════════════════════════════════════════════════════════════════╣
+║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 1 wf       ║
+╠════════════════════════════════════════════════════════════════════════════════════════╣
+║ 1-5 tabs · / filter focus · t order · End auto · j/k scroll · enter detail · q quit  ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+Color: `error` rows `[bold red]` preceded by `━━━━` separator that breaks
+rhythm. `permission` pending rows prefixed `⏸` in `$color-warn`. `compaction`
+in `[italic dim]` (informational). Auto-scroll indicator top-right: `↓ auto`
+in `$color-running` when active, `⏸ paused` in `$color-dim` when user
+scrolled up. `End` resumes auto.
+
 ### 7.7 Widget mapping
 
 | Pattern | Textual widget | Notes |
