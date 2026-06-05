@@ -1,0 +1,146 @@
+/* MISHKAN observability TUI theme — implements §7.4 of the design doc.
+ * Color tokens, typography, box-drawing weights, focus ring.
+ * Dark-background defaults; --theme light handled separately by App.
+ */
+
+$color-running: #00D4AA;
+$color-idle: #4A5568;
+$color-done: #68D391;
+$color-error: #FC8181;
+$color-warn: #F6AD55;
+$color-info: #63B3ED;
+$color-dim: #4A5568;
+$color-muted: #2D3748;
+$color-accent-1: #B794F4;     /* workflow domain — reserved */
+$color-accent-2: #F687B3;     /* knowledge domain — reserved */
+$color-surface: #1A202C;
+$color-border-heavy: #718096;
+$color-border-light: #2D3748;
+$color-focus-ring: #4299E1;
+$color-bg: #0F1117;
+
+Screen {
+    background: $color-bg;
+    color: white 80%;
+}
+
+Header {
+    dock: top;
+    background: $color-surface;
+    color: white 90%;
+    height: 1;
+}
+
+Footer {
+    dock: bottom;
+    background: $color-surface;
+    color: $color-dim;
+    height: 1;
+}
+
+#status-bar {
+    dock: bottom;
+    height: 1;
+    background: $color-muted;
+    color: white 90%;
+    padding: 0 1;
+    border-top: tall $color-border-light;
+}
+
+TabbedContent {
+    background: $color-bg;
+}
+
+TabPane {
+    padding: 0;
+}
+
+Tabs {
+    background: $color-surface;
+}
+
+Tabs > Tab.-active {
+    color: $color-focus-ring;
+    text-style: bold underline;
+}
+
+/* ─── Tab: Live ─────────────────────────────────────────────────── */
+
+#live-grid {
+    layout: grid;
+    grid-size: 2 2;
+    grid-rows: 1fr auto;
+    grid-columns: 32% 68%;
+    grid-gutter: 0;
+    height: 100%;
+}
+
+#live-active, #live-feed, #live-worktrees, #live-knowledge {
+    border: solid $color-border-light;
+    padding: 0 1;
+    background: $color-surface;
+}
+
+#live-active {
+    column-span: 1;
+    row-span: 1;
+}
+
+#live-feed {
+    column-span: 1;
+    row-span: 2;
+}
+
+#live-worktrees {
+    column-span: 1;
+    row-span: 1;
+    height: 8;
+}
+
+.panel-title {
+    color: $color-dim;
+    text-style: bold;
+}
+
+.agent-line {
+    height: 1;
+}
+
+.agent-line.-running {
+    color: $color-running;
+}
+
+.agent-line.-idle {
+    color: $color-idle;
+}
+
+.agent-line.-errored {
+    color: $color-error;
+}
+
+.agent-line.-focused {
+    background: $color-muted;
+}
+
+/* ─── Tab: Activity ─────────────────────────────────────────────── */
+
+#activity-filter {
+    height: 3;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#activity-stream {
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+/* ─── Generic placeholders for stub tabs (Phase 4) ──────────────── */
+
+.stub {
+    content-align: center middle;
+    color: $color-dim;
+    text-style: italic;
+}
