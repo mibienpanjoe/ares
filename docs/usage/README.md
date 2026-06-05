@@ -38,7 +38,7 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 
 | # | Chapter | What it covers |
 |---|---|---|
-| 01 | [Installation](./01-installation.md) | Prerequisites, `npx mishkan install`, layout, uninstall |
+| 01 | [Installation](./01-installation.md) | Prerequisites, `npx mishkan-harness install`, layout, uninstall |
 | 02 | [Project initialisation](./02-project-init.md) | `/mishkan-init` flow, scope choices, brownfield handling |
 | 03 | [Orchestration](./03-orchestration.md) | Main-session-as-orchestrator, model routing, skills on-demand |
 | 04 | [Memory layer (cognee)](./04-memory-layer.md) | Work + curated stores, `cognify`/`memify`/`search`, UIs |

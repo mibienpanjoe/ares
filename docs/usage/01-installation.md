@@ -62,7 +62,7 @@ node bin/mishkan.js install
 Or via npx (after publishing — not done as of this writing):
 
 ```bash
-npx mishkan install
+npx mishkan-harness install
 ```
 
 What the installer does (read `bin/mishkan.js` for the full list):
