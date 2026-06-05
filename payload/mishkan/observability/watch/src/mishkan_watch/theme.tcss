@@ -64,14 +64,16 @@ Tabs > Tab.-active {
     text-style: bold underline;
 }
 
-/* ─── Tab: Live ─────────────────────────────────────────────────── */
+/* ─── Tab: Live — horizontal split, no grid ─────────────────────── */
 
-#live-grid {
-    layout: grid;
-    grid-size: 2 3;
-    grid-rows: 2fr 1fr 1fr;
-    grid-columns: 35% 65%;
-    grid-gutter: 0;
+#live-row {
+    layout: horizontal;
+    height: 100%;
+}
+
+#live-left {
+    layout: vertical;
+    width: 35%;
     height: 100%;
 }
 
@@ -82,23 +84,20 @@ Tabs > Tab.-active {
 }
 
 #live-active {
-    column-span: 1;
-    row-span: 1;
-}
-
-#live-feed {
-    column-span: 1;
-    row-span: 3;
+    height: 2fr;
 }
 
 #live-worktrees {
-    column-span: 1;
-    row-span: 1;
+    height: 1fr;
 }
 
 #live-knowledge {
-    column-span: 1;
-    row-span: 1;
+    height: 1fr;
+}
+
+#live-feed {
+    width: 65%;
+    height: 100%;
 }
 
 .panel-title {

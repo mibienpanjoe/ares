@@ -12,7 +12,7 @@ from collections import deque
 from typing import Any
 
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import RichLog, Static
 from rich.text import Text
 
@@ -119,11 +119,12 @@ class LiveTab(Container):
         self._feed_buf: deque[Text] = deque(maxlen=MAX_FEED_LINES)
 
     def compose(self) -> ComposeResult:
-        with Container(id="live-grid"):
-            yield Static("", id="live-active")
+        with Horizontal(id="live-row"):
+            with Vertical(id="live-left"):
+                yield Static("", id="live-active")
+                yield Static("", id="live-worktrees")
+                yield Static("", id="live-knowledge")
             yield RichLog(id="live-feed", highlight=False, markup=False, wrap=False)
-            yield Static("", id="live-worktrees")
-            yield Static("", id="live-knowledge")
 
     def on_mount(self) -> None:
         self._render_active({})
@@ -145,6 +146,9 @@ class LiveTab(Container):
             feed.write(_fmt_event_line(ev))
         except Exception:
             pass
+        # Mirror essential daemon-state mutations so structural panels
+        # reflect events that arrive AFTER the initial snapshot.
+        self._mutate_state(ev)
         # Re-render the structural panels on relevant events.
         etype = ev.get("type")
         if etype in ("agent_spawn", "agent_complete", "tool_call", "token_usage",
@@ -154,6 +158,68 @@ class LiveTab(Container):
             self._render_worktrees(self._state)
         if etype in ("mcp_server", "cognee_op"):
             self._render_knowledge(self._state)
+
+    def _mutate_state(self, ev: dict[str, Any]) -> None:
+        """Mirror the subset of daemon-side HarnessState.apply needed for
+        the LIVE tab's structural panels. Idempotent on unknowns."""
+        try:
+            etype = ev.get("type")
+            sid = ev.get("session")
+            sessions = self._state.setdefault("sessions", {})
+            if sid and sid not in sessions:
+                sessions[sid] = {
+                    "session_id": sid,
+                    "project": ev.get("project") or "unknown",
+                    "agents_active": {},
+                    "workflows_active": {},
+                }
+            if etype == "agent_spawn" and sid:
+                name = ev.get("agent") or (ev.get("payload") or {}).get("subagent_type")
+                if name:
+                    sessions[sid].setdefault("agents_active", {})[name] = {
+                        "name": name,
+                        "started": ev.get("ts"),
+                        "last_tool": ev.get("tool"),
+                        "status": "running",
+                    }
+            elif etype == "agent_complete" and sid:
+                name = ev.get("agent")
+                if name:
+                    sessions[sid].get("agents_active", {}).pop(name, None)
+            elif etype == "tool_call" and sid:
+                name = ev.get("agent")
+                if name:
+                    ag = sessions[sid].get("agents_active", {}).get(name)
+                    if ag:
+                        ag["last_tool"] = ev.get("tool")
+                        ag["last_activity"] = ev.get("ts")
+            elif etype == "worktree_change":
+                p = ev.get("payload") or {}
+                path = p.get("path")
+                if path:
+                    worktrees = self._state.setdefault("worktrees", {})
+                    if p.get("op") == "remove":
+                        worktrees.pop(path, None)
+                    else:
+                        worktrees[path] = {
+                            "path": path,
+                            "branch": p.get("branch") or "",
+                            "owner_session": p.get("owner_session"),
+                            "head": p.get("head"),
+                        }
+            elif etype == "mcp_server":
+                p = ev.get("payload") or {}
+                name = p.get("server") or ev.get("tool")
+                if name:
+                    mcps = self._state.setdefault("mcp_servers", {})
+                    existing = mcps.get(name, {"name": name, "url": p.get("url") or ""})
+                    existing["status"] = p.get("status") or existing.get("status", "?")
+                    existing["last_event"] = ev.get("ts")
+                    mcps[name] = existing
+            elif etype == "session_stop" and sid:
+                sessions.pop(sid, None)
+        except Exception:
+            return
 
     # ----- panel renderers ---------------------------------------------------
 

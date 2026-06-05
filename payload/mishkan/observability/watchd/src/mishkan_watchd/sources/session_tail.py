@@ -31,7 +31,14 @@ class _SessionTailer:
         self.session_id = session_id
         self.path = jsonl_path
         self.queue = queue
-        self.offset = 0
+        # Start at end of file — we only care about NEW assistant turns
+        # going forward. Backfilling decades of history would flood the
+        # bus with hundreds of inter_agent / compaction events per
+        # session at daemon start.
+        try:
+            self.offset = jsonl_path.stat().st_size
+        except OSError:
+            self.offset = 0
 
     async def step(self) -> None:
         try:
