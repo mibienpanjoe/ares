@@ -27,54 +27,121 @@ def _iso(ts: float | None = None) -> str:
     return t.strftime("%Y-%m-%dT%H:%M:%S.") + f"{t.microsecond // 1000:03d}Z"
 
 
-def _discover_mcp_servers(projects_dir: Path) -> dict[str, dict[str, str]]:
-    """Read all .mcp.json under ~/.claude/projects/* and the user config.
+def _add(found: dict[str, dict[str, str]], name: str, url: str,
+         transport: str, project: str) -> None:
+    key = f"{name}@{url or 'stdio'}"
+    found.setdefault(key, {
+        "name": name,
+        "url": url,
+        "transport": transport,
+        "project": project,
+    })
 
-    Returns {name: {url, transport, project}}, deduplicated by name+url.
+
+def _parse_servers_block(servers: Any, project: str, found: dict[str, dict[str, str]]) -> None:
+    if not isinstance(servers, dict):
+        return
+    for name, cfg in servers.items():
+        if not isinstance(cfg, dict):
+            continue
+        url = cfg.get("url") or cfg.get("endpoint") or ""
+        transport = cfg.get("transport") or cfg.get("type") or "stdio"
+        _add(found, name, url, transport, project)
+
+
+def _discover_mcp_servers(projects_dir: Path) -> dict[str, dict[str, str]]:
+    """Discover MCP servers from every place Claude Code stores them.
+
+    Returns {name@url: {name, url, transport, project}}.
+
+    Sources, in increasing priority for the same name:
+      1. Project .mcp.json files placed by /mishkan-init at each project
+         root (e.g. /home/ogu/theY4NN/aiobi-mail/.mcp.json). Project
+         paths are read from ~/.claude.json `.projects` keys.
+      2. The legacy ~/.claude/projects/*/.mcp.json glob (most installs
+         do not use this layout but it's cheap to also check).
+      3. ~/.claude.json `.projects.<path>.mcpServers` per-project block
+         (claude mcp add writes here on some installs).
+      4. ~/.claude/settings.json `mcpServers`.
+      5. ~/.claude/mcp-needs-auth-cache.json — exposes claude.ai-side
+         injected MCPs (Gmail, Drive, Canva, …) that don't have a
+         local URL. They appear in the table with transport="claude.ai"
+         and status will be reported as "remote" rather than probed.
     """
     found: dict[str, dict[str, str]] = {}
-    # Per-project .mcp.json
-    for mcp_json in projects_dir.glob("*/.mcp.json"):
+    claude_home = projects_dir.parent  # ~/.claude/
+
+    # (1) — project .mcp.json files. The list of project paths lives in
+    # ~/.claude.json under `.projects`. /mishkan-init writes the .mcp.json
+    # at the project root, NOT in the Claude Code project session dir.
+    home = claude_home.parent  # /home/ogu/
+    claude_json = home / ".claude.json"
+    if claude_json.exists():
         try:
-            data = json.loads(mcp_json.read_text())
+            data = json.loads(claude_json.read_text())
+            project_paths = list((data.get("projects") or {}).keys())
         except Exception:
-            continue
-        servers = data.get("mcpServers") or data.get("servers") or {}
-        if not isinstance(servers, dict):
-            continue
-        for name, cfg in servers.items():
-            if not isinstance(cfg, dict):
+            project_paths = []
+        for p in project_paths:
+            try:
+                mcp_path = Path(p) / ".mcp.json"
+                if not mcp_path.exists():
+                    continue
+                pdata = json.loads(mcp_path.read_text())
+                _parse_servers_block(
+                    pdata.get("mcpServers") or pdata.get("servers"),
+                    project=p, found=found,
+                )
+            except Exception:
                 continue
-            url = cfg.get("url") or cfg.get("endpoint") or ""
-            transport = cfg.get("transport") or cfg.get("type") or "stdio"
-            key = f"{name}@{url or 'stdio'}"
-            found.setdefault(key, {
-                "name": name,
-                "url": url,
-                "transport": transport,
-                "project": str(mcp_json.parent),
-            })
-    # User-level settings.json mcpServers (some installs put MCPs there).
-    user_settings = projects_dir.parent / "settings.json"
+
+    # (2) — legacy glob; covers old layouts where .mcp.json sat alongside
+    # the session JSONLs.
+    try:
+        for mcp_json in projects_dir.glob("*/.mcp.json"):
+            try:
+                data = json.loads(mcp_json.read_text())
+                _parse_servers_block(
+                    data.get("mcpServers") or data.get("servers"),
+                    project=str(mcp_json.parent), found=found,
+                )
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # (3) — ~/.claude.json `.projects.<path>.mcpServers`. claude mcp add
+    # may write here on some installs.
+    if claude_json.exists():
+        try:
+            data = json.loads(claude_json.read_text())
+            for p, pcfg in (data.get("projects") or {}).items():
+                if isinstance(pcfg, dict):
+                    _parse_servers_block(pcfg.get("mcpServers"), project=p, found=found)
+        except Exception:
+            pass
+
+    # (4) — ~/.claude/settings.json `mcpServers`.
+    user_settings = claude_home / "settings.json"
     if user_settings.exists():
         try:
             data = json.loads(user_settings.read_text())
-            servers = data.get("mcpServers") or {}
-            if isinstance(servers, dict):
-                for name, cfg in servers.items():
-                    if not isinstance(cfg, dict):
-                        continue
-                    url = cfg.get("url") or cfg.get("endpoint") or ""
-                    transport = cfg.get("transport") or cfg.get("type") or "stdio"
-                    key = f"{name}@{url or 'stdio'}"
-                    found.setdefault(key, {
-                        "name": name,
-                        "url": url,
-                        "transport": transport,
-                        "project": "user",
-                    })
+            _parse_servers_block(data.get("mcpServers"), project="user", found=found)
         except Exception:
             pass
+
+    # (5) — claude.ai-injected MCPs. No URL → marked transport=claude.ai.
+    needs_auth = claude_home / "mcp-needs-auth-cache.json"
+    if needs_auth.exists():
+        try:
+            data = json.loads(needs_auth.read_text())
+            if isinstance(data, dict):
+                for name, cfg in data.items():
+                    _add(found, name, url="", transport="claude.ai",
+                         project="claude.ai-injected")
+        except Exception:
+            pass
+
     return found
 
 
@@ -113,8 +180,10 @@ async def _probe_tcp(host: str, port: int, timeout: float = 2.0) -> bool:
 
 
 async def _probe_server(cfg: dict[str, str]) -> str:
-    """Returns 'up' or 'down' for a given MCP server config."""
+    """Returns 'up', 'down', 'remote' (claude.ai-side, no probe), or 'unknown'."""
     transport = (cfg.get("transport") or "").lower()
+    if transport == "claude.ai":
+        return "remote"  # injected by claude.ai server-side; not locally probable
     url = cfg.get("url") or ""
     if not url:
         return "unknown"

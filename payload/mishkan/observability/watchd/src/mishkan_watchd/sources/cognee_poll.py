@@ -204,6 +204,25 @@ async def run(queue: asyncio.Queue[dict[str, Any]], projects_dir: Path,
                     "outcome": "completed",
                     "payload": payload,
                 })
+                # Also surface cognee in the MCP servers table — these
+                # are MCP servers even when not declared in .mcp.json,
+                # because the daemon knows about them out of the box.
+                mcp_name = f"cognee-{store}"
+                await queue.put({
+                    "ts": _iso(),
+                    "session": None,
+                    "project": None,
+                    "type": "mcp_server",
+                    "tool": mcp_name,
+                    "outcome": "completed",
+                    "payload": {
+                        "server": mcp_name,
+                        "url": url,
+                        "transport": "http",
+                        "status": "up" if up else "down",
+                        "status_changed": changed,
+                    },
+                })
             await asyncio.sleep(poll_interval)
     except asyncio.CancelledError:
         return
