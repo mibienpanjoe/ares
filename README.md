@@ -22,14 +22,19 @@ It's personal, opinionated infrastructure built around one engineer's standards 
 and shared openly for anyone who wants to try working this way. To make it yours,
 replace one file (your profile) and re-sync; nothing else hardcodes the author.
 
-> **Status:** early and evolving. Used daily, not yet battle-hardened for everyone.
-> The agent fleet, rules, hooks, and installer are complete; the Cognee knowledge
-> graph is opt-in (bring up a local container) and some integration points are
-> marked as such below.
+> **Status:** v0.2.0 — early and evolving. The agent fleet, rules, hooks, and
+> installer are complete. The Cognee knowledge stack (work + curated stores) is
+> ready to bring up locally. Live observability (daemon + Textual TUI) ships as
+> an opt-in stack of two `uv tool install`-able Python packages.
 
 ---
 
-## Why
+## Three pillars
+
+MISHKAN rests on three things that work together. They are independent — you
+can use each without the others — but they compound:
+
+### 1. A disciplined multi-agent organisation
 
 Most "AI coding" is one model in one chat doing everything at once — generating,
 judging its own output, skipping the spec, drifting scope. MISHKAN refuses that:
@@ -38,12 +43,36 @@ judging its own output, skipping the spec, drifting scope. MISHKAN refuses that:
   Modeling → implementation. Agents won't jump to code without the upstream artifacts.
 - **Generation ≠ evaluation.** The agent that writes is never the agent that reviews.
   QA and reporters are structurally separate roles.
-- **Deterministic guardrails.** Secrets, injection, unsafe deserialization, disabled
-  TLS, `:latest` tags, weak hashing — blocked by a hook *before* the write lands,
-  not flagged after.
 - **Security & dependencies are first-class**, not an afterthought audit.
-- **It learns.** Resolved research and decisions become nodes in a knowledge graph
-  (Cognee) that grows through use.
+
+### 2. Deterministic guardrails
+
+Quality and security aren't *requested* of the model — they're **enforced by
+the environment**: path-scoped rules, pre-write security hooks, structural
+separation of generation from review. Secrets, injection, unsafe
+deserialization, disabled TLS, `:latest` tags, weak hashing — blocked by a
+hook *before* the write lands, not flagged after.
+
+### 3. A knowledge stack that grows
+
+MISHKAN is built around **persisting what you learn**, so future sessions
+start where the last one stopped instead of from zero. Three complementary
+layers (see [D-008](docs/design/MISHKAN_decisions.md)):
+
+- **[Cognee work](payload/mishkan/cognee/) (`:7777`)** — per-project semantic
+  graph. ADRs, runbooks, decisions, resolved research — all ingested
+  selectively, then queryable by any agent that hits an unknown.
+- **[Cognee curated](payload/mishkan/cognee/) (`:7730`)** — cross-project
+  reference library. Read-mostly, seeded once, shared across every project on
+  the host.
+- **[Graphify](https://github.com/safishamsi/graphify) (planned, D-008
+  signed)** — deterministic code-structure graph for "who calls X, who depends
+  on Y", complementing Cognee's semantic layer.
+
+Plus a **live observability TUI** ([mishkan-watch](payload/mishkan/observability/))
+that shows every running agent, workflow, tool call, hook fire, token spend,
+and MCP/Cognee status — in real time, across every session, with no overload.
+See [`docs/design/MISHKAN_observability.md`](docs/design/MISHKAN_observability.md).
 
 ## The teams
 
@@ -81,9 +110,14 @@ install time — nothing machine-specific is baked in.
 
 ```bash
 npx mishkan-harness status                # what's installed
+npx mishkan-harness observability         # install/refresh just the daemon + TUI (needs `uv`)
 npx mishkan-harness uninstall             # remove harness; keep your CLAUDE.md & rules
 npx mishkan-harness uninstall --purge     # also remove the user-level rule
 ```
+
+The installer walks 7 phases with clear progress, asks once whether to install
+the observability stack at the end, and skips that step cleanly if `uv` isn't
+installed.
 
 ## A first session
 
@@ -129,14 +163,14 @@ org-layer agent) owns re-deriving anything drawn from it. See
   workspace (discovery-based, no hardcoded paths), aggregates shared CVEs and
   version drift, and produces a coordinated, vetted update plan.
 
-## Knowledge graph (optional)
+## Knowledge stack
 
-MISHKAN uses [Cognee](https://docs.cognee.ai) as the knowledge graph that grows as
-you work. Cognee core is a Python library; the harness consumes it through the
-**`cognee-mcp`** server. Optional at first run — agents work without it; only
-persistence is deferred. Run the **cognee-quickstart** skill for guided setup, or
-the hardened Docker deployment under `~/.claude/mishkan/cognee/` (HTTP transport,
-port 7777):
+MISHKAN uses [Cognee](https://docs.cognee.ai) as its **two-store knowledge
+graph** that grows as you work. Cognee core is a Python library; the harness
+consumes it through the **`cognee-mcp`** server. Agents can still work without
+it — persistence is just deferred. Run the **cognee-quickstart** skill for
+guided setup, or the hardened Docker deployment under
+`~/.claude/mishkan/cognee/`:
 
 ```bash
 cd ~/.claude/mishkan/cognee
@@ -146,13 +180,30 @@ nc -z localhost 7777 && echo up
 ~/.claude/mishkan/scripts/seed-curated-library.sh      # 96 curated references
 ```
 
-Agents reach it via each project's `.mcp.json` (seeded by `/mishkan-init`): the
-default is HTTP transport to `http://localhost:7777/mcp`, with a zero-container
-stdio alternative included. The deployment follows the infra rules — built from a
-pinned `Dockerfile` (no `:latest`), SOPS secrets, hardening overlay on every
-recreate, `127.0.0.1`-bound. Pin `COGNEE_MCP_REF` to a release and confirm details
-against [Cognee's docs](https://docs.cognee.ai/cognee-mcp/mcp-local-setup).
-Full guide: [`payload/mishkan/cognee/README.md`](payload/mishkan/cognee/README.md).
+Agents reach the work store at `http://localhost:7777/mcp` and the curated
+store at `:7730`, both seeded by `/mishkan-init` into each project's
+`.mcp.json`. The deployment is pinned, SOPS-managed, hardening-overlay on
+every recreate, `127.0.0.1`-bound. Full guide:
+[`payload/mishkan/cognee/README.md`](payload/mishkan/cognee/README.md).
+
+## Live observability (opt-in)
+
+See **everything** that runs across your MISHKAN sessions in a single Textual
+TUI: active agents, workflows-in-flight, token spend ($), file changes, hook
+decisions, Cognee node counts, MCP server status. Cross-session,
+cross-project, near-zero overhead. Two `uv tool`-installable Python packages:
+
+```bash
+# the installer offers this automatically; or run it standalone any time:
+npx mishkan-harness observability
+
+# then, in two tmux panes (or any two terminals):
+mishkan-watchd start                    # daemon — aggregates the bus
+mishkan-watch                           # TUI client — 5 tabs, status bar
+```
+
+Full operator guide: [`docs/usage/10-observability.md`](docs/usage/10-observability.md).
+Design and event schema: [`docs/design/MISHKAN_observability.md`](docs/design/MISHKAN_observability.md).
 
 ## Token & context management
 

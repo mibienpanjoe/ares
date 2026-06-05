@@ -59,23 +59,36 @@ cd ~/path/to/harness
 node bin/mishkan.js install
 ```
 
-Or via npx (after publishing — not done as of this writing):
+Or via npx (published from v0.2.0):
 
 ```bash
 npx mishkan-harness install
 ```
 
-What the installer does (read `bin/mishkan.js` for the full list):
+The installer walks **7 named phases** with a one-line "why" under each header,
+so you can see what is happening and what it gives you. Last phase asks once
+whether to install the **observability stack** (daemon + TUI) — opt-in, see
+[chapter 10](./10-observability.md).
 
-1. Copies `payload/user/rules/*` → `~/.claude/rules/` (refreshing `y4nn-standards.md`,
-   installing `engineer-standards.md` once if absent).
-2. Copies `payload/mishkan/*` → `~/.claude/mishkan/` under one clean prefix.
-3. Symlinks `payload/mishkan/commands/*` → `~/.claude/commands/` (only if no
-   filename collision with existing user commands).
-4. Merges `payload/install/settings.hooks.json` into `~/.claude/settings.json`,
-   resolving the `{{MISHKAN}}` placeholder to the absolute install path.
-   **Existing hooks are preserved** (dedupe is by exact command string).
-5. Writes an install stamp (version + timestamp) for `status` to read later.
+Phases:
+
+1. **Payload** — copy `payload/mishkan/*` → `~/.claude/mishkan/` under one
+   clean prefix (agents, skills, commands, hooks, rules, cognee compose,
+   observability sources).
+2. **Engineer profile** — place runtime profile (gitignored real profile if
+   present, otherwise sanitized example). Never overwrites an existing edited
+   one.
+3. **User-level rules** — refresh harness default `y4nn-standards.md`;
+   preserve your `engineer-standards.md` and `CLAUDE.md`.
+4. **Discovery symlinks** — symlink agents/skills/commands into `~/.claude/`
+   so Claude Code finds them. Skips on filename collisions with your own.
+5. **Hooks** — merge `payload/install/settings.hooks.json` into
+   `~/.claude/settings.json`, resolving `{{MISHKAN}}`. **Existing hooks
+   preserved** (dedupe by exact command).
+6. **Stamp** — record version + timestamp for `status` / `uninstall` to read.
+7. **Observability (opt-in)** — prompts to install `mishkan-watchd` and
+   `mishkan-watch` via `uv tool`. Skipped cleanly if `uv` isn't on PATH; you
+   can re-run it later with `npx mishkan-harness observability`.
 
 ## Verify the install
 
@@ -168,11 +181,26 @@ node bin/mishkan.js status
 
 Prints version, install timestamp, and a quick layout check.
 
+## Observability stack (opt-in)
+
+The installer's phase 7 asks whether to install the cross-session observability
+stack. You can also run it standalone any time:
+
+```bash
+npx mishkan-harness observability
+```
+
+Requirements: `uv` (https://astral.sh/uv) and Python 3.11+. If `uv` is not on
+PATH, the step is skipped cleanly with a one-liner showing how to install it
+and rerun. See [chapter 10](./10-observability.md) for the full operator guide.
+
 ## See also
 
 - Up next: [Project initialisation](./02-project-init.md) — running
   `/mishkan-init` in a project directory.
 - [LLM provider profiles](./06-llm-providers.md) — choosing what powers the
   cognee LLM/embedding calls.
+- [Observability](./10-observability.md) — live daemon + TUI for cross-session
+  monitoring.
 - Live install record (D-005 npm package): [`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md).
 - Initial harness commit: `35fa034`.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // MISHKAN installer — dependency-free (Node >=18, built-ins only).
-// Commands: install | uninstall | status
+// Commands: install | uninstall | status | observability
 //
 // Portability by design: every path is resolved from os.homedir() at runtime.
 // No machine-specific paths are baked in. Idempotent: re-running install updates
@@ -10,6 +10,9 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync,
 import { homedir } from "node:os";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { createInterface } from "node:readline";
+import { stdin, stdout } from "node:process";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PKG = join(HERE, "..");
@@ -18,8 +21,30 @@ const CLAUDE = join(HOME, ".claude");
 const MISHKAN = join(CLAUDE, "mishkan");
 const STAMP = join(MISHKAN, ".install-stamp");
 
+// ─── output ────────────────────────────────────────────────────────────────
+
+const NO_COLOR = process.env.NO_COLOR || !process.stdout.isTTY;
+const c = NO_COLOR
+  ? { dim: s => s, bold: s => s, cyan: s => s, green: s => s, yellow: s => s, red: s => s }
+  : {
+      dim:    s => `\x1b[2m${s}\x1b[0m`,
+      bold:   s => `\x1b[1m${s}\x1b[0m`,
+      cyan:   s => `\x1b[36m${s}\x1b[0m`,
+      green:  s => `\x1b[32m${s}\x1b[0m`,
+      yellow: s => `\x1b[33m${s}\x1b[0m`,
+      red:    s => `\x1b[31m${s}\x1b[0m`,
+    };
+
 const log = (...a) => console.log("mishkan:", ...a);
-const warn = (...a) => console.warn("mishkan: WARN", ...a);
+const warn = (...a) => console.warn("mishkan: " + c.yellow("WARN"), ...a);
+
+// Print a phase header with a one-line "why" subtitle. Helps the engineer
+// see what each step does and why, instead of an unstructured wall of logs.
+function phase(n, total, title, why) {
+  console.log();
+  console.log(c.bold(c.cyan(`[${n}/${total}] ${title}`)));
+  if (why) console.log(c.dim(`        ${why}`));
+}
 
 function ensureDir(d) { mkdirSync(d, { recursive: true }); }
 
@@ -106,16 +131,85 @@ function removeHooks() {
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
 }
 
-function install() {
+// ─── tool availability + interactive prompt ────────────────────────────────
+
+function commandExists(cmd) {
+  const r = spawnSync(process.platform === "win32" ? "where" : "which",
+                      [cmd], { stdio: "ignore" });
+  return r.status === 0;
+}
+
+async function promptYN(question, defaultYes = true) {
+  // Non-TTY (CI, piped install) -> use the default, never block.
+  if (!stdin.isTTY) return defaultYes;
+  const suffix = defaultYes ? " [Y/n] " : " [y/N] ";
+  const rl = createInterface({ input: stdin, output: stdout });
+  const ans = await new Promise(r => rl.question(question + suffix, r));
+  rl.close();
+  const a = ans.trim().toLowerCase();
+  if (!a) return defaultYes;
+  return a === "y" || a === "yes" || a === "o" || a === "oui";
+}
+
+// ─── observability opt-in (Phase 1.5 of the install contract, §10 of doc) ──
+
+function installObservabilityStack() {
+  console.log();
+  console.log(c.bold(c.cyan("Observability stack")));
+  console.log(c.dim(
+    "  Optional cross-session daemon + TUI client that aggregates the event\n" +
+    "  bus into a live snapshot. Read docs/design/MISHKAN_observability.md.\n" +
+    "  Requires `uv` (https://astral.sh/uv) and Python 3.11+."));
+
+  if (!commandExists("uv")) {
+    console.log(c.yellow("  uv not found — skipping observability install."));
+    console.log(c.dim(
+      "  Install uv with:\n" +
+      "    curl -LsSf https://astral.sh/uv/install.sh | sh\n" +
+      "  Then re-run:  npx mishkan-harness observability"));
+    return { installed: false, reason: "uv-missing" };
+  }
+
+  const watchdSrc = join(PKG, "payload", "mishkan", "observability", "watchd");
+  const watchSrc  = join(PKG, "payload", "mishkan", "observability", "watch");
+  for (const dir of [watchdSrc, watchSrc]) {
+    if (!existsSync(dir)) {
+      warn(`observability source missing: ${tilde(dir)}`);
+      return { installed: false, reason: "payload-missing" };
+    }
+  }
+
+  console.log(c.dim("  Installing mishkan-watchd (daemon)…"));
+  const r1 = spawnSync("uv", ["tool", "install", "--from", watchdSrc, "mishkan-watchd"],
+                       { stdio: "inherit" });
+  if (r1.status !== 0) { warn("mishkan-watchd install failed"); return { installed: false, reason: "install-failed" }; }
+
+  console.log(c.dim("  Installing mishkan-watch (TUI client)…"));
+  const r2 = spawnSync("uv", ["tool", "install", "--from", watchSrc, "mishkan-watch"],
+                       { stdio: "inherit" });
+  if (r2.status !== 0) { warn("mishkan-watch install failed"); return { installed: false, reason: "install-failed" }; }
+
+  console.log(c.green("  ✓ observability stack installed"));
+  console.log(c.dim(
+    "  Start the daemon:  " + c.bold("mishkan-watchd start") + "\n" +
+    "  Open the TUI:      " + c.bold("mishkan-watch") + "\n" +
+    "  Auto-start unit:   mishkan-watchd install-service"));
+  return { installed: true };
+}
+
+async function install() {
+  const totalPhases = 7;
   log(`installing into ${tilde(CLAUDE)} (home resolved at runtime)`);
   ensureDir(CLAUDE);
+
+  phase(1, totalPhases, "Payload",
+        "copy agents, skills, commands, hooks, rules, cognee compose, observability sources");
   // 1. payload/mishkan -> ~/.claude/mishkan
   copyDir(join(PKG, "payload", "mishkan"), MISHKAN);
   ensureDir(join(MISHKAN, "logs"));
   ensureDir(join(MISHKAN, "cognee"));
-  // 2. engineer profile -> runtime. Prefer a real (gitignored) profile.md if the
-  // engineer made one; otherwise ship the sanitized example. Never overwrite an
-  // existing runtime profile the engineer may have edited in place.
+  phase(2, totalPhases, "Engineer profile",
+        "place runtime profile — never overwrites an existing edited one");
   const realProfile = join(PKG, "docs", "engineer", "profile.md");
   const exampleProfile = join(PKG, "docs", "engineer", "profile.example.md");
   const runtimeProfile = join(MISHKAN, "profile.md");
@@ -126,33 +220,59 @@ function install() {
   } else {
     log("preserved existing ~/.claude/mishkan/profile.md");
   }
-  // 3. user-level files
+
+  phase(3, totalPhases, "User-level rules",
+        "refresh harness default; preserve your engineer-standards.md + CLAUDE.md");
   ensureDir(join(CLAUDE, "rules"));
-  // y4nn-standards.md is the harness-maintained DEFAULT — always refreshed so
-  // updates flow. Customisation lives in engineer-standards.md instead.
   copyFileSync(join(PKG, "payload", "user", "rules", "y4nn-standards.md"),
                join(CLAUDE, "rules", "y4nn-standards.md"));
   log("refreshed harness default ~/.claude/rules/y4nn-standards.md");
-  // engineer-standards.md is the USER's layer — placed once, never overwritten.
   const engRule = join(CLAUDE, "rules", "engineer-standards.md");
   if (!existsSync(engRule)) copyFileSync(join(PKG, "payload", "user", "rules", "engineer-standards.md"), engRule);
   else log("preserved your ~/.claude/rules/engineer-standards.md");
-  // user CLAUDE.md — placed once, never overwritten.
   const userClaude = join(CLAUDE, "CLAUDE.md");
   if (!existsSync(userClaude)) copyFileSync(join(PKG, "payload", "user", "CLAUDE.md"), userClaude);
   else log("preserved existing ~/.claude/CLAUDE.md");
-  // 4. symlinks for discovery
+
+  phase(4, totalPhases, "Discovery symlinks",
+        "make agents, skills, commands visible to Claude Code");
   const a = linkInto("agents", join(CLAUDE, "agents"), false);
   const s = linkInto("skills", join(CLAUDE, "skills"), true);
-  const c = linkInto("commands", join(CLAUDE, "commands"), false);
-  log(`linked agents=${a.linked} (skipped ${a.skipped}), skills=${s.linked}, commands=${c.linked}`);
-  // 5. hooks
+  const cm = linkInto("commands", join(CLAUDE, "commands"), false);
+  log(`linked agents=${a.linked} (skipped ${a.skipped}), skills=${s.linked}, commands=${cm.linked}`);
+
+  phase(5, totalPhases, "Hooks",
+        "merge MISHKAN hooks into ~/.claude/settings.json (preserves existing)");
   mergeHooks();
-  log("hooks merged into settings.json (existing hooks preserved)");
-  // 6. stamp
+  log("hooks merged into settings.json");
+
+  phase(6, totalPhases, "Stamp",
+        "record install version + timestamp for status / uninstall");
   const version = JSON.parse(readFileSync(join(PKG, "package.json"), "utf8")).version;
   writeFileSync(STAMP, JSON.stringify({ version, installedAt: new Date().toISOString() }, null, 2) + "\n");
-  log(`installed v${version}. Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.`);
+
+  phase(7, totalPhases, "Observability (opt-in)",
+        "Python daemon + Textual TUI for live cross-session monitoring");
+  if (await promptYN("        Install observability stack now?", true)) {
+    installObservabilityStack();
+  } else {
+    console.log(c.dim("        Skipped. Re-run later:  npx mishkan-harness observability"));
+  }
+
+  console.log();
+  console.log(c.green(`✓ MISHKAN v${version} installed.`));
+  console.log(c.dim(
+    "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
+    "  Status:           npx mishkan-harness status\n" +
+    "  Re-add obs stack: npx mishkan-harness observability"));
+}
+
+function uninstallObservabilityHint() {
+  if (commandExists("uv")) {
+    console.log(c.dim(
+      "  Observability stack installed via uv tool — remove manually if desired:\n" +
+      "    uv tool uninstall mishkan-watch mishkan-watchd"));
+  }
 }
 
 function uninstall({ purge = false } = {}) {
@@ -180,6 +300,7 @@ function uninstall({ purge = false } = {}) {
   } else {
     log("kept user-level CLAUDE.md, y4nn-standards.md, and engineer-standards.md (use --purge to remove the default).");
   }
+  uninstallObservabilityHint();
 }
 
 function status() {
@@ -208,14 +329,16 @@ function status() {
 const cmd = process.argv[2];
 const flags = new Set(process.argv.slice(3));
 switch (cmd) {
-  case "install": install(); break;
+  case "install": await install(); break;
   case "uninstall": uninstall({ purge: flags.has("--purge") }); break;
   case "status": status(); break;
+  case "observability": installObservabilityStack(); break;
   default:
     console.log(`MISHKAN harness installer
 Usage:
-  npx mishkan-harness install      Install/refresh into ~/.claude (idempotent)
-  npx mishkan-harness status       Show install state
-  npx mishkan-harness uninstall    Remove harness (keeps your CLAUDE.md & rules)
+  npx mishkan-harness install          Install/refresh into ~/.claude (idempotent)
+  npx mishkan-harness observability    Install only the observability stack (daemon + TUI, needs uv)
+  npx mishkan-harness status           Show install state
+  npx mishkan-harness uninstall        Remove harness (keeps your CLAUDE.md & rules)
   npx mishkan-harness uninstall --purge   Also remove user-level rule`);
 }
