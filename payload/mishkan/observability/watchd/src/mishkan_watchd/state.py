@@ -257,13 +257,20 @@ def _dc_to_dict(dc) -> dict[str, Any]:
 
 
 def _session_dict(s: SessionState) -> dict[str, Any]:
+    # Truncate recent_events for the snapshot frame so the daemon doesn't
+    # send 200 events × N sessions on connect — that easily exceeds the
+    # client's readline buffer. Per-session ring buffer stays at 200 for
+    # delta-driven views; the snapshot just shows the last 30.
+    recent = list(s.recent_events)
+    if len(recent) > 30:
+        recent = recent[-30:]
     return {
         "session_id": s.session_id,
         "project": s.project,
         "started": s.started,
         "agents_active": {k: _dc_to_dict(v) for k, v in s.agents_active.items()},
         "workflows_active": {k: _dc_to_dict(v) for k, v in s.workflows_active.items()},
-        "recent_events": list(s.recent_events),
+        "recent_events": recent,
         "tokens_in": s.tokens_in,
         "tokens_out": s.tokens_out,
         "cache_read": s.cache_read,

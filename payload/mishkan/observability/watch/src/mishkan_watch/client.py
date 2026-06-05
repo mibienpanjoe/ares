@@ -67,7 +67,12 @@ class DaemonClient:
     async def _connect_and_read(self) -> None:
         if not self.socket_path.exists():
             raise FileNotFoundError(f"socket {self.socket_path} not found")
-        self._reader, self._writer = await asyncio.open_unix_connection(str(self.socket_path))
+        # The snapshot frame can exceed asyncio's default 64 KB readline
+        # limit when many sessions × many recent_events are aggregated.
+        # 16 MB is generous enough for any realistic harness state.
+        self._reader, self._writer = await asyncio.open_unix_connection(
+            str(self.socket_path), limit=2 ** 24
+        )
         if self._on_status:
             await self._on_status("connected")
         # Optional: announce subscription. Server accepts and ignores for now.
