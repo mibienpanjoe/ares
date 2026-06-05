@@ -157,8 +157,17 @@ class HarnessState:
     def _ensure_session(self, sid: str, project: str) -> SessionState:
         s = self.sessions.get(sid)
         if s is None:
-            s = SessionState(session_id=sid, project=project, started=_now())
+            s = SessionState(session_id=sid, project=project or "unknown",
+                             started=_now())
             self.sessions[sid] = s
+            return s
+        # If we already have the session but the recorded project is the
+        # "unknown" placeholder (set when the first event we saw lacked a
+        # project field — typical for the bus_tail backfill of old
+        # events), upgrade it as soon as a real project value arrives
+        # (e.g. from session_discover's session_start event).
+        if (s.project in ("", "unknown", None)) and project and project not in ("", "unknown"):
+            s.project = project
         return s
 
     def _on_agent_spawn(self, sid: Optional[str], event: dict[str, Any]) -> None:

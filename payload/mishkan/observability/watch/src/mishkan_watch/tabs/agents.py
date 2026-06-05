@@ -20,6 +20,28 @@ from textual.widgets import DataTable, Static, Tree
 from textual.widgets.tree import TreeNode
 
 
+def _pretty_project(project: Optional[str]) -> str:
+    """Decode Claude Code's encoded project dir name into a real path.
+
+    ~/.claude/projects encodes each working directory as its absolute
+    path with '/' replaced by '-'. Reverse it for display so the user
+    sees /home/ogu/theY4NN/harness instead of
+    -home-ogu-theY4NN-harness. If the input doesn't look encoded
+    (starts with '/' already, or is empty/unknown), pass through.
+    """
+    if not project or project in ("unknown", "?"):
+        return "?"
+    if project.startswith("/"):
+        # Already a real path (post-tool-observe.sh sets pwd).
+        return project
+    if project.startswith("-"):
+        # Encoded form: leading "-" maps to "/", subsequent "-" likely
+        # also "/". This loses information when a real dir name
+        # contains "-", but covers the common case.
+        return project.replace("-", "/")
+    return project
+
+
 class AgentsTab(Container):
     DEFAULT_CSS = ""
 
@@ -170,7 +192,7 @@ class AgentsTab(Container):
         for sid, sess in sessions.items():
             label = Text()
             label.append(sid[:8] + "… ", style="cyan")
-            label.append(sess.get("project", "?")[:30], style="dim")
+            label.append(_pretty_project(sess.get("project"))[:30], style="dim")
             sess_node = root.add(label, data={"kind": "session", "sid": sid})
             sess_node.expand()
             agents = sess.get("agents_active") or {}
