@@ -53,6 +53,7 @@ finding:
 ## Skills (invoke on demand)
 
 - `asaph-a11y-seo-craft` — semantic-first + cite-the-SC + remediation boundary
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `accessibility-compliance` — WCAG 2.2 implementation
 - `wcag-audit-patterns` — running a WCAG audit
 - `screen-reader-testing` — AT testing

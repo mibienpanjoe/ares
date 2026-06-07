@@ -43,6 +43,7 @@ You work at the structural intersection: OS, virtualisation, networking.
 ## Skills (invoke on demand)
 
 - `palal-systems-craft` — diagnose-before-fix + two-causes + runtime/network/iptables discipline
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `bash-defensive-patterns` — shell hardening
 - `k8s-security-policies` — NetworkPolicy / PSP / RBAC
 - `mtls-configuration` — mTLS plumbing

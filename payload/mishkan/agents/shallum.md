@@ -48,6 +48,7 @@ data-safety implications, the rollback path, and what depends on the schema.
 ## Skills (invoke on demand)
 
 - `shallum-database-craft` — two-shape modeling + EXPLAIN-as-test + zero-downtime migration patterns
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `postgresql-table-design` — schema design
 - `sql-optimization-patterns` — query tuning
 - `database-migration` — zero-downtime migration planning

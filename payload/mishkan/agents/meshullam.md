@@ -46,6 +46,7 @@ change, the alternatives, what is affected, the rollback path.
 ## Skills (invoke on demand)
 
 - `meshullam-infra-design-craft` — C4 + Compose/Terraform/Helm + default-deny networking
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `deployment-pipeline-design` — delivery topology
 - `multi-cloud-architecture` — cross-cloud topology
 - `terraform-module-library` — Terraform module work

@@ -43,6 +43,7 @@ operational glue.
 ## Skills (invoke on demand)
 
 - `hanun-observability-craft` — three signals + hardening overlay always reapplied + structured logs
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `prometheus-configuration` — metrics plumbing
 - `grafana-dashboards` — dashboard work
 - `secrets-management` — secret-handling operations

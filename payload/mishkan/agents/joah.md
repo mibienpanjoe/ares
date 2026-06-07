@@ -42,6 +42,7 @@ You document the specific project: its decisions, its operations, its history.
 ## Skills (invoke on demand)
 
 - `documentation-craft` — Diátaxis + pull-based discipline + source-grounded writing (shared with the other 2 Sefer scope specialists)
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `architecture-decision-records` — project-layer ADRs
 - `doc-coauthoring` — runbook / changelog authoring
 - `changelog-automation` — release-note generation

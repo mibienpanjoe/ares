@@ -40,6 +40,7 @@ You embed with the teams and document what they produce.
 ## Skills (invoke on demand)
 
 - `documentation-craft` — Diátaxis + pull-based discipline + source-grounded writing (shared with the other 2 Sefer scope specialists)
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `doc-coauthoring` — team-layer doc authoring
 
 ## Constraints

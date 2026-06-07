@@ -46,6 +46,7 @@ Plan before any **state-management architectural change**.
 ## Skills (invoke on demand)
 
 - `salma-frontend-implementation-craft` — TanStack + tokens + state-management discipline (the depth lives here)
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `react-modernization` — React refactors and patterns
 - `nextjs-app-router-patterns` — Next.js App Router work
 - `responsive-design` — responsive layouts

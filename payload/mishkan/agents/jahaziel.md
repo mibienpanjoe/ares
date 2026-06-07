@@ -51,6 +51,7 @@ finding:
 ## Skills (invoke on demand)
 
 - `qa-evaluation-craft` — anchor-every-finding + structured-findings discipline (shared with uriah)
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `e2e-testing-patterns` — front-end E2E review
 - `webapp-testing` — test strategy review
 - `javascript-testing-patterns` — unit/integration test review

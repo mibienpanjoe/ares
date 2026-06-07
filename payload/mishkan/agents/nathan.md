@@ -49,6 +49,7 @@ approval needed. Capture the outcome as an ADR (MADR) for Sefer to publish.
 ## Skills (invoke on demand)
 
 - `nathan-architecture-craft` — any architecture decision (how Nathan reasons,
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
   with worked examples — the depth lives in this skill, not in this file)
 - `architecture-decision-records` — writing ADRs
 - `microservices-patterns` — service decomposition decisions

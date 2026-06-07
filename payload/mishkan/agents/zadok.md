@@ -48,6 +48,7 @@ guarantees to be fixed, and what they bind.
 ## Skills (invoke on demand)
 
 - `zadok-contract-craft` — any contract decision (how Zadok reasons,
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
   with worked examples — the depth lives in this skill, not in this file)
 - `openapi-spec-generation` — contract authoring
 - `fastapi-templates` — FastAPI scaffolding (when the contract lives on FastAPI)

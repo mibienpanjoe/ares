@@ -42,6 +42,7 @@ you do not write or block code (that is Ira/Joab/Benaiah).
 ## Skills (invoke on demand)
 
 - `hushai-security-advisor-craft` — ASVS prioritisation + delivery-vs-security counsel; advisory-only
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `security-threat-model` — advisory threat-model review
 - `code-review-security` — advisory security review
 

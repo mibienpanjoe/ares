@@ -51,6 +51,7 @@ when a task touches more than one component.
 ## Skills (invoke on demand)
 
 - `hizkiah-implementation-craft` — any backend implementation against
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
   a fixed contract (principles-first, with Python/FastAPI, TypeScript/Hono,
   and PHP/Laravel examples — the depth lives in this skill, not here)
 - `fastapi-templates` — FastAPI implementation (when the stack is Python)

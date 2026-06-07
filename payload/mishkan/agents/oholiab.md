@@ -46,6 +46,7 @@ Plan before a **design-system or state-management architectural change**.
 ## Skills (invoke on demand)
 
 - `oholiab-design-system-craft` — tokens + components + theming + cost-of-extension (the depth lives here)
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `design-system-patterns` — DS architecture and tokens
 - `tailwind-design-system` — Tailwind tokenisation
 - `web-component-design` — component contracts

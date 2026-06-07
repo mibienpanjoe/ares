@@ -43,6 +43,7 @@ You take structured graph knowledge and make it legible. You publish.
 ## Skills (invoke on demand)
 
 - `jehonathan-publication-craft` — Cognee query + Stripe-quality bar + source-grounded publication
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `doc-coauthoring` — knowledge publication
 - `context-compress` — compress findings before publish
 

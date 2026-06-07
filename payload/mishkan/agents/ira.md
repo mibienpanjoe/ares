@@ -65,6 +65,7 @@ finding:
 ## Skills (invoke on demand)
 
 - `ira-code-security-craft` — any code-level security review (the
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
   pre-block rubric, the false-positive guard list, severity calibration,
   and durable remediation patterns — the depth lives in this skill)
 - `code-review-security` — code-level security review

@@ -53,6 +53,7 @@ finding:
 ## Skills (invoke on demand)
 
 - `joab-app-security-craft` — auth flows + CSRF/XSS + OWASP API Top 10 across surfaces
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `api-security-best-practices` — API attack-surface review
 - `auth-implementation-patterns` — auth flow review
 - `code-review-security` — client/surface security review

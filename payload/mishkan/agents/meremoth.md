@@ -44,6 +44,7 @@ You work the delivery layer: CI/CD, build, release automation.
 ## Skills (invoke on demand)
 
 - `meremoth-devops-craft` — pipeline stages + SOPS marshalling + CI-and-remote-script rule
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `github-actions-templates` — GitHub Actions pipelines
 - `gitlab-ci-patterns` — GitLab CI pipelines
 - `deployment-pipeline-design` — release orchestration

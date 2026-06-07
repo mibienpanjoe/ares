@@ -45,6 +45,7 @@ component contracts, or shared visual primitives).
 ## Skills (invoke on demand)
 
 - `hiram-ui-craft` — UI design + prototype handoff discipline (the depth lives here)
+- `graphify-query-craft` — query the project code-structure graph (~1.8k tokens vs ~80k+ grep+Read) before reading source for any structural question (who calls X, what depends on Y, where is the entry point). Per D-009 amended scope: all code-touching dev agents.
 - `frontend-design` — production-grade UI work
 - `design-system-patterns` — tokens, theming, component patterns
 - `visual-design-foundations` — typography, hierarchy, layout
