@@ -22,9 +22,10 @@ foundation with:
 2. **A daemon (`mishkan-watchd`)** — tails every session's NDJSON, polls a few
    synchronous sources (git worktrees, Cognee stats), keeps a live snapshot of
    harness state, and exposes a UNIX-socket NDJSON protocol.
-3. **A TUI client (`mishkan-watch`)** — Textual app. 5 tabs, key-driven, no
+3. **A TUI client (`mishkan-watch`)** — Textual app. 8 tabs, key-driven, no
    overload. Reads the daemon snapshot+delta stream, renders the view, never
-   touches files directly.
+   touches files directly. Tabs 1-5 are live; tabs 6-8 (Org-Ref · Usage ·
+   Skills) are reference/analytical views added at v0.2.3.
 
 The TUI runs in any terminal (tmux pane, standalone window, attached over SSH).
 It is a passive observer — it never writes to harness state, never alters
@@ -62,8 +63,11 @@ directory paths. Nothing has to be registered in a config file.
 ### 3.4 No overload in the UI
 
 The TUI defaults to ONE view that answers "what is happening right now?". All
-historical depth lives behind explicit key presses. The 5-tab layout is a hard
-upper bound; if a sixth dimension matters we replace, not add.
+historical depth lives behind explicit key presses. v0.2.0 shipped with a
+5-tab layout (Live · Agents · Workflows · Knowledge · Activity); v0.2.3
+added three reference/analytical tabs (Org-Ref · Usage · Skills) for
+recall and analysis without disturbing the live view. The 8-tab layout
+is the new upper bound; if a ninth dimension matters we replace, not add.
 
 ## 4. Event schema
 
@@ -498,7 +502,7 @@ CSS classes + `set_timer` cover every effect below.
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
 ║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 1 wf        ║
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
-║ 1-5 tabs · / filter · enter detail · q quit · ? help · t time-order · r refresh       ║
+║ 1-8 tabs · / filter · enter detail · q quit · ? help · t time-order · r refresh       ║
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -534,7 +538,7 @@ CSS classes + `set_timer` cover every effect below.
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
 ║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 3 wf        ║
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
-║ 1-5 tabs · enter detail · ←/→ select wf · ▸/▾ expand · / filter · q quit · ? help     ║
+║ 1-8 tabs · enter detail · ←/→ select wf · ▸/▾ expand · / filter · q quit · ? help     ║
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -562,7 +566,7 @@ CSS classes + `set_timer` cover every effect below.
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
 ║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 1 wf       ║
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
-║ 1-5 tabs · enter detail · j/k row · tab pane · / filter · q quit · ? help            ║
+║ 1-8 tabs · enter detail · j/k row · tab pane · / filter · q quit · ? help            ║
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -609,7 +613,7 @@ empty state dim-centered.
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
 ║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 1 wf       ║
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
-║ 1-5 tabs · enter detail · j/k row · tab pane · / filter · q quit · ? help            ║
+║ 1-8 tabs · enter detail · j/k row · tab pane · / filter · q quit · ? help            ║
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -651,7 +655,7 @@ green / red / yellow / dim. `⟳` for STALE (poll deadline missed, not down).
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
 ║ ⏵ 02h14m · 142.4k in · 18.2k out · 89.1k cached · est. $2.40 · 2 active · 1 wf       ║
 ╠════════════════════════════════════════════════════════════════════════════════════════╣
-║ 1-5 tabs · / filter focus · t order · End auto · j/k scroll · enter detail · q quit  ║
+║ 1-8 tabs · / filter focus · t order · End auto · j/k scroll · enter detail · q quit  ║
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 

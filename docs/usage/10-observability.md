@@ -13,7 +13,7 @@ Two artefacts that ship as one stack:
   network sources into a single in-memory snapshot. Exposes it on a UNIX
   socket as a snapshot + delta + heartbeat NDJSON stream.
 - **`mishkan-watch`** — Textual TUI client. Connects to the daemon socket,
-  renders 5 tabs and a permanent status bar.
+  renders 8 tabs and a permanent status bar, with a project filter on `p`.
 
 See the design doc [`docs/design/MISHKAN_observability.md`](../design/MISHKAN_observability.md)
 for the full event schema, daemon architecture, and TUI layout.
@@ -43,14 +43,30 @@ uv tool install --from ~/.claude/mishkan/observability/watch  mishkan-watch
 
 ## Run
 
-Two processes, two terminals (or two tmux panes):
+Single command — the TUI auto-starts the daemon if its socket isn't
+present, waits up to 8 s for the bind, then opens. The daemon survives
+the TUI's exit so a second `mishkan-watch` (e.g. in another tmux pane)
+connects instantly.
 
 ```bash
-# terminal 1 — daemon, foreground
+mishkan-watch
+```
+
+Power users who want to manage the daemon explicitly (separate logs,
+custom socket path, attached over SSH from another host) can opt out:
+
+```bash
+# terminal 1 — daemon, foreground (logs in your face)
 mishkan-watchd start
 
-# terminal 2 — TUI
-mishkan-watch
+# terminal 2 — TUI; refuses to fork the daemon
+mishkan-watch --no-autostart
+```
+
+Stop the daemon when you're done:
+
+```bash
+mishkan-watchd stop
 ```
 
 Daemon lifecycle is always manual. Auto-start follow-up:
@@ -67,15 +83,22 @@ mishkan-watchd status              # connect, print current snapshot as JSON
 mishkan-watchd stop                # SIGTERM via the PID file
 ```
 
-## The 5 tabs
+## The 8 tabs
 
-| # | Tab | What it answers |
+| Key | Tab | What it answers |
 |---|---|---|
-| 1 | **Live** | "What is happening *right now*?" Active agents, workflows in-flight, current worktrees, Cognee + MCP rollup, rolling feed of every event. Default tab on launch. |
-| 2 | **Agents** | "What did each agent do?" Sessions tree (left) × agent history `DataTable` (centre) × errors panel (right). Per-session current-agent tracking attributes subagent tool calls to the right agent (sourced via `subagent_tail`). |
-| 3 | **Workflows** | "What did each dynamic workflow run?" Cards list (left) × phase tree with fan-out + cost (right). Populated from `workflow_start` events; phase/agent detail lights up as the `Workflow` tool runs. |
-| 4 | **Knowledge** | "Are my Cognee stores up and growing?" Two cards (work + curated, real-time node counts via neo4j HTTP cypher) × recent ops `DataTable` × MCP server status table covering Cognee + every other configured MCP. |
-| 5 | **Activity** | Unified, filterable event stream. Regex filter + type/agent selects. Errors and blocked permissions break the visual rhythm with a separator line. |
+| `1` | **Live** | "What is happening *right now*?" Active agents (with `alias · role` annotation), workflows in-flight, current worktrees, Cognee + Graphify + MCP rollup, rolling feed of every event. Default tab on launch. |
+| `2` | **Agents** | "What did each agent do?" Sessions tree (left, project paths decoded) × agent history `DataTable` (centre) × errors panel (right). Phantom sessions filtered out at the daemon `_confirmed_alive` gate. |
+| `3` | **Workflows** | "What did each dynamic workflow run, and what's *available* to run?" Recent runs (top) + static catalogue parsed from each script's `meta` block (description, when-to-use, phases). Click an entry for detail. |
+| `4` | **Knowledge** | "Are my stores up and growing?" Three cards (work + curated + graphify, real-time counts) × recent ops `DataTable` × MCP server status table. |
+| `5` | **Activity** | Unified, filterable event stream. Regex filter + type/agent selects. Errors and blocked permissions break the visual rhythm with a separator line. |
+| `6` | **Org-Ref** | Read-only browser of the 45-agent org from `org.json`. Tree by team, click a group → mission / charter / Hebrew name; click an agent → role, source, description. |
+| `7` | **Usage** | Harness-wide tokens in/out/cached, cost, context window estimate, request counts. Per-session table sorted by token volume. Detail panel with per-agent attribution + top tools. |
+| `8` | **Skills** | All installed skills (MISHKAN craft + community + plugin) grouped by origin × category. Right panel cross-references each skill to the CTO decisions (ADRs) that mention it. |
+
+**Project filter (`p`)** — default off; press `p` to scope Live's ACTIVE
+and WORKTREES to the current project only. Current project picked from
+`CLAUDE_PROJECT_DIR` env var or `pwd` at launch.
 
 ## The status bar
 
@@ -109,7 +132,8 @@ Six daemon sources, each independent and fail-open:
 ## Keybindings
 
 ```
-1-5     switch tab (instantaneous)
+1-8     switch tab (instantaneous)
+p       toggle project filter (current ↔ all)
 q       quit
 j/k ↑↓  move focus within current panel
 tab     move focus between panels

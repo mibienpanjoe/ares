@@ -140,8 +140,9 @@ Don't, unless:
 3. The repeatability is real (same orchestration each time, just different inputs).
 
 Otherwise: Task fan-out from the main session is the right answer.
-The seven workflows above were picked precisely because each clears
-all three bars.
+The 10 org-level + 8 team-level workflows above were picked precisely
+because each clears all three bars; the portfolio is capped at 10 + 4
+per team per ADR D-010.
 
 ## Constraints (reminders)
 
