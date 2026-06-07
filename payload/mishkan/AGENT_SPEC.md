@@ -62,8 +62,10 @@ Optional and NOT used by MISHKAN by default: `skills`, `disallowedTools`,
 
 ## Dynamic Context Injection Point
 
-<!-- Project sprint state from ./CLAUDE.md is injected below at runtime.
-     Everything above this line is the cacheable static role prefix. -->
+<!-- Cacheable prefix boundary. Everything above this line must stay
+     byte-identical between calls for prompt caching to fire. Project
+     sprint state from ./CLAUDE.md is loaded by Claude Code into the
+     parent session context, not injected here. -->
 ```
 
 ## 3. The Prompt Defense Baseline (verbatim, every agent)
@@ -110,13 +112,29 @@ Every agent file ends with:
 
 ## Dynamic Context Injection Point
 
-<!-- Project sprint state from ./CLAUDE.md is injected below at runtime.
-     Everything above this line is the cacheable static role prefix. -->
+<!-- Cacheable prefix boundary. Everything above this line must stay
+     byte-identical between calls for prompt caching to fire. Project
+     sprint state from ./CLAUDE.md is loaded by Claude Code into the
+     parent session context, not injected here. -->
 ```
 
-This is the marker MISHKAN's runtime uses to append project sprint state
-(when one exists) below the cacheable static prefix. Always present, even
-on roles that do not currently consume the injection.
+This is a **boundary marker, not a runtime hook**. Nothing in MISHKAN
+parses it at load time or splices content at the position. Its job is
+twofold:
+
+- **Author discipline.** Everything above the marker must stay byte-
+  identical between calls so Anthropic's prompt cache fires on the
+  static prefix. Putting a date, a counter, or any volatile value above
+  the marker breaks cacheability for that whole prefix on the next call.
+- **Reader orientation.** A human reading the file sees exactly where
+  the cacheable role ends and where project-variable context starts.
+
+Project sprint state from `./CLAUDE.md` does land in the agent's effective
+context — but via Claude Code's normal session loading (parent session
+context propagates to spawned subagents), not by injection at this
+marker. The section title is kept for backwards compatibility and
+because it correctly names the boundary; the comment inside has been
+updated to match reality.
 
 ## 6. Body length policy
 

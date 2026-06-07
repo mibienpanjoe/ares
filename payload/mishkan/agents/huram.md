@@ -62,5 +62,7 @@ Approval gate via `/plan`. pnpm only. WCAG 2.2 AA. Core Web Vitals budgets.
 
 ## Dynamic Context Injection Point
 
-<!-- Project sprint state from ./CLAUDE.md is injected below at runtime.
-     Everything above this line is the cacheable static role prefix. -->
+<!-- Cacheable prefix boundary. Everything above this line must stay
+     byte-identical between calls for prompt caching to fire. Project
+     sprint state from ./CLAUDE.md is loaded by Claude Code into the
+     parent session context, not injected here. -->
