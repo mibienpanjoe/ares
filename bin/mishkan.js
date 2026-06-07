@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
 import { stdin, stdout } from "node:process";
+import { randomBytes } from "node:crypto";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PKG = join(HERE, "..");
@@ -131,7 +132,7 @@ function removeHooks() {
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
 }
 
-// ─── tool availability + interactive prompt ────────────────────────────────
+// ─── tool availability + interactive prompts ──────────────────────────────
 
 function commandExists(cmd) {
   const r = spawnSync(process.platform === "win32" ? "where" : "which",
@@ -149,6 +150,263 @@ async function promptYN(question, defaultYes = true) {
   const a = ans.trim().toLowerCase();
   if (!a) return defaultYes;
   return a === "y" || a === "yes" || a === "o" || a === "oui";
+}
+
+async function promptText(question) {
+  const rl = createInterface({ input: stdin, output: stdout });
+  const ans = await new Promise(r => rl.question(question, r));
+  rl.close();
+  return ans.trim();
+}
+
+// Masked input: each typed char becomes "*". Ctrl-C aborts. Backspace works.
+// Non-TTY: falls back to a normal readline with a one-line warning.
+async function promptSecret(question) {
+  if (!stdin.isTTY) {
+    warn("non-TTY stdin — secret input will be visible.");
+    return promptText(question);
+  }
+  stdout.write(question);
+  return new Promise((resolve) => {
+    let buf = "";
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+    const onData = (ch) => {
+      if (ch === "\r" || ch === "\n") {
+        stdin.setRawMode(false);
+        stdin.pause();
+        stdin.removeListener("data", onData);
+        stdout.write("\n");
+        resolve(buf);
+      } else if (ch === "") { // Ctrl-C
+        stdin.setRawMode(false);
+        stdin.pause();
+        stdin.removeListener("data", onData);
+        stdout.write("\n");
+        process.exit(130);
+      } else if (ch === "" || ch === "") { // backspace
+        if (buf.length > 0) { buf = buf.slice(0, -1); stdout.write("\b \b"); }
+      } else if (ch >= " " && ch.length === 1) {
+        buf += ch;
+        stdout.write("*");
+      }
+    };
+    stdin.on("data", onData);
+  });
+}
+
+async function promptChoice(question, choices) {
+  if (!stdin.isTTY) return choices[0]?.key;
+  console.log();
+  console.log(c.bold(question));
+  for (const ch of choices) {
+    console.log(`  ${c.cyan(ch.key)}) ${c.bold(ch.name)}`);
+    if (ch.why) console.log(c.dim(`     ${ch.why}`));
+  }
+  const valid = new Set(choices.map(c => c.key.toUpperCase()));
+  while (true) {
+    const ans = (await promptText(`  Choose [${choices.map(c => c.key).join("/")}]: `)).toUpperCase();
+    if (valid.has(ans)) return ans;
+    console.log(c.yellow(`  ? not a valid choice`));
+  }
+}
+
+// ─── Knowledge stack configuration wizard ─────────────────────────────────
+// Configures the whole cognee .env: LLM provider + key(s), neo4j/pg/admin
+// secrets (generated or preserved), admin email. Without this, the stack
+// doesn't have enough env to bring docker-compose up.
+
+const LLM_PROFILES = {
+  A: {
+    name: "Ollama (fully self-hosted)",
+    why: "No key, no quota. Free but slower for cognify. Recommended for personal hosts.",
+    needs: [],
+    block: () => `# Provider profile: Ollama (local, no external dependency)
+LLM_PROVIDER=ollama
+LLM_MODEL=qwen2.5:3b
+LLM_ENDPOINT=http://ollama:11434/v1
+LLM_API_KEY=ollama
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=nomic-embed-text:latest
+EMBEDDING_ENDPOINT=http://ollama:11434/api/embed
+EMBEDDING_DIMENSIONS=768`,
+  },
+  B: {
+    name: "Google Gemini (cloud, paired LLM+embed)",
+    why: "Generous free tier at Google AI Studio. Single key. Strong for cognify volume.",
+    needs: [{ key: "LLM_API_KEY", prompt: "  Google AI Studio key: " }],
+    block: (k) => `# Provider profile: Google Gemini (paired LLM + embeddings)
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini/gemini-2.5-flash
+LLM_API_KEY=${k.LLM_API_KEY}
+EMBEDDING_PROVIDER=gemini
+EMBEDDING_MODEL=gemini/gemini-embedding-001
+EMBEDDING_DIMENSIONS=3072`,
+  },
+  C: {
+    name: "OpenAI (cloud, paired LLM+embed)",
+    why: "Pay per token, no free tier. Single key. Predictable quality.",
+    needs: [{ key: "LLM_API_KEY", prompt: "  OpenAI API key (sk-...): " }],
+    block: (k) => `# Provider profile: OpenAI (paired LLM + embeddings)
+LLM_PROVIDER=openai
+LLM_MODEL=openai/gpt-5-mini
+LLM_API_KEY=${k.LLM_API_KEY}
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=openai/text-embedding-3-large
+EMBEDDING_DIMENSIONS=3072`,
+  },
+  D: {
+    name: "Anthropic LLM + OpenAI embeddings (TWO keys)",
+    why: "Claude for reasoning; OpenAI for embed (Claude has none). Two providers, two keys.",
+    needs: [
+      { key: "LLM_API_KEY", prompt: "  Anthropic API key (sk-ant-...): " },
+      { key: "EMBEDDING_API_KEY", prompt: "  OpenAI API key for embeddings (sk-...): " },
+    ],
+    block: (k) => `# Provider profile: Anthropic LLM + OpenAI embeddings
+LLM_PROVIDER=anthropic
+LLM_MODEL=anthropic/claude-sonnet-4-5
+LLM_API_KEY=${k.LLM_API_KEY}
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=openai/text-embedding-3-large
+EMBEDDING_DIMENSIONS=3072
+EMBEDDING_API_KEY=${k.EMBEDDING_API_KEY}`,
+  },
+  E: {
+    name: "NVIDIA API Catalog + Ollama embeddings",
+    why: "Free NVIDIA cloud LLM (rate-limited, OpenAI-compatible) + local Ollama embed.",
+    needs: [{ key: "LLM_API_KEY", prompt: "  NVIDIA nvapi-... key (build.nvidia.com): " }],
+    block: (k) => `# Provider profile: NVIDIA API Catalog (LLM) + Ollama (embeddings)
+LLM_PROVIDER=custom
+LLM_MODEL=openai/meta/llama-3.1-70b-instruct
+LLM_ENDPOINT=https://integrate.api.nvidia.com/v1
+LLM_API_KEY=${k.LLM_API_KEY}
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=nomic-embed-text:latest
+EMBEDDING_ENDPOINT=http://ollama:11434/api/embed
+EMBEDDING_DIMENSIONS=768`,
+  },
+};
+
+// Parse a KEY=VALUE env file into a flat dict (ignores comments / blank lines).
+function parseEnv(text) {
+  const out = {};
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const k = line.slice(0, eq).trim();
+    const v = line.slice(eq + 1);
+    out[k] = v;
+  }
+  return out;
+}
+
+// 32-char URL-safe random secret. Strong enough for local-only daemons.
+function genSecret() { return randomBytes(16).toString("hex"); }
+
+async function configureKnowledge() {
+  const targetDir = join(MISHKAN, "cognee");
+  const exampleEnv = join(targetDir, ".env.example");
+  const targetEnv = join(targetDir, ".env");
+
+  console.log();
+  console.log(c.bold(c.cyan("Configure the knowledge stack")));
+  console.log(c.dim(
+    "  Writes ~/.claude/mishkan/cognee/.env (0600, gitignored).\n" +
+    "  Sets the LLM provider + keys, generates neo4j + postgres + admin\n" +
+    "  passwords on a fresh install, preserves them on a re-run so an\n" +
+    "  initialised neo4j volume keeps working."));
+
+  if (!existsSync(targetDir)) {
+    warn("cognee dir missing. Run `mishkan-harness install` first.");
+    return;
+  }
+  if (!existsSync(exampleEnv)) {
+    warn(`template missing: ${tilde(exampleEnv)}`);
+    return;
+  }
+
+  // Preserve existing local secrets if a .env is already initialised — neo4j
+  // and pg volumes are encrypted-at-rest with their first-boot password and
+  // would lock us out if we regenerated.
+  let preserved = {};
+  if (existsSync(targetEnv)) {
+    const ok = await promptYN(`  .env exists. Overwrite (preserving the 3 local secrets)?`, false);
+    if (!ok) { console.log(c.dim("  Aborted.")); return; }
+    copyFileSync(targetEnv, targetEnv + ".bak");
+    preserved = parseEnv(readFileSync(targetEnv, "utf8"));
+  }
+
+  // 1) provider profile
+  const profileKey = await promptChoice("LLM provider profiles:",
+    Object.entries(LLM_PROFILES).map(([key, p]) => ({ key, name: p.name, why: p.why })));
+  const profile = LLM_PROFILES[profileKey];
+
+  // 2) provider keys (masked)
+  const apiKeys = {};
+  for (const need of profile.needs) {
+    const v = await promptSecret(need.prompt);
+    if (!v) { console.log(c.yellow("  Aborted (empty key).")); return; }
+    apiKeys[need.key] = v;
+  }
+
+  // 3) admin email (cognee backend bootstrap user)
+  const defaultEmail = preserved.DEFAULT_USER_EMAIL || "admin@local.dev";
+  const emailIn = await promptText(`  Cognee admin email [${defaultEmail}]: `);
+  const adminEmail = emailIn || defaultEmail;
+
+  // 4) stack secrets — preserve if .env existed, else generate
+  const stackSecrets = {
+    GRAPH_DATABASE_USERNAME: preserved.GRAPH_DATABASE_USERNAME || "neo4j",
+    GRAPH_DATABASE_PASSWORD: preserved.GRAPH_DATABASE_PASSWORD || genSecret(),
+    DB_PASSWORD:             preserved.DB_PASSWORD             || genSecret(),
+    DEFAULT_USER_PASSWORD:   preserved.DEFAULT_USER_PASSWORD   || genSecret(),
+  };
+  const generated = Object.entries(stackSecrets).filter(([k]) => !preserved[k]).map(([k]) => k);
+
+  // 5) build the .env. Strip provider + stack-secret lines from the example
+  // so our explicit blocks land cleanly, then append the rest verbatim so the
+  // engineer's tuning (rate limits, common defaults) survives.
+  const example = readFileSync(exampleEnv, "utf8");
+  const strip = /^(LLM|EMBEDDING)_(API_KEY|PROVIDER|MODEL|ENDPOINT|DIMENSIONS)=|^(GRAPH_DATABASE_USERNAME|GRAPH_DATABASE_PASSWORD|DB_PASSWORD|DEFAULT_USER_EMAIL|DEFAULT_USER_PASSWORD)=/;
+  const tail = example.split("\n").filter(l => !strip.test(l)).join("\n");
+
+  const stackBlock = `# Local-only stack secrets (neo4j, postgres, cognee backend admin).
+# Generated fresh on first run; preserved across re-runs of configure-llm.
+GRAPH_DATABASE_USERNAME=${stackSecrets.GRAPH_DATABASE_USERNAME}
+GRAPH_DATABASE_PASSWORD=${stackSecrets.GRAPH_DATABASE_PASSWORD}
+DB_PASSWORD=${stackSecrets.DB_PASSWORD}
+DEFAULT_USER_EMAIL=${adminEmail}
+DEFAULT_USER_PASSWORD=${stackSecrets.DEFAULT_USER_PASSWORD}`;
+
+  const final = `# Generated by mishkan-harness configure-llm on ${new Date().toISOString()}
+# Profile: ${profile.name}
+# Re-run \`npx mishkan-harness configure-llm\` to switch providers (secrets preserved).
+
+${profile.block(apiKeys)}
+
+${stackBlock}
+
+${tail}`;
+
+  writeFileSync(targetEnv, final, { mode: 0o600 });
+  console.log();
+  console.log(c.green(`✓ wrote ${tilde(targetEnv)} (0600)`));
+  console.log(c.dim(`  Profile: ${profile.name}`));
+  if (generated.length) {
+    console.log(c.yellow(`  Generated fresh: ${generated.join(", ")}`));
+    console.log(c.dim(
+      "  Save these elsewhere if you need them — they live only in this .env.\n" +
+      `    grep -E '(GRAPH_DATABASE_PASSWORD|DB_PASSWORD|DEFAULT_USER)' ${tilde(targetEnv)}`));
+  } else {
+    console.log(c.dim("  Preserved existing neo4j/pg/admin secrets."));
+  }
+  console.log(c.dim(
+    "\n  Bring up the Cognee stack:\n" +
+    `    cd ${tilde(targetDir)}\n` +
+    "    docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build"));
 }
 
 // ─── observability opt-in (Phase 1.5 of the install contract, §10 of doc) ──
@@ -333,12 +591,14 @@ switch (cmd) {
   case "uninstall": uninstall({ purge: flags.has("--purge") }); break;
   case "status": status(); break;
   case "observability": installObservabilityStack(); break;
+  case "configure-knowledge": await configureKnowledge(); break;
   default:
     console.log(`MISHKAN harness installer
 Usage:
-  npx mishkan-harness install          Install/refresh into ~/.claude (idempotent)
-  npx mishkan-harness observability    Install only the observability stack (daemon + TUI, needs uv)
-  npx mishkan-harness status           Show install state
-  npx mishkan-harness uninstall        Remove harness (keeps your CLAUDE.md & rules)
-  npx mishkan-harness uninstall --purge   Also remove user-level rule`);
+  npx mishkan-harness install                Install/refresh into ~/.claude (idempotent)
+  npx mishkan-harness configure-knowledge    Wizard for the Cognee .env (LLM + neo4j/pg/admin secrets)
+  npx mishkan-harness observability          Install only the observability stack (daemon + TUI, needs uv)
+  npx mishkan-harness status                 Show install state
+  npx mishkan-harness uninstall              Remove harness (keeps your CLAUDE.md & rules)
+  npx mishkan-harness uninstall --purge      Also remove user-level rule`);
 }
