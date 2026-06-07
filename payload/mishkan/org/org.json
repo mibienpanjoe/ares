@@ -1,0 +1,141 @@
+{
+  "generated_from": "docs/design/MISHKAN_agent_aliases.md",
+  "schema_version": 1,
+  "groups": [
+    {
+      "id": "orchestration",
+      "label": "Orchestration",
+      "domain": null,
+      "mission": "Routes every request, owns scope, owns technical standards. The two interface layers of MISHKAN — PM (Nehemiah) talks to Y4NN, CTO (Bezalel) gates technical quality.",
+      "charter": "No specialist work happens without scope (Nehemiah) and technical fit (Bezalel) approved first.",
+      "agents": [
+        {"alias": "nehemiah", "role": "project_manager", "short": "PM", "description": "Scope, delivery, sprint state, user interface in exploration mode.", "source": "Book of Nehemiah"},
+        {"alias": "bezalel", "role": "cto", "short": "CTO", "description": "Technical standards, architecture, quality bar.", "source": "Exodus 31:2"}
+      ]
+    },
+    {
+      "id": "research",
+      "label": "Research Pipeline",
+      "domain": null,
+      "mission": "Shared research pipeline reachable by any agent facing an unknown. Six stages: clarify → formulate → research → summarise → evaluate → report.",
+      "charter": "No fabricated facts. If it's unknown, the pipeline runs. The report carries verifiable sources or marks the unknown explicitly.",
+      "agents": [
+        {"alias": "jakin", "role": "intent_clarificator", "short": "intent", "description": "Establishes the threshold — clarifies what the question really is before research starts.", "source": "1 Kings 7:21"},
+        {"alias": "ezra", "role": "research_details_formulator", "short": "formulate", "description": "Structures the research plan with precision.", "source": "Ezra 7:6"},
+        {"alias": "caleb", "role": "contextual_web_researcher", "short": "web", "description": "Goes wide and returns a faithful, fearless report.", "source": "Numbers 13:30"},
+        {"alias": "shaphan", "role": "contextual_research_summarizer", "short": "summarize", "description": "Compresses Caleb's findings into actionable summary.", "source": "2 Kings 22:3-10"},
+        {"alias": "shemaiah", "role": "contextual_research_results_evaluator", "short": "evaluate", "description": "Discerns true signal from false in the research output.", "source": "Nehemiah 6:10-13"},
+        {"alias": "baruch", "role": "research_reporter", "short": "report", "description": "Carries the final message back faithfully.", "source": "Jeremiah 36:4"}
+      ]
+    },
+    {
+      "id": "chosheb",
+      "label": "Chosheb",
+      "domain": "Design",
+      "hebrew": "חֹשֵׁב",
+      "hebrew_meaning": "Cunning work — deviser of artistic works (Exodus 31:4)",
+      "mission": "Designs the visible and felt experience before a line of frontend code is written. Owns UI, UX, design system tokens, accessibility intent.",
+      "charter": "Design handoff to Panim is complete or it doesn't ship. DS fit, a11y, asset manifest, QA matrix — all four lenses or the package is incomplete.",
+      "relationships": "Chosheb → Panim (design handoff · unidirectional)",
+      "agents": [
+        {"alias": "aholiab", "role": "chosheb_team_lead", "short": "lead", "description": "Bezalel's partner — leads design craftsmen, coordinates handoff.", "source": "Exodus 31:6"},
+        {"alias": "hiram", "role": "senior_ui_design_and_prototype_implementation", "short": "ui", "description": "Crafts the visible beautiful things — UI design and prototypes.", "source": "1 Kings 7:13-14"},
+        {"alias": "deborah", "role": "cognitive_and_emotional_ux_expert", "short": "ux", "description": "Sees what others miss — cognitive and emotional UX guidance.", "source": "Judges 4:4-5"},
+        {"alias": "elasah", "role": "chosheb_team_reporter", "short": "report", "description": "Carries the team's structured output faithfully.", "source": "Jeremiah 29:3"}
+      ]
+    },
+    {
+      "id": "panim",
+      "label": "Panim",
+      "domain": "Frontend",
+      "hebrew": "פָּנִים",
+      "hebrew_meaning": "Face · presence · what is turned toward (Exodus 33:14)",
+      "mission": "Implements every visible surface — components, pages, design system code, asset pipeline, a11y/SEO. Consumes Chosheb's handoff, contracts with Yasad's APIs.",
+      "charter": "What the user sees is correct, accessible, and consistent with the DS. Token changes propagate everywhere or nowhere — no half-rolled-out themes.",
+      "relationships": "Chosheb → Panim (design handoff) · Panim ↔ Yasad (API contracts)",
+      "agents": [
+        {"alias": "huram", "role": "panim_team_lead", "short": "lead", "description": "Leads all visible frontend works — cunning across stack.", "source": "2 Chronicles 2:13"},
+        {"alias": "oholiab", "role": "senior_frontend_engineer_frontend_design_system_expert", "short": "ds", "description": "Keeper of patterns and standards across components.", "source": "Exodus 35:34"},
+        {"alias": "salma", "role": "senior_frontend_developer", "short": "dev", "description": "Implements visible form — the builder of frontend code.", "source": "1 Chronicles 2:51"},
+        {"alias": "obed", "role": "smart_frontend_assets_feeder", "short": "assets", "description": "Faithful servant who supplies and sustains assets.", "source": "Ruth 4:17"},
+        {"alias": "asaph", "role": "seo_accessibility_expert", "short": "a11y", "description": "Makes the work heard and received by all — SEO + a11y.", "source": "1 Chronicles 16:5"},
+        {"alias": "jahaziel", "role": "frontend_qa_engineer", "short": "qa", "description": "Sees what others miss — frontend QA, evaluates without producing.", "source": "2 Chronicles 20:14"},
+        {"alias": "ahikam", "role": "panim_team_reporter", "short": "report", "description": "Carries the team's structured output faithfully.", "source": "2 Kings 22:12"}
+      ]
+    },
+    {
+      "id": "yasad",
+      "label": "Yasad",
+      "domain": "Backend",
+      "hebrew": "יָסַד",
+      "hebrew_meaning": "To lay the foundation · establish solidly (Psalm 24:2)",
+      "mission": "Lays and maintains the backend foundation — endpoints, contracts, data schema, persistence, business invariants. Contract-first.",
+      "charter": "Contracts before code. Migrations reviewed by 4 orthogonal lenses (contracts/perf/security/tests) before they ship.",
+      "relationships": "Panim ↔ Yasad (API contracts) · Yasad ↔ Mishmar (audit + remediation)",
+      "agents": [
+        {"alias": "zerubbabel", "role": "yasad_team_lead", "short": "lead", "description": "Governor who lays the deep base — leads backend foundation work.", "source": "Ezra 3:2"},
+        {"alias": "zadok", "role": "senior_software_engineer_design_system_master", "short": "patterns", "description": "Keeper of what must not change — backend patterns.", "source": "2 Samuel 8:17"},
+        {"alias": "nathan", "role": "senior_software_engineer_software_architecture_master", "short": "arch", "description": "Brings architectural vision — what should and should not be built.", "source": "2 Samuel 7:2"},
+        {"alias": "hizkiah", "role": "senior_backend_engineer_pure_backend_implementation", "short": "impl", "description": "Strength of Yah — does the direct backend implementation labour.", "source": "2 Chronicles 31:13"},
+        {"alias": "shallum", "role": "senior_backend_engineering_databases_expert", "short": "db", "description": "Keeper of what is stored — database design and migration.", "source": "2 Kings 15:10"},
+        {"alias": "uriah", "role": "backend_qa_engineer", "short": "qa", "description": "Absolute integrity — holds the line on backend standards.", "source": "2 Samuel 11"},
+        {"alias": "igal", "role": "yasad_team_reporter", "short": "report", "description": "Reports faithfully from his section.", "source": "Numbers 13:7"}
+      ]
+    },
+    {
+      "id": "mishmar",
+      "label": "Mishmar",
+      "domain": "Security",
+      "hebrew": "מִשְׁמָר",
+      "hebrew_meaning": "Guard · watch · the post set day and night (Nehemiah 4:9)",
+      "mission": "Cross-cutting security — code, surface, infrastructure, threat model. A constraint shaping every team's output from the start, not a team reviewing at the end.",
+      "charter": "Sensitive surface changes pass the 3-lens gate (code-OWASP / surface / threat-model) with adversarial refute before merge. Hardening overlay re-applied on every container recreate.",
+      "relationships": "Mishmar ↔ all teams (cross-cutting audit) · Mishmar → Migdal (security gates infra)",
+      "agents": [
+        {"alias": "phinehas", "role": "mishmar_team_lead", "short": "lead", "description": "Acted decisively to stop a breach — zealous for the boundary.", "source": "Numbers 25:7-8"},
+        {"alias": "benaiah", "role": "software_and_infrastructure_security_expert_devsecops", "short": "infra-sec", "description": "Mighty man who handles the hardest infrastructure threats.", "source": "2 Samuel 23:20"},
+        {"alias": "joab", "role": "web_mobile_desktop_security_expert", "short": "app-sec", "description": "Field general across all attack vectors — app surface security.", "source": "2 Samuel 8:16"},
+        {"alias": "ira", "role": "code_security_ops", "short": "code-sec", "description": "Keeps watch at the code level — security ops.", "source": "2 Samuel 20:26"},
+        {"alias": "hushai", "role": "software_security_advisor", "short": "advisor", "description": "Trusted advisor who outmanoeuvred the attacker — security counsel.", "source": "2 Samuel 15:37"},
+        {"alias": "maaseiah", "role": "mishmar_team_reporter", "short": "report", "description": "Carries the structured account faithfully.", "source": "Nehemiah 8:4"}
+      ]
+    },
+    {
+      "id": "migdal",
+      "label": "Migdal",
+      "domain": "Infrastructure",
+      "hebrew": "מִגְדָּל",
+      "hebrew_meaning": "Tower · load-bearing structures of the wall (Nehemiah 3:1)",
+      "mission": "Builds and operates the load-bearing infrastructure — systems, network, devops pipelines, observability, recovery. Gated by Mishmar at change time.",
+      "charter": "Infra change passes the 5-lens panel (design/systems/devops/observability/health) before apply. No `:latest` tags. Hardening overlay always re-applied. DR drilled quarterly.",
+      "relationships": "Mishmar → Migdal (security gates) · Migdal serves all teams' runtime",
+      "agents": [
+        {"alias": "eliashib", "role": "migdal_team_lead", "short": "lead", "description": "Organises the foundational infrastructure work.", "source": "Nehemiah 3:1"},
+        {"alias": "palal", "role": "systems_engineer_os_virtualisation_networks", "short": "systems", "description": "Works at the structural intersection — OS / virt / networks.", "source": "Nehemiah 3:25"},
+        {"alias": "meshullam", "role": "infrastructure_design_engineer", "short": "design", "description": "Designs connections between infrastructure parts.", "source": "Nehemiah 3:4"},
+        {"alias": "hanun", "role": "devsecops_practitioner_support_ops", "short": "devsecops", "description": "Long support stretch — devsecops practice, operational support.", "source": "Nehemiah 3:13"},
+        {"alias": "meremoth", "role": "devops_engineer", "short": "devops", "description": "Works at the delivery layer — pipelines, deploys.", "source": "Nehemiah 3:4"},
+        {"alias": "rehum", "role": "infrastructure_health_and_security_advisor", "short": "health", "description": "Watches for risk and advises — infrastructure health.", "source": "Nehemiah 3:17"},
+        {"alias": "zaccur", "role": "migdal_team_reporter", "short": "report", "description": "Keeps record, mindful of what happened.", "source": "Nehemiah 3:2"}
+      ]
+    },
+    {
+      "id": "sefer",
+      "label": "Sefer",
+      "domain": "Documentation",
+      "hebrew": "סֵפֶר",
+      "hebrew_meaning": "Book · scroll · official written record (Nehemiah 8, Ezra 6)",
+      "mission": "Documentation across three layers — organisation (Seraiah), project (Joah), team (Shevna). Pull-based: pulls at milestones and on trigger events, not on every commit.",
+      "charter": "What is not written down is forgotten. Release notes assembled from git log per category. ADRs for every consequential decision. Style guide applied uniformly.",
+      "relationships": "Sefer ← all teams (pulls at milestones + trigger events)",
+      "agents": [
+        {"alias": "jehoshaphat", "role": "sefer_team_lead", "short": "lead", "description": "First Recorder in David's court — cares for national archives.", "source": "2 Samuel 8:16"},
+        {"alias": "seraiah", "role": "organisation_layer_specialist", "short": "org", "description": "Operates at the highest state level — org-wide documentation.", "source": "2 Samuel 8:17"},
+        {"alias": "joah", "role": "project_layer_specialist", "short": "project", "description": "Documents specific events and decisions of each project.", "source": "2 Kings 18:18"},
+        {"alias": "shevna", "role": "team_layer_specialist", "short": "team", "description": "Embedded with teams — documents their specific outputs.", "source": "2 Kings 18:18"},
+        {"alias": "jehonathan", "role": "knowledge_publication_specialist", "short": "publish", "description": "Takes knowledge and makes it legible for others.", "source": "1 Chronicles 27:32"},
+        {"alias": "huldah", "role": "sefer_team_reporter", "short": "report", "description": "Verifies, interprets, reports back with authority.", "source": "2 Kings 22:14"}
+      ]
+    }
+  ]
+}

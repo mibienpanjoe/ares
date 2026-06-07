@@ -16,6 +16,27 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import RichLog, Static
 from rich.text import Text
 
+# Module-level cache for the alias→role lookup (org.json is static).
+_ROLE_CACHE: dict[str, str | None] | None = None
+
+
+def _role_for(alias: str) -> str | None:
+    global _ROLE_CACHE
+    if _ROLE_CACHE is None:
+        try:
+            from ..org_data import load_org
+            org = load_org()
+            cache: dict[str, str | None] = {}
+            for grp in org.get("groups", []):
+                for ag in grp.get("agents", []):
+                    a = (ag.get("alias") or "").lower()
+                    if a:
+                        cache[a] = ag.get("short") or ag.get("role")
+            _ROLE_CACHE = cache
+        except Exception:
+            _ROLE_CACHE = {}
+    return _ROLE_CACHE.get((alias or "").lower())
+
 
 MAX_FEED_LINES = 200
 
@@ -116,6 +137,9 @@ class LiveTab(Container):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._state: dict[str, Any] = {}
+        # Project filter — None means show all; a Path means filter to that project.
+        # Toggled by the app via set_project_filter() in response to the 'p' key.
+        self._project_filter: Any = None
         self._feed_buf: deque[Text] = deque(maxlen=MAX_FEED_LINES)
 
     def compose(self) -> ComposeResult:
@@ -159,7 +183,7 @@ class LiveTab(Container):
             self._render_active(self._state)
         if etype == "worktree_change":
             self._render_worktrees(self._state)
-        if etype in ("mcp_server", "cognee_op"):
+        if etype in ("mcp_server", "cognee_op", "graphify_scan", "graphify_query"):
             self._render_knowledge(self._state)
 
     def _mutate_state(self, ev: dict[str, Any]) -> None:
@@ -219,12 +243,67 @@ class LiveTab(Container):
                     existing["status"] = p.get("status") or existing.get("status", "?")
                     existing["last_event"] = ev.get("ts")
                     mcps[name] = existing
+            elif etype == "cognee_op":
+                p = ev.get("payload") or {}
+                store = p.get("store")
+                if store:
+                    cognee = self._state.setdefault("cognee", {})
+                    entry = cognee.setdefault(store, {})
+                    entry["up"] = bool(p.get("up"))
+                    entry["url"] = p.get("url") or entry.get("url", "")
+                    if "nodes" in p:
+                        entry["nodes"] = p.get("nodes")
+                    entry["last_event"] = ev.get("ts")
+            elif etype in ("graphify_scan", "graphify_query"):
+                p = ev.get("payload") or {}
+                g = self._state.setdefault("graphify", {})
+                if etype == "graphify_scan":
+                    g["nodes"] = p.get("nodes")
+                    g["edges"] = p.get("edges")
+                    g["communities"] = p.get("communities")
+                    g["scans"] = (g.get("scans") or 0) + 1
+                    g["last_scan_at"] = p.get("scanned_at") or ev.get("ts")
+                else:
+                    g["queries"] = (g.get("queries") or 0) + 1
+                    g["last_query_at"] = ev.get("ts")
             elif etype == "session_stop" and sid:
                 sessions.pop(sid, None)
         except Exception:
             return
 
     # ----- panel renderers ---------------------------------------------------
+
+    def set_project_filter(self, project: Any) -> None:
+        """Called by the app when the user toggles the project filter (key 'p')."""
+        self._project_filter = project
+        self._render_active(self._state)
+        self._render_worktrees(self._state)
+
+    def _session_matches_filter(self, sess: dict[str, Any]) -> bool:
+        """Match a session to the active project filter, tolerating both
+        absolute paths and Claude Code's encoded dir form.
+
+        Claude Code stores sessions under ~/.claude/projects/<encoded>/...
+        where <encoded> is the absolute project path with '/' replaced by
+        '-' (e.g. -home-ogu-theY4NN-harness). The daemon's session.project
+        field carries this encoded form. The filter target is an absolute
+        Path. We compare both:
+          - absolute  →  encoded     (replace '/' with '-')
+          - encoded   →  basename match (last segment)
+        """
+        flt = getattr(self, "_project_filter", None)
+        if not flt:
+            return True
+        proj = (sess.get("project") or "").rstrip("/")
+        if not proj:
+            return False
+        target_abs = str(flt).rstrip("/")
+        # Encoded form: leading dash + path with '/' → '-'.
+        target_encoded = target_abs.replace("/", "-")
+        if proj == target_abs or proj == target_encoded:
+            return True
+        # Last-segment fallback (covers both encoded and absolute forms).
+        return proj.rsplit("-", 1)[-1] == target_abs.rsplit("/", 1)[-1]
 
     def _render_active(self, state: dict[str, Any]) -> None:
         try:
@@ -233,9 +312,13 @@ class LiveTab(Container):
             return
         sessions = (state or {}).get("sessions") or {}
         text = Text()
-        text.append("ACTIVE\n", style="bold dim")
+        flt = getattr(self, "_project_filter", None)
+        title = "ACTIVE" if not flt else f"ACTIVE  ·  {str(flt).split('/')[-1]} only (p to toggle)"
+        text.append(title + "\n", style="bold dim")
         any_agent = False
         for sid, sess in sessions.items():
+            if not self._session_matches_filter(sess):
+                continue
             for name, ag in (sess.get("agents_active") or {}).items():
                 any_agent = True
                 started = (ag.get("started") or "")[11:19]
@@ -245,6 +328,9 @@ class LiveTab(Container):
                 style = _style_for_type("agent_spawn") if status == "running" else "dim"
                 text.append(f"{dot} ", style=style)
                 text.append(f"{name:14}", style="bold")
+                role = _role_for(name)
+                if role:
+                    text.append(f" · {role:18}", style="dim")
                 text.append(f"  {started}  {last_tool}\n", style="dim")
         if not any_agent:
             text.append("(no active agents)\n", style="dim italic")
@@ -295,6 +381,20 @@ class LiveTab(Container):
             text.append(f"{nodes:>6} nodes\n", style="white")
         if not cognee:
             text.append("(cognee not yet probed)\n", style="dim italic")
+        g = (state or {}).get("graphify") or {}
+        if g:
+            nodes = g.get("nodes")
+            edges = g.get("edges")
+            scans = g.get("scans") or 0
+            queries = g.get("queries") or 0
+            text.append("● ", style="#00D4AA")
+            text.append(f"{'graphify':12} ", style="bold")
+            if nodes is not None:
+                text.append(f"{nodes:>6} nodes", style="white")
+                if edges is not None:
+                    text.append(f" / {edges:,} edges", style="dim")
+                text.append("\n")
+            text.append(f"  {scans} scans · {queries} queries\n", style="dim")
         mcp = (state or {}).get("mcp_servers") or {}
         if mcp:
             text.append("\nMCP\n", style="bold dim")

@@ -189,6 +189,11 @@ class AgentsTab(Container):
         root = tree.root
         root.expand()
         sessions = (self._state.get("sessions") or {})
+        # Daemon-side confirmed-alive gate (state.py) is the source of
+        # truth for what counts as a real session. Any session reaching
+        # us here is confirmed by session_discover. A residual project=""
+        # entry would be a daemon bug — surface it visually as "?" so we
+        # notice rather than silently hiding it.
         for sid, sess in sessions.items():
             label = Text()
             label.append(sid[:8] + "… ", style="cyan")
@@ -204,6 +209,9 @@ class AgentsTab(Container):
                     al = Text()
                     al.append("● ", style="#00D4AA")
                     al.append(name, style="bold")
+                    role = _role_for(name)
+                    if role:
+                        al.append(f"  · {role}", style="dim")
                     sess_node.add_leaf(al, data={"kind": "agent", "sid": sid, "agent": name})
 
     def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
@@ -271,8 +279,32 @@ class AgentsTab(Container):
                 p = ev.get("payload") or {}
                 ts = (ev.get("ts") or "")[11:19]
                 agent = ev.get("agent") or "(main)"
+                role = _role_for(agent) if agent != "(main)" else None
                 msg = (p.get("message") or "")[:60]
-                text.append(f"● {agent}  {ts}\n", style="#FC8181 bold")
+                label = f"{agent} · {role}" if role else agent
+                text.append(f"● {label}  {ts}\n", style="#FC8181 bold")
                 text.append(f"  {msg}\n", style="white")
                 text.append("─────────\n", style="dim")
         panel.update(text)
+
+
+# Module-level cache for the alias→role lookup (org.json is static).
+_ROLE_CACHE: dict[str, str | None] | None = None
+
+
+def _role_for(alias: str) -> str | None:
+    global _ROLE_CACHE
+    if _ROLE_CACHE is None:
+        try:
+            from ..org_data import load_org
+            org = load_org()
+            cache: dict[str, str | None] = {}
+            for grp in org.get("groups", []):
+                for ag in grp.get("agents", []):
+                    a = (ag.get("alias") or "").lower()
+                    if a:
+                        cache[a] = ag.get("short") or ag.get("role")
+            _ROLE_CACHE = cache
+        except Exception:
+            _ROLE_CACHE = {}
+    return _ROLE_CACHE.get((alias or "").lower())

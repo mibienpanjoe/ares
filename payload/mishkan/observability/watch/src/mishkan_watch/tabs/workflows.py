@@ -1,8 +1,13 @@
 """Tab 3 — Workflows.
 
 2-panel layout per §7.3:
-  - WORKFLOW LIST (left, 30%)  — cards of recent workflow runs
-  - PHASE TREE (right, 70%)    — phases + agent fan-out of the selected run
+  - WORKFLOW LIST (left, 30%)  — static catalogue + recent runs
+  - PHASE TREE (right, 70%)    — phases + agent fan-out OR catalog detail
+
+The list panel shows BOTH:
+  - Live runs (top) — recent workflow invocations with status
+  - Available catalogue (below) — workflows installed on the system,
+    with name, description, whenToUse — clickable to read full meta.
 
 Tracks workflow_start / workflow_phase / workflow_agent_call /
 workflow_agent_result / workflow_complete events emitted by the
@@ -11,7 +16,10 @@ in post-tool-observe.sh.
 """
 from __future__ import annotations
 
+import os
+import re
 from collections import OrderedDict
+from pathlib import Path
 from typing import Any, Optional
 
 from rich.text import Text
@@ -19,6 +27,97 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.widgets import ListItem, ListView, Static, Tree
 from textual.widgets.tree import TreeNode
+
+
+# Locations to scan for installed workflow scripts. First hit wins per name.
+_WORKFLOW_PATHS = [
+    Path.home() / ".claude" / "mishkan" / "workflows",
+]
+
+
+def _scan_catalogue() -> list[dict[str, Any]]:
+    """Parse meta blocks from every .js workflow on disk.
+
+    Extracts: name, description, whenToUse, phases (titles only). The meta
+    block is required by the workflow contract (`export const meta = {...}`)
+    so a missing one is a malformed workflow — silently skipped.
+
+    Repo-mode fallback: walk up from this file looking for
+    payload/mishkan/workflows/ in case mishkan-watch runs from a source
+    checkout without the runtime payload installed.
+    """
+    paths = list(_WORKFLOW_PATHS)
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        c = parent / "payload" / "mishkan" / "workflows"
+        if c.is_dir():
+            paths.append(c)
+            break
+        if parent == parent.parent:
+            break
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for d in paths:
+        if not d.is_dir():
+            continue
+        for js in sorted(d.glob("*.js")):
+            try:
+                txt = js.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            meta = _extract_meta(txt)
+            if not meta or not meta.get("name"):
+                continue
+            if meta["name"] in seen:
+                continue
+            seen.add(meta["name"])
+            meta["_path"] = str(js)
+            out.append(meta)
+    return out
+
+
+# Accept both " and ' quoting — JS allows both in literal strings.
+_META_KEY_RE = re.compile(
+    r'(name|description|whenToUse|title|detail)\s*:\s*'
+    r'(?:"((?:[^"\\]|\\.)*)"|\'((?:[^\'\\]|\\.)*)\')'
+)
+
+
+def _extract_meta(txt: str) -> dict[str, Any]:
+    """Best-effort extract of the `export const meta = {...}` literal.
+
+    The contract guarantees meta is a pure literal — no computed values —
+    so a key/value regex over the meta block is enough. We don't run a
+    full JS parser; we just lift the four fields we render.
+    """
+    m = re.search(r'export\s+const\s+meta\s*=\s*\{', txt)
+    if not m:
+        return {}
+    # Naive brace match — meta blocks don't contain strings with unmatched
+    # braces in practice; if they do we just truncate, which is fine for
+    # display purposes.
+    start = m.end()
+    depth = 1
+    i = start
+    while i < len(txt) and depth > 0:
+        c = txt[i]
+        if c == '{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+        i += 1
+    block = txt[start:i]
+    out: dict[str, Any] = {}
+    for key, dq, sq in _META_KEY_RE.findall(block):
+        val = dq or sq
+        # JS escape unescape for the common cases.
+        val = val.replace('\\"', '"').replace("\\'", "'").replace("\\n", " ").replace("\\\\", "\\")
+        out.setdefault(key, val)
+    # Phase titles (best-effort): every `title: "..."` or `title: '...'`.
+    titles = re.findall(r'\{\s*title:\s*[\'"]([^\'"]+)[\'"]', block)
+    if titles:
+        out["phase_titles"] = titles
+    return out
 
 
 class WorkflowsTab(Container):
@@ -29,6 +128,10 @@ class WorkflowsTab(Container):
         # run_id -> { name, started, phases: {phase: [agent_call dicts]}, ... }
         self._runs: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._selected: Optional[str] = None
+        # Static catalogue parsed from disk at mount.
+        self._catalogue: list[dict[str, Any]] = []
+        # Currently-shown catalogue entry (selected name) for the detail panel.
+        self._cat_selected: Optional[str] = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="workflows-row"):
@@ -40,6 +143,10 @@ class WorkflowsTab(Container):
                 yield Tree("(no workflow selected)", id="workflows-tree")
 
     def on_mount(self) -> None:
+        try:
+            self._catalogue = _scan_catalogue()
+        except Exception:
+            self._catalogue = []
         self._render_list()
         self._render_tree()
 
@@ -122,29 +229,61 @@ class WorkflowsTab(Container):
         except Exception:
             return
         lv.clear()
-        if not self._runs:
-            lv.append(ListItem(Static(Text("(none yet)\nrun a workflow to populate",
-                                          style="dim italic"))))
-            return
-        for run_id, run in list(self._runs.items())[-10:]:
-            t = Text()
-            mark = "║ " if self._selected == run_id else "  "
-            t.append(mark, style="#B794F4 bold")
-            t.append(run["name"][:24], style="bold")
-            t.append(f"  [{run['status']}]", style="dim")
-            phases_done = sum(1 for items in run["phases"].values()
-                              if items and all(a.get("status") != "running" for a in items))
-            phases_total = max(1, len(run["phases"]) or 1)
-            t.append(f"\n  {phases_done}/{phases_total} phases", style="dim")
-            cost = run.get("cost_usd") or 0.0
-            tok = run.get("tokens") or 0
-            t.append(f"   ${cost:.2f} · {tok/1000:.1f}k tok", style="#B794F4")
-            lv.append(ListItem(Static(t), id=f"wf-{run_id}"))
+        # ----- Recent runs (top) ---------------------------------------------
+        if self._runs:
+            head = Text()
+            head.append("RECENT RUNS\n", style="bold #B794F4")
+            lv.append(ListItem(Static(head)))
+            for run_id, run in list(self._runs.items())[-8:]:
+                t = Text()
+                mark = "║ " if self._selected == run_id else "  "
+                t.append(mark, style="#B794F4 bold")
+                t.append(run["name"][:24], style="bold")
+                t.append(f"  [{run['status']}]", style="dim")
+                phases_done = sum(1 for items in run["phases"].values()
+                                  if items and all(a.get("status") != "running" for a in items))
+                phases_total = max(1, len(run["phases"]) or 1)
+                t.append(f"\n  {phases_done}/{phases_total} phases", style="dim")
+                cost = run.get("cost_usd") or 0.0
+                tok = run.get("tokens") or 0
+                t.append(f"   ${cost:.2f} · {tok/1000:.1f}k tok", style="#B794F4")
+                lv.append(ListItem(Static(t), id=f"wf-{run_id}"))
+        # ----- Catalogue (bottom) --------------------------------------------
+        if self._catalogue:
+            head = Text()
+            if self._runs:
+                head.append("\nAVAILABLE\n", style="bold #00D4AA")
+            else:
+                head.append("AVAILABLE\n", style="bold #00D4AA")
+            head.append(f"({len(self._catalogue)} workflows · select for detail)", style="dim italic")
+            lv.append(ListItem(Static(head)))
+            for entry in self._catalogue:
+                name = entry.get("name", "?")
+                desc = entry.get("description") or ""
+                mark = "║ " if self._cat_selected == name else "  "
+                t = Text()
+                t.append(mark, style="#00D4AA bold")
+                t.append(name[:30], style="bold")
+                if desc:
+                    t.append(f"\n  {desc[:60]}", style="dim")
+                lv.append(ListItem(Static(t), id=f"cat-{name}"))
+        elif not self._runs:
+            lv.append(ListItem(Static(Text(
+                "(no workflows installed and no runs yet)\n"
+                "Install via `npx mishkan-harness install`,\n"
+                "or run a workflow from the main session.",
+                style="dim italic",
+            ))))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         node_id = event.item.id or ""
         if node_id.startswith("wf-"):
             self._selected = node_id[3:]
+            self._cat_selected = None
+            self._render_tree()
+        elif node_id.startswith("cat-"):
+            self._cat_selected = node_id[4:]
+            self._selected = None
             self._render_tree()
 
     def _render_tree(self) -> None:
@@ -154,8 +293,34 @@ class WorkflowsTab(Container):
             return
         tree.clear()
         root = tree.root
+        # Catalogue detail mode — shows description, whenToUse, phases.
+        if self._cat_selected:
+            entry = next((e for e in self._catalogue if e.get("name") == self._cat_selected), None)
+            if entry:
+                rl = Text()
+                rl.append(entry.get("name", ""), style="bold #00D4AA")
+                rl.append("  (catalogue)", style="dim")
+                root.label = rl
+                root.expand()
+                desc = entry.get("description") or "(no description)"
+                root.add_leaf(Text(f"description: {desc}", style="white"))
+                wtu = entry.get("whenToUse")
+                if wtu:
+                    root.add_leaf(Text(f"when to use: {wtu}", style="#F6AD55"))
+                phases = entry.get("phase_titles") or []
+                if phases:
+                    pn = root.add(Text(f"phases ({len(phases)})", style="bold dim"))
+                    pn.expand()
+                    for i, ph in enumerate(phases, 1):
+                        pn.add_leaf(Text(f"  {i}. {ph}", style="white"))
+                path = entry.get("_path") or ""
+                if path:
+                    root.add_leaf(Text(f"source: {path}", style="dim italic"))
+            else:
+                root.label = Text("(workflow not in catalogue)", style="dim italic")
+            return
         if not self._selected or self._selected not in self._runs:
-            root.label = Text("(no workflow selected)", style="dim italic")
+            root.label = Text("(select a workflow run or a catalogue entry)", style="dim italic")
             return
         run = self._runs[self._selected]
         rl = Text()

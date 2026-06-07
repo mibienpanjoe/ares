@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
+
 from typing import Any
 
 from textual import work
@@ -24,6 +25,8 @@ from .tabs.activity import ActivityTab
 from .tabs.agents import AgentsTab
 from .tabs.knowledge import KnowledgeTab
 from .tabs.live import LiveTab
+from .tabs.org import OrgTab
+from .tabs.usage import UsageTab
 from .tabs.workflows import WorkflowsTab
 
 
@@ -40,6 +43,9 @@ class MishkanWatch(App):
         Binding("3", "switch_tab('workflows')", "Workflows"),
         Binding("4", "switch_tab('knowledge')", "Knowledge"),
         Binding("5", "switch_tab('activity')", "Activity"),
+        Binding("6", "switch_tab('org-ref')", "Org-Ref"),
+        Binding("7", "switch_tab('usage')", "Usage"),
+        Binding("p", "toggle_project_filter", "Project/All"),
         Binding("question_mark", "show_help", "help", show=False),
     ]
 
@@ -48,6 +54,17 @@ class MishkanWatch(App):
         self._socket_path = socket_path or DEFAULT_SOCKET
         self._client: DaemonClient | None = None
         self._started_at = time.time()
+        # Project filter — at startup, prefer CLAUDE_PROJECT_DIR (set by
+        # Claude Code in subprocess hooks), fall back to cwd. None means
+        # "show all projects" (toggle via 'p' key).
+        self._current_project: Path = Path(
+            os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        ).resolve()
+        # Default OFF — the filter is opt-in via 'p'. Defaulting ON broke
+        # rendering for users whose sess.project carries the Claude Code
+        # encoded form (e.g. -home-ogu-theY4NN-harness) instead of an
+        # absolute path; the comparator below tolerates both forms.
+        self._filter_to_current: bool = False
         self._totals = {
             "tokens_in": 0,
             "tokens_out": 0,
@@ -72,8 +89,24 @@ class MishkanWatch(App):
                 yield KnowledgeTab(id="tab-knowledge")
             with TabPane("Activity", id="activity"):
                 yield ActivityTab(id="tab-activity")
-        yield Static("", id="status-bar")
+            with TabPane("Org-Ref", id="org-ref"):
+                yield OrgTab(id="tab-org-ref")
+            with TabPane("Usage", id="usage"):
+                yield UsageTab(id="tab-usage")
+        # Footer docked first so it lands at the very bottom; status-bar
+        # yielded after so it sits just above. Otherwise both compete for
+        # the same bottom slot and Footer wins (status-bar invisible).
         yield Footer()
+        yield Static("", id="status-bar")
+
+    def on_mount_initial_filter(self) -> None:
+        """Propagate the initial project filter to tabs that support it."""
+        for tab in self._all_tabs():
+            try:
+                if hasattr(tab, "set_project_filter") and self._filter_to_current:
+                    tab.set_project_filter(self._current_project)
+            except Exception:
+                continue
 
     async def on_mount(self) -> None:
         # Status bar refresh on a fixed cadence rather than on every event.
@@ -81,6 +114,7 @@ class MishkanWatch(App):
         # on each was a major source of UI latency. 500 ms ticks feel
         # live without saturating the loop.
         self.set_interval(0.5, self._refresh_status_bar)
+        self.on_mount_initial_filter()
         self._client = DaemonClient(self._socket_path)
         await self._client.start(self._on_frame, self._on_status)
 
@@ -129,7 +163,7 @@ class MishkanWatch(App):
 
     def _all_tabs(self) -> list[Any]:
         out = []
-        for sel in ("#tab-live", "#tab-agents", "#tab-workflows", "#tab-knowledge", "#tab-activity"):
+        for sel in ("#tab-live", "#tab-agents", "#tab-workflows", "#tab-knowledge", "#tab-activity", "#tab-org-ref", "#tab-usage"):
             try:
                 out.append(self.query_one(sel))
             except Exception:
@@ -222,11 +256,34 @@ class MishkanWatch(App):
         # Minimal help; expand into a modal in a follow-up.
         try:
             bar = self.query_one("#status-bar", Static)
-            help_text = Text("1-5 tabs · / filter (Activity) · q quit",
+            help_text = Text("1-7 tabs · p project filter · / filter (Activity) · q quit",
                              style="bold")
             bar.update(help_text)
         except Exception:
             pass
+
+    def action_toggle_project_filter(self) -> None:
+        """Toggle between 'current project only' and 'all projects' filter.
+
+        Live tab reads `app.filter_project` to decide what to show. When
+        the filter is on, only sessions/worktrees whose project path
+        matches `self._current_project` are rendered.
+        """
+        self._filter_to_current = not self._filter_to_current
+        # Force a re-render of the structural panels via a fake snapshot pass.
+        for tab in self._all_tabs():
+            try:
+                if hasattr(tab, "set_project_filter"):
+                    tab.set_project_filter(
+                        self._current_project if self._filter_to_current else None
+                    )
+            except Exception:
+                continue
+        self._refresh_status_bar()
+
+    @property
+    def filter_project(self) -> Path | None:
+        return self._current_project if self._filter_to_current else None
 
 
 def run(socket_path: Path | None = None) -> int:

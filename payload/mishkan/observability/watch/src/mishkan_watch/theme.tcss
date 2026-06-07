@@ -40,7 +40,7 @@ Footer {
 
 #status-bar {
     dock: bottom;
-    height: 1;
+    height: 2;
     background: $color-muted;
     color: white 90%;
     padding: 0 1;
@@ -213,7 +213,7 @@ Tabs > Tab.-active {
 }
 
 .cognee-card {
-    width: 50%;
+    width: 1fr;
     border: solid $color-border-light;
     background: $color-surface;
     padding: 1 2;
@@ -251,4 +251,37 @@ Tabs > Tab.-active {
     content-align: center middle;
     color: $color-dim;
     text-style: italic;
+}
+
+/* ─── Tab: Usage ───────────────────────────────────────────────── */
+
+#usage-row {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#usage-totals {
+    width: 26%;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 1 2;
+}
+
+#usage-sessions {
+    width: 38%;
+    layout: vertical;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#usage-sessions-table {
+    height: 1fr;
+}
+
+#usage-detail {
+    width: 36%;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 1 2;
 }
