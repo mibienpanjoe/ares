@@ -28,6 +28,9 @@ payload/mishkan/profile.md
 node_modules/
 dist/
 
+# Graphify code-graph runtime output
+graphify-out/
+
 # Python
 **/__pycache__/
 **/*.pyc

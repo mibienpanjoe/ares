@@ -48,6 +48,7 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 | 08 | [Glossary](./08-glossary.md) | 45-agent roster (alias → role → team), key terms |
 | 09 | [Dynamic Workflows](./09-workflows.md) | The 7 MISHKAN workflows, when to fire them, the cost gate |
 | 10 | [Observability](./10-observability.md) | Cross-session daemon + Textual TUI (opt-in); 5 tabs, status bar, troubleshooting |
+| 11 | [Graphify](./11-graphify.md) | Code-structure graph; queries at ~1.8k tokens (88.1× reduction, POC-verified); D-008 + D-009 |
 
 ## Where to start
 

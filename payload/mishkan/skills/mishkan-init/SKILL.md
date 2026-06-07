@@ -46,6 +46,21 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
    the team rules from `~/.claude/mishkan/rules/*` → `.claude/rules/*` for
    path-scoped loading, and `~/.claude/mishkan/templates/mcp.json` → `./.mcp.json`
    so agents can reach the Cognee knowledge-graph MCP.
+10. **Automated — Graphify code graph** (the third store of the knowledge stack,
+    per D-008): if `graphify` is on PATH (`uv tool install graphifyy` provides
+    it), run an initial scan so the project has a structure graph from Sprint
+    S0 onwards. Otherwise skip with a one-line note — the agent fleet still
+    works; the graph populates the first time Hizkiah / Salma / Nathan / Zadok /
+    Oholiab runs `graphify update .` mid-sprint.
+    ```bash
+    if command -v graphify >/dev/null 2>&1; then
+      graphify update . || echo "mishkan-init: graphify scan failed, skipping (project will scan on first structural query)"
+    fi
+    ```
+    The output `graphify-out/` is gitignored by convention — re-derivable, no
+    need to commit. The MISHKAN observability daemon's `graphify_tail` source
+    will start emitting `graphify_scan` / `graphify_query` events for the
+    Knowledge tab as soon as the graph exists.
 
 ## Outputs
 

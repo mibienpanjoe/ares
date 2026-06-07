@@ -1,0 +1,57 @@
+name: Create release draft on tag push
+
+# Two-step publish flow:
+#   1. `git push origin v0.2.3`            → this workflow creates a DRAFT release
+#   2. Review the draft on github.com      → click "Publish release" when ready
+#   3. Publishing the release fires npm-publish.yml → npm gets the package
+#
+# A draft release is NOT visible publicly and does NOT trigger downstream
+# publish workflows. It's a safety net: tag pushes can no longer publish
+# accidentally to npm, and rolling back is `Delete draft` instead of
+# `npm unpublish` (which leaves a 24h zombie slot).
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve previous tag
+        id: prev
+        run: |
+          PREV=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || echo "")
+          echo "tag=$PREV" >> "$GITHUB_OUTPUT"
+      - name: Build changelog
+        id: changelog
+        run: |
+          if [ -n "${{ steps.prev.outputs.tag }}" ]; then
+            RANGE="${{ steps.prev.outputs.tag }}..${{ github.ref_name }}"
+          else
+            RANGE="${{ github.ref_name }}"
+          fi
+          {
+            echo "body<<EOF"
+            echo "## Changes since ${{ steps.prev.outputs.tag }}"
+            echo
+            git log --pretty='format:- %s' "$RANGE"
+            echo
+            echo
+            echo "Published to npm: https://www.npmjs.com/package/mishkan-harness/v/${GITHUB_REF_NAME#v}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.body }}
+          draft: true
+          prerelease: false

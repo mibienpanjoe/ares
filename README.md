@@ -140,6 +140,39 @@ installed.
 | `/promote` | Promote knowledge by blast radius |
 | `/sefer-pull` | Trigger a documentation pull |
 
+## Dynamic workflows
+
+Beyond the 45 agents and the skills they load, MISHKAN ships **dynamic
+workflows** — deterministic JavaScript scripts that orchestrate dozens
+of subagents at once with the patterns Anthropic codified
+([fan-out/synthesize, pipeline, judge panel, adversarial verify,
+loop-until-X](https://code.claude.com/docs/en/workflows)). Workflows fire
+from the **main session only**; they are the high-leverage path for
+work that scales by parallelism.
+
+The seven shipped today, each mapped to the real problem it solves:
+
+| Script | When to fire it |
+|---|---|
+| `mishkan-sprint-close` | At `/sprint-close` — six Team Reporters at once, then aggregate |
+| `mishkan-deep-research` | Any unknown where 3-vote adversarial refute is worth the cost |
+| `mishkan-codebase-audit` | Periodic / pre-release; multi-modal sweep with verify |
+| `mishkan-migration-wave` | Refactors, framework swaps, contract renames; per-file isolation |
+| `mishkan-architecture-panel` | High-leverage architecture decisions; 3 proposers × 3 reviewers |
+| `mishkan-release-readiness` | Before every staging-to-prod deploy; barrier gate |
+| `mishkan-init` | Once per project at `/mishkan-init`; spec chain with overlap |
+
+Cost discipline: the working ceiling for any production team is **3–6
+workflows**; seven is the upper bound. Adding more typically means the
+new use case was better served by a Task call or a skill.
+
+The full catalogue, patterns each script uses, and rough cost
+expectations per run live in
+[`payload/mishkan/workflows/README.md`](payload/mishkan/workflows/README.md).
+The PM (Nehemiah) and CTO (Bezalel) co-own the workflow portfolio —
+new workflows land through that PM+CTO review, not ad hoc, so the
+catalogue stays load-bearing rather than accreting noise.
+
 ## Make it yours
 
 The harness serves the engineer described in

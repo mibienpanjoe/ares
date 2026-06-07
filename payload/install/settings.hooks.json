@@ -28,6 +28,15 @@
             "command": "bash {{MISHKAN}}/hooks/pre-tool-trace.sh"
           }
         ]
+      },
+      {
+        "matcher": "Read|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash {{MISHKAN}}/hooks/pre-tool-graphify-nudge.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
