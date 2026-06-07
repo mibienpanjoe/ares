@@ -6,6 +6,12 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+### Fixed
+
+- **Workflows tab crash on `DuplicateIds`** — `_render_list` called `lv.clear()` without awaiting the returned `AwaitRemove`, so the Textual DOM still held old items when `set_timer(0.1)` re-fired during mount. Made `_render_list` async with proper `await`, and `on_mount`/`apply_snapshot`/`apply_event` all coordinate through the async path or `call_later`.
+
+- **State tests stale after phantom-session gate** — four `test_state.py` assertions sent events without a preceding `session_start`, which the `_confirmed_alive` gate (de77c0c) now requires. Prefixed each with `session_start`.
+
 ### Added
 
 - **Knowledge-route advisory hook (D-009 amendment 2026-06-07 — Phase 2

@@ -142,12 +142,12 @@ class WorkflowsTab(Container):
                 yield Static("PHASE TREE", classes="panel-title")
                 yield Tree("(no workflow selected)", id="workflows-tree")
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         try:
             self._catalogue = _scan_catalogue()
         except Exception:
             self._catalogue = []
-        self._render_list()
+        await self._render_list()
         self._render_tree()
         # Re-render once after mount completes — when the tab is created
         # before TabbedContent settles its layout, the first ListView paint
@@ -155,7 +155,7 @@ class WorkflowsTab(Container):
         # show as zero-height (visible as "header only, no rows"). A delayed
         # repaint guarantees the second pass runs with the final container
         # dimensions.
-        self.set_timer(0.1, self._render_list)
+        self.set_timer(0.1, self._re_render_list)
 
     # ----- snapshot / event application --------------------------------------
 
@@ -164,16 +164,16 @@ class WorkflowsTab(Container):
         for sess in (state.get("sessions") or {}).values():
             for ev in (sess.get("recent_events") or []):
                 self._ingest_event(ev)
-        self._render_list()
         self._render_tree()
+        self.call_later(self._re_render_list)
 
     def apply_event(self, ev: dict[str, Any]) -> None:
         if not self._is_workflow_event(ev):
             return
         self._ingest_event(ev)
-        self._render_list()
         if self._selected:
             self._render_tree()
+        self.call_later(self._re_render_list)
 
     def _is_workflow_event(self, ev: dict[str, Any]) -> bool:
         return (ev.get("type") or "").startswith("workflow_")
@@ -230,12 +230,15 @@ class WorkflowsTab(Container):
 
     # ----- renderers ---------------------------------------------------------
 
-    def _render_list(self) -> None:
+    async def _re_render_list(self) -> None:
+        await self._render_list()
+
+    async def _render_list(self) -> None:
         try:
             lv = self.query_one("#workflows-listview", ListView)
         except Exception:
             return
-        lv.clear()
+        await lv.clear()
         # ----- Recent runs (top) ---------------------------------------------
         if self._runs:
             head = Text()

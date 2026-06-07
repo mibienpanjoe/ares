@@ -11,6 +11,7 @@ from mishkan_watchd.state import HarnessState
 
 def test_agent_spawn_creates_session_and_agent():
     s = HarnessState()
+    s.apply({"ts": "x", "session": "sess-1", "type": "session_start", "project": "/tmp/proj"})
     s.apply({
         "ts": "2026-06-05T12:00:00.000Z",
         "session": "sess-1",
@@ -27,6 +28,7 @@ def test_agent_spawn_creates_session_and_agent():
 
 def test_token_usage_accumulates_per_session():
     s = HarnessState()
+    s.apply({"ts": "x", "session": "sess-tok", "type": "session_start", "project": "/p"})
     for tin, tout in [(100, 20), (200, 40), (50, 10)]:
         s.apply({
             "ts": "2026-06-05T12:00:00.000Z",
@@ -51,6 +53,7 @@ def test_session_stop_removes_session():
 def test_snapshot_serializes_cleanly():
     import json
     s = HarnessState()
+    s.apply({"ts": "x", "session": "snap", "type": "session_start", "project": "/p"})
     s.apply({
         "ts": "x", "session": "snap", "project": "/p",
         "type": "agent_spawn", "tool": "Task", "agent": "caleb",
@@ -63,8 +66,9 @@ def test_snapshot_serializes_cleanly():
 
 def test_unknown_event_type_is_ignored_gracefully():
     s = HarnessState()
-    s.apply({"ts": "x", "session": "weird", "type": "completely_unknown_type"})
-    # Session is created but no specific state mutation; no exception.
+    s.apply({"ts": "x", "session": "weird", "type": "session_start", "project": "/p"})
+    s.apply({"ts": "y", "session": "weird", "type": "completely_unknown_type"})
+    # Session exists from session_start; unknown type triggers no exception.
     assert "weird" in s.sessions
 
 
