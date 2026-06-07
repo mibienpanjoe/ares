@@ -25,7 +25,7 @@ foundation with:
 3. **A TUI client (`mishkan-watch`)** — Textual app. 8 tabs, key-driven, no
    overload. Reads the daemon snapshot+delta stream, renders the view, never
    touches files directly. Tabs 1-5 are live; tabs 6-8 (Org-Ref · Usage ·
-   Skills) are reference/analytical views added at v0.2.3.
+   Skills) are reference/analytical views added at v0.2.1.
 
 The TUI runs in any terminal (tmux pane, standalone window, attached over SSH).
 It is a passive observer — it never writes to harness state, never alters
@@ -64,7 +64,7 @@ directory paths. Nothing has to be registered in a config file.
 
 The TUI defaults to ONE view that answers "what is happening right now?". All
 historical depth lives behind explicit key presses. v0.2.0 shipped with a
-5-tab layout (Live · Agents · Workflows · Knowledge · Activity); v0.2.3
+5-tab layout (Live · Agents · Workflows · Knowledge · Activity); v0.2.1
 added three reference/analytical tabs (Org-Ref · Usage · Skills) for
 recall and analysis without disturbing the live view. The 8-tab layout
 is the new upper bound; if a ninth dimension matters we replace, not add.

@@ -81,7 +81,7 @@ See [`docs/design/MISHKAN_observability.md`](docs/design/MISHKAN_observability.m
 
 #### Auto-routing across the stack
 
-Two PreToolUse hooks ship the discoverability layer of v0.2.3 so agents
+Two PreToolUse hooks ship the discoverability layer of v0.2.1 so agents
 reach for the right surface without being asked:
 
 - **Skill discovery** ([D-011](docs/design/MISHKAN_decisions.md)) — a
@@ -203,7 +203,7 @@ loop-until-X](https://code.claude.com/docs/en/workflows)). Workflows fire
 from the **main session only**; they are the high-leverage path for
 work that scales by parallelism.
 
-The portfolio at v0.2.3 — **10 org-level + 8 team-level**, governed by
+The portfolio at v0.2.1 — **10 org-level + 8 team-level**, governed by
 [ADR D-010](docs/design/MISHKAN_decisions.md) (hard caps, four named
 anti-patterns, PM+CTO co-ownership, soft-retirement under 2 fires per
 3 sprints):

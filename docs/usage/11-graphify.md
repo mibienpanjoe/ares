@@ -255,7 +255,7 @@ opted out of the structural layer.
 - [D-008](../design/MISHKAN_decisions.md#d-008) — three-store knowledge
   epistemology.
 - [D-009](../design/MISHKAN_decisions.md#d-009) — graph-first PreToolUse
-  advisory hook (Phase 1 telemetry-only at v0.2.3, Phase 2 advisory
+  advisory hook (Phase 1 telemetry-only at v0.2.1, Phase 2 advisory
   injection planned).
 - [POC report](../research/graphify-token-saving-poc.md) — verified
   88.1× reduction on the MISHKAN harness, 2026-06-07.

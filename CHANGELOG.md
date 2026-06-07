@@ -63,7 +63,7 @@ All notable changes to MISHKAN are documented here. Format:
   end-to-end — every hook exits 0 on any error and never blocks the
   Task call. The `mishkan-init` Phase 1 canary is unchanged.
 
-## [0.2.3] — 2026-06-07
+## [0.2.1] — 2026-06-07
 
 The "discoverability + durability" release. Everything we'd promised becomes
 findable at runtime; the observability stack stops hallucinating sessions on
@@ -234,7 +234,7 @@ Initial npm release. The harness becomes distributable via
 - Dependency-free `npx` installer with idempotent + non-clobbering semantics.
 - ADRs D-001 through D-007.
 
-[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.3...HEAD
-[0.2.3]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.0...v0.2.3
+[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Y4NN777/mishkan-cc-harness/releases/tag/v0.1.0
