@@ -6,7 +6,8 @@
 // No machine-specific paths are baked in. Idempotent: re-running install updates
 // in place. Never clobbers user-edited files (CLAUDE.md, rules, real agents).
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync,
-         copyFileSync, lstatSync, readlinkSync, symlinkSync, rmSync, statSync } from "node:fs";
+         copyFileSync, lstatSync, readlinkSync, symlinkSync, rmSync, statSync,
+         chmodSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -586,9 +587,10 @@ function installObservabilityStack() {
 
   console.log(c.green("  ✓ observability stack installed"));
   console.log(c.dim(
-    "  Start the daemon:  " + c.bold("mishkan-watchd start") + "\n" +
-    "  Open the TUI:      " + c.bold("mishkan-watch") + "\n" +
-    "  Auto-start unit:   mishkan-watchd install-service"));
+    "  Open the TUI:        " + c.bold("mishkan-watch") + "  (auto-starts the daemon if needed)\n" +
+    "  Two-terminal mode:   --no-autostart on the TUI; run `mishkan-watchd start` first\n" +
+    "  Stop the daemon:     mishkan-watchd stop\n" +
+    "  Auto-start at login: mishkan-watchd install-service"));
   return { installed: true };
 }
 
@@ -603,6 +605,30 @@ async function install() {
   copyDir(join(PKG, "payload", "mishkan"), MISHKAN);
   ensureDir(join(MISHKAN, "logs"));
   ensureDir(join(MISHKAN, "cognee"));
+
+  // D-011 Phase 2: rebuild the universal skill-discovery index at install
+  // time so the router has a live index.json before the first session boots.
+  // The SessionStart hook keeps it fresh thereafter; this seeds it.
+  // Fail-open: a missing python3 or an indexer error is logged and the
+  // install continues — the router will surface `index_missing_or_unreadable`
+  // on its next call and /mishkan-skills-reindex is the recovery path.
+  const indexerPath = join(MISHKAN, "scripts", "skill-discovery-indexer.py");
+  if (existsSync(indexerPath) && commandExists("python3")) {
+    const r = spawnSync("python3", [indexerPath, "--rebuild", "--quiet"], {
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 15000,
+    });
+    if (r.status === 0) {
+      log("seeded skill-discovery index at ~/.claude/mishkan/skill-discovery/index.json");
+    } else {
+      warn(`skill-discovery indexer exited ${r.status ?? "with error"}; install continues. ` +
+           `Run /mishkan-skills-reindex once the harness is available.`);
+    }
+  } else if (!commandExists("python3")) {
+    warn("python3 not found; skipping skill-discovery index seed. " +
+         "Install python3 then run /mishkan-skills-reindex.");
+  }
+
   phase(2, totalPhases, "Engineer profile",
         "place runtime profile — never overwrites an existing edited one");
   const realProfile = join(PKG, "docs", "engineer", "profile.md");
@@ -654,12 +680,76 @@ async function install() {
     console.log(c.dim("        Skipped. Re-run later:  npx mishkan-harness observability"));
   }
 
+  // Auto-symlink ~/.local/bin/mishkan -> this package's bin/mishkan.js so
+  // the user gets `mishkan <subcommand>` directly without `npx` or a
+  // global npm install. Skipped (silently) when:
+  //   - ~/.local/bin doesn't exist (user didn't opt into local bins)
+  //   - the link already exists pointing to a different mishkan install
+  //     (don't clobber another version)
+  //   - the link exists pointing to us (idempotent re-run)
+  const localBin = join(HOME, ".local", "bin");
+  const linkTarget = join(PKG, "bin", "mishkan.js");
+  const linkPath = join(localBin, "mishkan");
+  let directAccess = "absent";
+  if (existsSync(localBin)) {
+    if (existsSync(linkPath) || isSymlink(linkPath)) {
+      try {
+        const current = isSymlink(linkPath) ? readlinkSync(linkPath) : null;
+        if (current === linkTarget) {
+          directAccess = "linked";
+        } else {
+          directAccess = "blocked"; // a different file lives at the path
+        }
+      } catch { directAccess = "blocked"; }
+    } else {
+      try {
+        // Defensive +x — npm publish normally sets this from the package.json
+        // `bin` field, but a checkout-from-source flow may not.
+        try { const st = statSync(linkTarget); chmodSync(linkTarget, st.mode | 0o111); } catch {}
+        symlinkSync(linkTarget, linkPath);
+        directAccess = "linked";
+        log(`linked ${tilde(linkPath)} -> ${tilde(linkTarget)}`);
+      } catch (e) {
+        directAccess = "failed";
+        warn(`could not symlink ${tilde(linkPath)}: ${e.message}`);
+      }
+    }
+  }
+  const pathHasLocalBin = (process.env.PATH || "").split(":").includes(localBin);
+
   console.log();
   console.log(c.green(`✓ MISHKAN v${version} installed.`));
-  console.log(c.dim(
-    "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
-    "  Status:           npx mishkan-harness status\n" +
-    "  Re-add obs stack: npx mishkan-harness observability"));
+  if (directAccess === "linked" && pathHasLocalBin) {
+    console.log(c.dim(
+      "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
+      "\n" +
+      "  Commands available directly on your PATH (no `npx` needed):\n" +
+      "    mishkan configure-knowledge   wizard: LLM provider + cognee secrets\n" +
+      "    mishkan code-graph status     inspect the project's Graphify graph\n" +
+      "    mishkan org                   print the 45-agent reference\n" +
+      "    mishkan status                show install state\n" +
+      "    mishkan-watch                 live observability TUI (auto-starts daemon)"));
+  } else if (directAccess === "linked") {
+    console.log(c.dim(
+      "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
+      "\n" +
+      `  Symlinked ${tilde(linkPath)} — add it to PATH for direct access:\n` +
+      `    echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc  # or ~/.zshrc\n` +
+      "  Until then, use `npx mishkan-harness <subcommand>`."));
+  } else {
+    console.log(c.dim(
+      "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
+      "\n" +
+      "  Day-to-day commands (via `npx mishkan-harness …`):\n" +
+      "    npx mishkan-harness configure-knowledge   wizard: LLM provider + cognee secrets\n" +
+      "    npx mishkan-harness code-graph status     inspect the project's Graphify graph\n" +
+      "    npx mishkan-harness org                   print the 45-agent reference\n" +
+      "    mishkan-watch                             live observability TUI (auto-starts daemon)\n" +
+      "\n" +
+      "  Want direct access? Either:\n" +
+      "    npm install -g mishkan-harness                                     # global npm bin\n" +
+      "    mkdir -p ~/.local/bin && ln -sf " + linkTarget + " ~/.local/bin/mishkan  # symlink"));
+  }
 }
 
 function uninstallObservabilityHint() {
@@ -671,6 +761,18 @@ function uninstallObservabilityHint() {
 }
 
 function uninstall({ purge = false } = {}) {
+  // remove the ~/.local/bin/mishkan symlink if we created it (it points
+  // at this package's bin/mishkan.js).
+  const localLink = join(HOME, ".local", "bin", "mishkan");
+  if (isSymlink(localLink)) {
+    try {
+      const t = readlinkSync(localLink);
+      if (t.includes("/bin/mishkan.js")) {
+        rmSync(localLink);
+        log(`removed ${tilde(localLink)}`);
+      }
+    } catch { /* ignore */ }
+  }
   // remove symlinks that point into mishkan
   for (const [sub, dirEntries] of [["agents", false], ["commands", false], ["skills", true]]) {
     const dir = join(CLAUDE, sub);
@@ -722,6 +824,66 @@ function status() {
 }
 
 // ─── org reference ─────────────────────────────────────────────────────────
+// ─── code-graph (Graphify) inspection ──────────────────────────────────────
+function codeGraphCmd(argv) {
+  const sub = argv[0] || "status";
+  const cwd = process.cwd();
+  const outDir = join(cwd, "graphify-out");
+  if (!existsSync(outDir)) {
+    console.error(c.red("no code-graph found in this project."));
+    console.log("run `graphify update .` from the project root, then retry.");
+    process.exit(1);
+  }
+  const graphJson = join(outDir, "graph.json");
+  const graphHtml = join(outDir, "graph.html");
+  if (sub === "status") {
+    let nodes = 0, edges = 0, lastScan = "?";
+    if (existsSync(graphJson)) {
+      try {
+        const g = JSON.parse(readFileSync(graphJson, "utf8"));
+        nodes = (g.nodes || []).length;
+        edges = (g.links || g.edges || []).length;
+        lastScan = statSync(graphJson).mtime.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+      } catch {}
+    }
+    console.log("");
+    console.log("  " + c.bold("code-graph") + "  " + c.dim(tilde(cwd)));
+    console.log("");
+    console.log("    nodes      " + c.cyan(String(nodes)));
+    console.log("    edges      " + c.cyan(String(edges)));
+    console.log("    last scan  " + c.dim(lastScan));
+    console.log("");
+    if (existsSync(graphHtml)) {
+      console.log("    " + c.dim("open visualisation:  ") + c.bold("npx mishkan-harness code-graph open"));
+    }
+    console.log("    " + c.dim("refresh:             ") + c.bold("npx mishkan-harness code-graph scan"));
+    console.log("");
+    return;
+  }
+  if (sub === "open") {
+    if (!existsSync(graphHtml)) {
+      console.error("graph.html missing. run `npx mishkan-harness code-graph scan` first.");
+      process.exit(1);
+    }
+    const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+    const r = spawnSync(opener, [graphHtml], { stdio: "ignore" });
+    if (r.status !== 0) {
+      console.log("could not auto-open. visualisation at:");
+      console.log("  file://" + graphHtml);
+    } else {
+      console.log(c.green("opened:") + " " + tilde(graphHtml));
+    }
+    return;
+  }
+  if (sub === "scan") {
+    const r = spawnSync("graphify", ["update", "."], { stdio: "inherit", cwd });
+    process.exit(r.status || 0);
+  }
+  console.error("unknown subcommand: " + sub);
+  console.log("use one of: status | open | scan");
+  process.exit(1);
+}
+
 function printOrgRef({ json = false } = {}) {
   const candidates = [
     join(MISHKAN, "org", "org.json"),
@@ -766,14 +928,78 @@ switch (cmd) {
   case "observability": installObservabilityStack(); break;
   case "configure-knowledge": await configureKnowledge(); break;
   case "org": case "org-ref": printOrgRef({ json: flags.has("--json") }); break;
+  case "code-graph": codeGraphCmd(process.argv.slice(3)); break;
+  case "help": case "--help": case "-h":
+    printHelp(); break;
   default:
-    console.log(`MISHKAN harness installer
-Usage:
-  npx mishkan-harness install                Install/refresh into ~/.claude (idempotent)
-  npx mishkan-harness configure-knowledge    Wizard for the Cognee .env (LLM + neo4j/pg/admin secrets)
-  npx mishkan-harness observability          Install only the observability stack (daemon + TUI, needs uv)
-  npx mishkan-harness org [--json]           Print the 45-agent organisation reference (teams + roles + descriptions)
-  npx mishkan-harness status                 Show install state
-  npx mishkan-harness uninstall              Remove harness (keeps your CLAUDE.md & rules)
-  npx mishkan-harness uninstall --purge      Also remove user-level rule`);
+    printHelp(); break;
+}
+
+// Help / usage — always shows. Detects whether ~/.local/bin/mishkan
+// symlinks back to us; when yes we print the short `mishkan <subcommand>`
+// form because that's what the user can actually type. Otherwise we
+// print the `npx mishkan-harness <subcommand>` form so copy-paste works
+// on a fresh shell without the symlink.
+function printHelp() {
+  const link = join(HOME, ".local", "bin", "mishkan");
+  let direct = false;
+  if (isSymlink(link)) {
+    try {
+      const t = readlinkSync(link);
+      direct = t === join(PKG, "bin", "mishkan.js");
+    } catch { direct = false; }
+  }
+  const prefix = direct ? "mishkan" : "npx mishkan-harness";
+  const pkgVersion = (() => {
+    try { return JSON.parse(readFileSync(join(PKG, "package.json"), "utf8")).version; } catch { return "?"; }
+  })();
+  console.log("");
+  console.log(c.bold(`MISHKAN harness  v${pkgVersion}`));
+  console.log("");
+  if (direct) {
+    console.log(c.dim("  Direct access detected: ~/.local/bin/mishkan -> bin/mishkan.js"));
+    console.log(c.dim("  All commands below run directly without `npx`."));
+  } else {
+    console.log(c.dim("  No ~/.local/bin/mishkan symlink — commands run via `npx mishkan-harness …`."));
+    console.log(c.dim("  After `install` the harness can symlink for direct access automatically."));
+  }
+  console.log("");
+  console.log(c.bold("Install / update"));
+  console.log("  " + c.bold(`${prefix} install`)         + "                   Install/refresh into ~/.claude (idempotent)");
+  console.log("  " + c.bold(`${prefix} observability`)   + "             Install only the observability stack (daemon + TUI, needs uv)");
+  console.log("  " + c.bold(`${prefix} uninstall`)       + "                 Remove harness (keeps your CLAUDE.md and rules)");
+  console.log("  " + c.bold(`${prefix} uninstall --purge`) + "         Also remove the user-level y4nn-standards.md");
+  console.log("");
+  console.log(c.bold("Configure"));
+  console.log("  " + c.bold(`${prefix} configure-knowledge`) + "       Wizard: LLM provider + cognee .env (neo4j/pg/admin secrets)");
+  console.log("");
+  console.log(c.bold("Inspect"));
+  console.log("  " + c.bold(`${prefix} status`)                + "                    Show install state, runtime profile, cognee dir, version stamp");
+  console.log("  " + c.bold(`${prefix} org [--json]`)          + "             Print the 45-agent organisation reference (teams + roles + descriptions)");
+  console.log("  " + c.bold(`${prefix} code-graph [sub]`)      + "        Inspect the project's code-graph (Graphify): status | open | scan");
+  console.log("");
+  console.log(c.bold("Run the live observability TUI"));
+  console.log("  " + c.bold("mishkan-watch")                   + "                            Open the TUI; auto-starts the daemon if needed");
+  console.log("  " + c.bold("mishkan-watch --no-autostart")    + "             Refuse to fork the daemon; you start it yourself");
+  console.log("  " + c.bold("mishkan-watchd start") + " | " + c.bold("stop") + " | " + c.bold("status") + "    Daemon lifecycle, when you want manual control");
+  console.log("");
+  console.log(c.bold("Inside a Claude Code session"));
+  console.log("  " + c.dim("Talk to Nehemiah (PM) in plain language — exploration mode is the default."));
+  console.log("  " + c.dim("Slash commands available after install:"));
+  console.log("    " + c.bold("/mishkan-init")           + "                            Spec chain on a new project (PRD → SRS → CONTRACT → …)");
+  console.log("    " + c.bold("/mishkan-resume")         + "                          Resume sprint state + open blockers");
+  console.log("    " + c.bold("/sprint-close")           + "                            Reporters → aggregate → docs pull → graph promote");
+  console.log("    " + c.bold("/code-graph") + " status|open|scan" + "         Inspect / open / refresh the Graphify graph");
+  console.log("    " + c.bold("/skills")                 + " <task description>          Skill-discovery router — 3-bucket result");
+  console.log("    " + c.bold("/mishkan-skills-reindex") + "                  Rebuild the universal skill index");
+  console.log("    " + c.bold("/mishkan-skills-misses")  + "                   Aggregate miss-log signal for skill-discovery tuning");
+  console.log("    " + c.bold("/mishkan-org-reference")  + "                   Print the 45-agent reference inline");
+  console.log("    " + c.bold("/eval-baruch")            + "                             Run the Baruch contract eval (schema + golden case)");
+  console.log("    " + c.bold("/dep-audit")              + "                               Cross-project dependency + supply-chain audit");
+  console.log("    " + c.bold("/promote")                + "                                 Promote a learning into Cognee by blast radius");
+  console.log("    " + c.bold("/sefer-pull")             + "                              Trigger a documentation pull");
+  console.log("");
+  console.log(c.dim("  Docs: docs/usage/  ·  Decisions: docs/design/MISHKAN_decisions.md"));
+  console.log(c.dim("  Repo: https://github.com/Y4NN777/mishkan-cc-harness"));
+  console.log("");
 }
