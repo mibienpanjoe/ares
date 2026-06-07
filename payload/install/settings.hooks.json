@@ -17,6 +17,10 @@
           {
             "type": "command",
             "command": "python3 {{MISHKAN}}/hooks/model-route.py"
+          },
+          {
+            "type": "command",
+            "command": "bash {{MISHKAN}}/hooks/pre-tool-task-skill-route.sh"
           }
         ]
       },
@@ -34,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash {{MISHKAN}}/hooks/pre-tool-graphify-nudge.sh"
+            "command": "bash {{MISHKAN}}/hooks/pre-tool-knowledge-route.sh"
           }
         ]
       }
@@ -46,6 +50,17 @@
           {
             "type": "command",
             "command": "bash {{MISHKAN}}/hooks/post-tool-observe.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash {{MISHKAN}}/hooks/session-start-skill-index.sh"
           }
         ]
       }

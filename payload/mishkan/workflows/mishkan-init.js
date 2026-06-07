@@ -22,7 +22,19 @@ export const meta = {
   name: 'mishkan-init',
   description: 'Pipelined PRD → SRS → CONTRACT → ARCHITECTURE → THREAT_MODEL → C4. Downstream stages start as soon as their upstream dependency lands; sequence rule preserved.',
   whenToUse: 'Once per project at /mishkan-init. Brownfield mode uses the same shape with read-existing instead of write-new at each stage.',
+  // Phase 1 canary for the skill-discovery layer (D-011). The router uses
+  // these to apply a ×1.5 category prior when surfacing candidate skills
+  // during the SkillRouter phase below. The actual loading decision stays
+  // with the model; the router is advisory.
+  relevant_skill_categories: [
+    'craft',
+    'mishkan-workflow',
+    'docs',
+    'security',
+    'process',
+  ],
   phases: [
+    { title: 'SkillRouter',  detail: 'Skill-discovery router surfaces relevant skills (advisory)' },
     { title: 'PRD',          detail: 'Nehemiah writes the product requirement document' },
     { title: 'SRS',          detail: 'Nathan turns PRD into a testable system requirement spec' },
     { title: 'CONTRACT+ARCH',detail: 'Zadok writes CONTRACT; Nathan writes ARCHITECTURE — in parallel' },
@@ -47,6 +59,51 @@ const ARTEFACT_SCHEMA = {
 }
 
 const STACK = args.stack_hint || 'undetermined'
+
+// --- Stage 0: SkillRouter (canary, advisory) --------------------------
+// Surfaces candidate skills relevant to the init task. Pure read; never
+// blocks. Result is passed into the Bezalel signoff prompt at Settle so
+// the CTO sees what the model could have reached for. Fail-open: any
+// router error is logged and the workflow continues.
+phase('SkillRouter')
+let skillCandidates = null
+try {
+  const cats = (meta.relevant_skill_categories || []).join(',')
+  const routerTask =
+    `Initialise project "${args.project_name}" under MISHKAN. ` +
+    `Intent: ${args.raw_intent}. Stack: ${STACK}. ` +
+    `Produce PRD, SRS, CONTRACT, ARCHITECTURE, THREAT_MODEL, C4, docs scaffold.`
+  // The runner is expected to execute the python helper out-of-band; if it
+  // does not, the catch below logs the miss and we continue.
+  skillCandidates = await agent(
+    `Invoke the skill-discovery router as an advisory pass. Run:\n` +
+    `  python3 ~/.claude/mishkan/scripts/skill-discovery-router.py ` +
+    `--task ${JSON.stringify(routerTask)} ` +
+    `--workflow mishkan-init ` +
+    `--relevant-categories ${JSON.stringify(cats)}\n` +
+    `Return the parsed JSON output verbatim. Do not load any of the ` +
+    `surfaced skills. This pass is advisory only — the loading decision ` +
+    `stays with the model and with Bezalel at Settle.`,
+    {
+      label: 'skill-discovery:router',
+      phase: 'SkillRouter',
+      agentType: 'skill-discovery',
+      schema: {
+        type: 'object',
+        required: ['task_summary'],
+        properties: {
+          task_summary:    { type: 'string' },
+          must_load:       { type: 'array' },
+          should_consider: { type: 'array' },
+          adjacent:        { type: 'array' },
+          warnings:        { type: 'array', items: { type: 'string' } },
+        },
+      },
+    }
+  )
+} catch (err) {
+  skillCandidates = { error: String(err), warnings: ['router_invocation_failed'] }
+}
 
 // --- Stage 1: PRD ------------------------------------------------------
 phase('PRD')
@@ -149,6 +206,7 @@ return {
     prd, srs, contract, architecture, threat, c4,
     docs_scaffold: docsScaffold,
   },
+  skill_candidates: skillCandidates,
   bezalel_signoff: signoff,
   next: signoff?.status === 'accepted'
     ? `Init complete. Begin Sprint S0; Nehemiah leads. Hand the directory state to Y4NN for git init + first commit.`
