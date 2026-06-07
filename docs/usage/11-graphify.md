@@ -119,29 +119,60 @@ method: `docs/research/graphify-token-saving-poc.md`.
 > on real codebases. Treat 71.5× / 88.1× as **directional**, not
 > spec-grade: they prove "Graphify costs orders of magnitude less than
 > reading everything" — they don't prove "your next chat session costs
-> 88× fewer tokens." The advisory hook (D-009) measures the real-session
-> ratio in Phase 1 so we can tighten this claim.
+> 88× fewer tokens." The advisory hook (D-009) keeps emitting telemetry
+> alongside the advisory injection — the firing-vs-graphify-query ratio
+> on real sessions is the data path to tighten this claim.
 
 ## How MISHKAN agents use it
 
-The five code-writing specialists (Hizkiah, Salma, Oholiab, Nathan,
-Zadok) load the **graphify-query-craft** skill. Its core rule:
+Twenty code-touching dev agents across all six teams (per D-009
+amended scope, 2026-06-07) load **graphify-query-craft**: Yasad backend
+(Hizkiah, Nathan, Zadok, Shallum, Uriah) · Panim frontend (Salma,
+Oholiab, Asaph, Jahaziel) · Chosheb UI (Hiram) · Mishmar code-security
+(Ira, Joab, Hushai) · Migdal infra-code (Palal, Meshullam, Meremoth,
+Hanun) · Sefer code-documentation (Joah, Shevna, Jehonathan). Its core
+rule:
 
 > Structure question → `graphify query`.
 > Semantic question → Cognee work.
 
-The PreToolUse hook **`pre-tool-graphify-nudge.py`** (per D-009) runs
-in two phases:
+The PreToolUse hook **`pre-tool-knowledge-route.sh`** (D-009 amendment
+2026-06-07 — Phase 2 shipped) routes the agent to the right knowledge
+surface. On every structural Read / bare-identifier Grep, it does two
+things:
 
-- **Phase 1 (current)** — telemetry-only. Counts every structural Read
-  / bare-identifier Grep without blocking or injecting advisory text.
-  Used to baseline the rate before Phase 2 lands.
-- **Phase 2 (future ADR)** — advisory injection. When a structural
-  Read fires for one of the five specialists, a one-line reminder is
-  attached to the tool input's permissionDecisionReason field saying
-  "Consider `graphify query` first." Never blocks; opt-out via
-  `tool_input.metadata.skip_graphify_nudge = true` (per-call) or
-  `MISHKAN_GRAPHIFY_NUDGE=off` (per-session).
+- **Emits telemetry**: a `hook_fire` event on the bus. The Knowledge
+  tab's activity counter records it.
+- **Injects a 4-surface palette** via
+  `hookSpecificOutput.additionalContext` listing every knowledge surface
+  MISHKAN exposes, with pre-formed commands and per-surface signals so
+  the agent picks the right one — not graphify by default.
+
+The four surfaces (D-008 + this amendment):
+
+| Surface | Question it answers |
+|---|---|
+| **CODE STRUCTURE** (Graphify) | "who calls X", "what depends on Y", "path between A and B", impact / blast-radius |
+| **THIS project's MEMORY** (Cognee work) | "why did WE decide X", "what's OUR convention", "what was resolved last sprint" — ADRs, runbooks, past research |
+| **CROSS-PROJECT REFERENCE** (Cognee curated) | "what does the spec say about X", "what did we learn on OTHER projects" — shared read-only library |
+| **Literal file content / text match** (Read or Grep) | "what's in THIS specific file", "every line containing this exact string" |
+
+The advisory carries **real signals** inlined per call, so the agent
+doesn't pick blind:
+
+- Graph node + edge count, last-scan age (with `(stale — /code-graph scan to refresh)` flag when > 1h)
+- For Grep on a bare identifier: a `jq` check on `graph.json` says whether the target is actually a node in the graph. If not, the advisory explicitly warns "don't burn ~1.8k tokens on a seedless query"
+- For Read: the file's line count and an approximate token cost (`~lines × 4`)
+- Cognee work and curated node counts (from the daemon's poll cache at `~/.cache/mishkan/cognee-counts.json`) so "(0 nodes — nothing ingested yet)" replaces a misleading recommendation
+
+The hook never sets `permissionDecision` — purely advisory, the
+Read/Grep still proceeds. When the project has no `graphify-out/`
+directory the CODE STRUCTURE line flips to an install hint; the cognee
+lines stay since the MCP surface is independent of graphify state.
+
+No pre-cooked verdict ("soft" vs "strong") and no invented thresholds.
+Threshold tuning is the D-011 telemetry workflow's job (`hook_fire` vs
+`graphify_query` / `cognee_op` rates, reviewed at `/sprint-close`).
 
 Performance contract for the hook: ≤50 ms p95, fail-open everywhere.
 
@@ -188,6 +219,29 @@ Per D-008's "what NOT to do" list:
 - **`./.graphify/providers.json` no longer auto-loads** (0.8.29
   soft-break). Set `GRAPHIFY_ALLOW_LOCAL_PROVIDERS=1` if you use
   per-project provider configs.
+
+## Refreshing the graph
+
+Graphify indexing is **manual** — there is no auto-update on file
+changes today. Three equivalent ways to refresh:
+
+```bash
+graphify update .                            # direct CLI
+npx mishkan-harness code-graph scan          # MISHKAN wrapper
+/code-graph scan                             # slash command (same wrapper)
+```
+
+A read-only inspection of the current graph (no rebuild):
+
+```bash
+npx mishkan-harness code-graph status        # nodes / edges / last scan timestamp
+/code-graph status                           # same
+npx mishkan-harness code-graph open          # opens graph.html in the browser
+```
+
+When the advisory hook fires and you suspect the graph is stale, the
+hook's own advisory text reminds you to run `npx mishkan-harness
+code-graph scan` first.
 
 ## Project init
 

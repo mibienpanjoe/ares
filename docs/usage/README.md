@@ -46,9 +46,10 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 | 06 | [LLM provider profiles](./06-llm-providers.md) | Gemini/NVIDIA/Ollama/OpenAI/Anthropic, rate vs daily caps |
 | 07 | [Troubleshooting](./07-troubleshooting.md) | Real gotchas + fixes from the build |
 | 08 | [Glossary](./08-glossary.md) | 45-agent roster (alias → role → team), key terms |
-| 09 | [Dynamic Workflows](./09-workflows.md) | The 7 MISHKAN workflows, when to fire them, the cost gate |
-| 10 | [Observability](./10-observability.md) | Cross-session daemon + Textual TUI (opt-in); 5 tabs, status bar, troubleshooting |
+| 09 | [Dynamic Workflows](./09-workflows.md) | 10 org-level + 8 team-level workflows, ADR D-010 portfolio discipline |
+| 10 | [Observability](./10-observability.md) | Cross-session daemon + Textual TUI; 8 tabs (Live · Agents · Workflows · Knowledge · Activity · Org-Ref · Usage · Skills), project filter (`p`) |
 | 11 | [Graphify](./11-graphify.md) | Code-structure graph; queries at ~1.8k tokens (88.1× reduction, POC-verified); D-008 + D-009 |
+| 12 | [Skill discovery](./12-skill-discovery.md) | Universal indexer + 3-bucket router across MISHKAN, user, plugin, and project skills; D-011 |
 
 ## Where to start
 
@@ -61,7 +62,7 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 ## Authoritative references this documentation builds on
 
 - [`docs/design/MISHKAN_harness_design.md`](../design/MISHKAN_harness_design.md) — the 5-layer architecture and rationale.
-- [`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md) — D-001…D-007 with rationale.
+- [`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md) — D-001…D-011 with rationale.
 - [`docs/design/MISHKAN_agent_aliases.md`](../design/MISHKAN_agent_aliases.md) — the biblical roster.
 - [`docs/design/MISHKAN_ontology.md`](../design/MISHKAN_ontology.md) — cognee entity + relationship types.
 - [`docs/design/MISHKAN_token_optimisation.md`](../design/MISHKAN_token_optimisation.md) — context economy.

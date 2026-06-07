@@ -65,13 +65,17 @@ layers (see [D-008](docs/design/MISHKAN_decisions.md)):
 - **[Cognee curated](payload/mishkan/cognee/) (`:7730`)** — cross-project
   reference library. Read-mostly, seeded once, shared across every project on
   the host.
-- **[Graphify](https://github.com/safishamsi/graphify) (planned, D-008
-  signed)** — deterministic code-structure graph for "who calls X, who depends
-  on Y", complementing Cognee's semantic layer.
+- **[Graphify](https://github.com/safishamsi/graphify) (shipped, D-008 + D-009)** —
+  deterministic code-structure graph for "who calls X, who depends on Y",
+  88.1× verified token reduction on the harness corpus, advisory PreToolUse
+  nudge for the 20 code-touching dev agents across all teams (D-009
+  amended scope).
 
 Plus a **live observability TUI** ([mishkan-watch](payload/mishkan/observability/))
 that shows every running agent, workflow, tool call, hook fire, token spend,
 and MCP/Cognee status — in real time, across every session, with no overload.
+**Eight tabs** (`1`–`8`): Live · Agents · Workflows · Knowledge · Activity ·
+Org-Ref · Usage · Skills. Project filter on `p`.
 See [`docs/design/MISHKAN_observability.md`](docs/design/MISHKAN_observability.md).
 
 ## The teams
@@ -150,9 +154,12 @@ loop-until-X](https://code.claude.com/docs/en/workflows)). Workflows fire
 from the **main session only**; they are the high-leverage path for
 work that scales by parallelism.
 
-The seven shipped today, each mapped to the real problem it solves:
+The portfolio at v0.2.3 — **10 org-level + 8 team-level**, governed by
+[ADR D-010](docs/design/MISHKAN_decisions.md) (hard caps, four named
+anti-patterns, PM+CTO co-ownership, soft-retirement under 2 fires per
+3 sprints):
 
-| Script | When to fire it |
+| Org-level workflow | When to fire it |
 |---|---|
 | `mishkan-sprint-close` | At `/sprint-close` — six Team Reporters at once, then aggregate |
 | `mishkan-deep-research` | Any unknown where 3-vote adversarial refute is worth the cost |
@@ -161,17 +168,26 @@ The seven shipped today, each mapped to the real problem it solves:
 | `mishkan-architecture-panel` | High-leverage architecture decisions; 3 proposers × 3 reviewers |
 | `mishkan-release-readiness` | Before every staging-to-prod deploy; barrier gate |
 | `mishkan-init` | Once per project at `/mishkan-init`; spec chain with overlap |
+| `mishkan-blast-radius` | Before a refactor — what does this change actually touch (Graphify + 3 lenses) |
+| `mishkan-knowledge-gap-discovery` | Sprint close: probe Cognee for expected concepts, loop-until-dry |
+| `mishkan-standards-rollout` | New rule lands in y4nn-standards.md → translate + verify + ratify per team |
 
-Cost discipline: the working ceiling for any production team is **3–6
-workflows**; seven is the upper bound. Adding more typically means the
-new use case was better served by a Task call or a skill.
+Team-level (8 across 6 teams, cap 4 per team): `chosheb-feature-ship`,
+`panim-ds-rollout`, `yasad-data-migration-wave`, `yasad-schema-evolution`,
+`mishmar-security-gate`, `migdal-infra-change`, `migdal-dr-drill`,
+`sefer-release-notes`. Each codifies the recurring high-stakes
+orchestration that only that team runs.
+
+Cost discipline: hard cap **10 org-level + 4 per team**. Adding more
+typically means an existing workflow should be retired or the new use
+case was better served by a Task call or a skill.
 
 The full catalogue, patterns each script uses, and rough cost
 expectations per run live in
 [`payload/mishkan/workflows/README.md`](payload/mishkan/workflows/README.md).
 The PM (Nehemiah) and CTO (Bezalel) co-own the workflow portfolio —
-new workflows land through that PM+CTO review, not ad hoc, so the
-catalogue stays load-bearing rather than accreting noise.
+new workflows land through that PM+CTO review per ADR D-010, not ad hoc,
+so the catalogue stays load-bearing rather than accreting noise.
 
 ## Make it yours
 
@@ -232,7 +248,7 @@ npx mishkan-harness observability
 
 # then, in two tmux panes (or any two terminals):
 mishkan-watchd start                    # daemon — aggregates the bus
-mishkan-watch                           # TUI client — 5 tabs, status bar
+mishkan-watch                           # TUI client — 8 tabs, project filter (p), status bar
 ```
 
 Full operator guide: [`docs/usage/10-observability.md`](docs/usage/10-observability.md).
