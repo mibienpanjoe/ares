@@ -1,8 +1,9 @@
 # MISHKAN workflows
 
-Seven dynamic-workflow scripts that codify the orchestrations where
-parallel scale + repeatability justify a script. Each maps to one or
-more of the nine canonical workflow patterns from
+Eighteen dynamic-workflow scripts — ten org-level + eight team-level —
+that codify the orchestrations where parallel scale + repeatability
+justify a script. Each maps to one or more of the nine canonical workflow
+patterns from
 [Anthropic's reference](https://code.claude.com/docs/en/workflows) and the
 [community patterns catalogue](https://github.com/ray-amjad/claude-code-workflow-creator/blob/main/references/patterns.md).
 
@@ -20,25 +21,85 @@ These run from the **main session only** (subagents cannot invoke
 | [`mishkan-architecture-panel.js`](mishkan-architecture-panel.js) | judge panel + impact-fanout + synthesis | Architecture decisions with a wide answer space; 3 Nathan runs from cost/scale/simplicity priors; Zadok+Phinehas+Shallum score; Bezalel synthesises | High-leverage architecture decisions |
 | [`mishkan-release-readiness.js`](mishkan-release-readiness.js) | barrier `parallel()` + structured pass/fail + nested workflow | Pre-deploy gate: tests + security + dependency + SLO + pipeline shape, all at once → single go/no-go | Before every staging-to-prod deploy |
 | [`mishkan-init.js`](mishkan-init.js) | pipeline with overlap (PRD → SRS → CONTRACT+ARCH in parallel → THREAT+C4 in parallel → settle) | Cut project init from hours to minutes without violating the sequence rule | Once per project at `/mishkan-init` |
+| [`mishkan-blast-radius.js`](mishkan-blast-radius.js) | Graphify discovery + 3-lens orthogonal verify + synthesis | "What does this change actually touch?" Refactor blast-radius with three load-bearing lenses (caller-side / data-contract / runtime-behavior) so false positives drop before scheduling | Before editing a function whose downstream impact is uncertain; gated by `/plan` |
+| [`mishkan-knowledge-gap-discovery.js`](mishkan-knowledge-gap-discovery.js) | parallel probe + **loop-until-dry** + research fan-out | Probe Cognee work for expected concepts; the only candidate that legitimately needs loop-until-X — confirm gaps via paraphrase retries before dispatching research | Sprint close (optional barrier step) or after `/sefer-pull` |
+| [`mishkan-standards-rollout.js`](mishkan-standards-rollout.js) | pipeline (translate → verify) + barrier + judge panel (Bezalel + scope-conditional reviewers) | When a new rule lands in `y4nn-standards.md`, it propagates per-team with translation, drift verification, and CTO ratification — closes the silent failure mode of rules drift | When a new standard ships; BEFORE the rule is considered live across the fleet |
 
 ## The patterns each script uses
 
 | Pattern | Used by |
 |---|---|
-| Fan-out → synthesize | `codebase-audit`, `release-readiness`, `architecture-panel` |
-| Pipeline (overlapping) | `deep-research`, `migration-wave`, `init` |
-| Barrier `parallel()` | `sprint-close`, `release-readiness`, `architecture-panel` (Vote stage) |
+| Fan-out → synthesize | `codebase-audit`, `release-readiness`, `architecture-panel`, `blast-radius` |
+| Pipeline (overlapping) | `deep-research`, `migration-wave`, `init`, `standards-rollout` |
+| Barrier `parallel()` | `sprint-close`, `release-readiness`, `architecture-panel` (Vote stage), `knowledge-gap-discovery`, `standards-rollout` |
 | Adversarial verification (3-vote refute) | `deep-research`, `codebase-audit` |
-| Judge panel | `architecture-panel`, `migration-wave` (2-reviewer accept) |
+| Orthogonal 3-lens verify (caller / data / runtime) | `blast-radius` |
+| Judge panel | `architecture-panel`, `migration-wave` (2-reviewer accept), `standards-rollout` (Bezalel + scope-conditional) |
 | Nested workflow | `release-readiness` → `codebase-audit` |
-| Loop-until-X | — (mechanism inside scripts when needed; no top-level loop workflows yet) |
+| Loop-until-X | `knowledge-gap-discovery` (paraphrase-retries to confirm gaps before research) |
+
+## Team-level catalogue
+
+Eight team-level workflows codified per ADR D-010 (cap 4/team, PM+CTO
+co-owned). Invoked through the Team Lead's craft skill.
+
+| Script | Pattern combo | Real problem it solves | Team |
+|---|---|---|---|
+| [`chosheb-feature-ship.js`](chosheb-feature-ship.js) | barrier + synthesis | Design → handoff package complete (DS fit + a11y + assets + QA) | Chosheb |
+| [`panim-ds-rollout.js`](panim-ds-rollout.js) | pipeline + worktree + judge panel | Design token change propagated to all consumers with a11y + regression review | Panim |
+| [`yasad-data-migration-wave.js`](yasad-data-migration-wave.js) | pipeline + 4-lens judge panel | Wave of DB migrations, per-table reviewed (contracts/perf/security/tests) | Yasad |
+| [`yasad-schema-evolution.js`](yasad-schema-evolution.js) | pipeline + per-phase judge panel | Phased schema change with zero-downtime invariants + per-phase rollback | Yasad |
+| [`mishmar-security-gate.js`](mishmar-security-gate.js) | barrier + 3-vote adversarial refute | Security gate on sensitive surface (auth/payment/PII), 3 orthogonal lenses | Mishmar |
+| [`migdal-infra-change.js`](migdal-infra-change.js) | barrier + 5-lens panel | Infra change validated by design/systems/devops/observability/health lenses | Migdal |
+| [`migdal-dr-drill.js`](migdal-dr-drill.js) | pipeline + per-step judge panel | DR drill — enumerate, simulate, verify, RTO/RPO measurement, gap report | Migdal |
+| [`sefer-release-notes.js`](sefer-release-notes.js) | pipeline + per-category fan-out + style synthesis | Release notes assembled from git log per category with style-guide application | Sefer |
+
+Spare slots (Chosheb 3, Panim 3, Yasad 2, Mishmar 3, Migdal 2, Sefer 3)
+are deliberately open; candidates compete for them at PM+CTO review.
+
+## Portfolio governance — D-010
+
+The portfolio is **PM + CTO co-owned** with hard caps and an anti-pattern
+canon (ADR D-010, 2026-06-07). Nehemiah owns scope, delivery, recurrence
+justification; Bezalel owns orchestration shape, schema contracts, quality
+bar. New workflows land through joint review — not ad hoc.
+
+**Hard caps.** 10 org-level (full) + 4 per team (varies). To add, retire.
+**Soft retirement.** Workflows that fire < 2× in 3 sprints surface at
+`/sprint-close` for PM+CTO retirement vote; default is `workflows/proposed/`.
+
+The June 2026 portfolio review produced the org-level additions
+(`blast-radius`, `knowledge-gap-discovery`, `standards-rollout`), the
+org-level removal (`multi-perspective-review` was theatre vs the existing
+`architecture-panel`), the eight team-level workflows above, and the
+anti-patterns below.
+
+### Anti-patterns to avoid (D-010)
+
+1. **Skill-in-workflow-clothing.** Linear sequence, no parallelism, no
+   termination predicate, no panel — that's a skill, not a workflow.
+2. **Workflow calling workflow without a contract.** Nested workflows
+   are valid (cf. `release-readiness` → `codebase-audit`) only when the
+   inner workflow's output schema is consumed structurally. Free-form
+   nesting hides token cost and breaks retry semantics.
+3. **Judge panels with non-orthogonal reviewers.** If two reviewers in
+   a panel share 70%+ of their evaluation criteria, the panel is
+   theatre. Each lens must be load-bearing and distinct (`blast-radius`
+   enforces this with caller-side / data-contract / runtime-behavior).
+4. **Workflow-as-status-page.** Orchestration that fans out to gather
+   state without synthesis is a dashboard query, not a workflow. If the
+   synthesis stage is missing or trivial, the work belongs in
+   observability, not in `Workflow()`.
 
 ## Cost discipline
 
 Workflows are expensive. The community baseline is **3–6 workflows per
-production team**. Seven is the working ceiling — adding more
-typically means the new use case is better served by Task delegation
-or a skill.
+production team**. The MISHKAN hard cap is **10 org-level + 4 per team**
+(current count: 10 org + 8 team across 6 teams = 18 total). Adding more
+typically means either (a) the new use case is better served by Task
+delegation or a skill, or (b) an existing workflow should be retired —
+soft-retirement happens after a workflow fires < 2× across 3 sprints,
+under PM+CTO review.
 
 Cost expectations per run (subagent-tokens, rough orders of
 magnitude):
@@ -52,6 +113,9 @@ magnitude):
 | `mishkan-architecture-panel` | medium | 3 proposals × 3 reviewers + synthesis |
 | `mishkan-release-readiness` | low-medium | 7–8 parallel checks; nested audit if enabled |
 | `mishkan-init` | medium | 6 artefacts pipelined |
+| `mishkan-blast-radius` | medium | `sites × 3 lenses` + discovery + synthesis; short-circuits on empty graph |
+| `mishkan-knowledge-gap-discovery` | medium-high | probe × N concepts + loop-until-dry rephrasings + research fan-out per gap |
+| `mishkan-standards-rollout` | low-medium | 6 translations + 6 verifications + 1-3 ratifiers (scope-conditional) |
 
 Run on a small slice first (one directory; one phase) before
 committing to a full wave.

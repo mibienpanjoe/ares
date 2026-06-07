@@ -298,11 +298,16 @@ introduced to protect.
 
 ### Out of scope (explicitly not decided here)
 
-1. **Token-saving measurement POC.** Whether Graphify saves Nx tokens on a
-   representative agent workload is a separate, instrumented experiment with
-   its own success criteria. The 71.5× figure circulating in third-party write-ups
-   is **not** verified by this ADR and must not be cited as a MISHKAN claim
-   until measured.
+1. ~~**Token-saving measurement POC.**~~ **CLOSED 2026-06-07** —
+   POC executed on the MISHKAN harness with Graphify v0.8.33: **88.1×
+   average reduction** across the 5 canonical structural questions
+   (range 69.4× to 141.8×). The third-party 71.5× claim is **verified**
+   in spirit — MISHKAN's actual measurement is +23 % higher (likely
+   driven by Python-heavy AST shape vs the mixed TS corpora of the
+   third-party benchmark). Full method, query-by-query results, and
+   honest gaps in `docs/research/graphify-token-saving-poc.md`. The 88.1×
+   figure may be cited as a MISHKAN claim. The 71.5× figure may be cited
+   as a third-party point reference within the observed range.
 2. **Refactor of the Explore agent / Hiram's exploration playbook.** Whether
    Hiram should consult Graphify before grep is a downstream agent change,
    not decided here.
@@ -566,6 +571,155 @@ enforcement. If it does not, a future ADR can revisit hardening.
 providing the runtime mechanism D-008 explicitly deferred (D-008 Out of
 Scope #4). Composes with D-004 (existing PreToolUse Bash chain) without
 modifying it.
+
+## D-010 — Workflow portfolio discipline: four anti-patterns, two caps, PM+CTO co-ownership (added 2026-06-07)
+
+**Decision:** the dynamic-workflow portfolio is governed by an explicit
+discipline rather than ad-hoc accretion. Three rules together: (a) **hard
+caps** — 10 top-level (org) workflows + 4 team workflows per team; (b) **four
+named anti-patterns** that disqualify a candidate; (c) **PM + CTO joint
+ownership** — every addition, retirement, or substitution goes through
+Nehemiah and Bezalel together, never through a single agent's unilateral push.
+A fire-count rule retires workflows that fire < 2× across 3 sprints, gated by
+the same PM+CTO review.
+
+### Force-tension
+
+**What pushes toward accretion.** Workflows are the most powerful primitive
+the harness exposes — typed contracts, parallel fan-out, adversarial verify
+panels. Every recurring task looks like a candidate. Each team has 5–7
+specialists, so "one workflow per team's main shipping flow" feels natural.
+Six team-ship workflows × six teams + the 10 org-level = a portfolio of 46.
+Without a cap, that is the asymptote: most workflows fire once, contribute
+nothing, and add maintenance debt.
+
+**What pushes against.** Workflow runtime cost is real (Bun-shape migrations
+hit hundreds of agents and thousands of subagent-tokens per run). Each
+workflow carries a contract surface that must be kept correct as agents
+evolve. Workflows that fire rarely cannot pay back their codification cost.
+Worse, workflows that look load-bearing but encode skill-shape (linear
+sequence, no panel, no termination predicate) blur the distinction between
+workflow and skill, eroding the discipline that makes the workflow tool
+worth reaching for.
+
+### Adopted shape
+
+**(a) Hard caps.**
+
+- **10 org-level workflows.** Current: `mishkan-sprint-close`,
+  `mishkan-deep-research`, `mishkan-codebase-audit`, `mishkan-migration-wave`,
+  `mishkan-architecture-panel`, `mishkan-release-readiness`, `mishkan-init`,
+  `mishkan-blast-radius`, `mishkan-knowledge-gap-discovery`,
+  `mishkan-standards-rollout`. Adding an 11th forces a retirement vote.
+- **4 team-level workflows per team.** Current shipped count varies by team
+  (Chosheb 1, Panim 1, Yasad 2, Mishmar 1, Migdal 2, Sefer 1). Spare slots
+  per team are deliberately left open — candidates compete for them at
+  PM+CTO review, not on a team lead's word.
+
+**(b) Four anti-patterns.** A candidate that exhibits any of these is rejected
+or reworked, regardless of fit:
+
+1. **Skill-in-workflow-clothing.** Linear sequence, no parallelism, no
+   termination predicate, no panel. That shape is a skill, not a workflow.
+   If the cost-to-fan-out gain is < 2× wall-clock vs Task delegation, it
+   does not earn the workflow tool.
+2. **Workflow calling workflow without a contract.** Nested workflows are
+   valid (cf. `release-readiness` → `codebase-audit`) **only** when the
+   inner workflow's output schema is consumed structurally by the outer.
+   Free-form nesting hides token cost, breaks retry semantics, and produces
+   an opaque blob of subagent transcript that the orchestrator cannot
+   reason over.
+3. **Judge panels with non-orthogonal reviewers.** If two reviewers in a
+   panel share ≥ 70% of their evaluation criteria, the panel is theatre —
+   redundant votes from correlated judges. Each lens must be load-bearing
+   and distinct (the canonical example is `mishkan-blast-radius`'s
+   caller-side / data-contract / runtime-behavior triad).
+4. **Workflow-as-status-page.** Orchestration that fans out to gather state
+   without synthesis is a dashboard query, not a workflow. The synthesis
+   stage is the workflow's reason to exist; if it is missing or trivial,
+   the work belongs in observability, not in `Workflow()`.
+
+**(c) PM + CTO joint ownership.** New workflow proposals are written as a
+brief (problem, fan-out shape, termination predicate, expected fire-count,
+anti-pattern self-check). Nehemiah owns delivery / recurrence justification;
+Bezalel owns orchestration shape / schema contracts. Joint approval lands
+the workflow under `payload/mishkan/workflows/`; unanimous rework lands it
+under `payload/mishkan/workflows/proposed/` with the rework note; rejection
+returns the brief to its proposer with the failing anti-pattern named.
+
+**Soft-retirement rule.** A workflow that fires < 2 times across 3 consecutive
+sprints surfaces in the next `/sprint-close` for PM+CTO review. The default
+disposition is retirement to `proposed/`; the rebuttal is a concrete
+upcoming-use justification.
+
+### Alternatives considered
+
+1. **No cap; allow accretion.** *Rejected.* This is the default state of every
+   ungoverned workflow portfolio in the wild. The reference cases (OneRedOak,
+   Bun-shape) show that production teams converge on 3–6 workflows after
+   accretion; the cap codifies that ceiling rather than letting the harness
+   relearn it under load.
+
+2. **Per-team unilateral additions, no PM+CTO review.** *Rejected.* Without
+   a joint gate the four anti-patterns reappear — every team adds the
+   workflow that feels load-bearing from their vantage point, and the
+   harness ends up with six near-identical feature-ship orchestrations.
+   The June 2026 portfolio review surfaced exactly this drift (Sefer
+   proposed two doc-generation workflows; both folded into skills under
+   the gate).
+
+3. **Workflow router that auto-selects per task.** *Deferred.* Selecting
+   among 18 workflows by task description is the same problem as skill
+   discovery (cf. `mishkan-skill-discovery`). Layering a router on top of
+   workflows duplicates that infrastructure. Wait for the skill-discovery
+   layer's telemetry before deciding whether workflows need their own
+   router or can be discovered through the same surface.
+
+4. **Cap of 6 org-level + 6 team workflows.** *Rejected after PM/CTO split
+   verdict.* Bezalel preferred 6 load-bearing org-level; Nehemiah preferred
+   10 with retirement-based pruning. Adopted 10 because the existing
+   portfolio already contains 10 that pass the anti-pattern check; cutting
+   to 6 would retire workflows that clear the bar by lottery, not by
+   discipline. The retirement rule is the steady-state pressure.
+
+### Invariants of the discipline
+
+- **Org-level cap = 10.** Always. To add, retire.
+- **Team-level cap = 4 per team.** Always. To add, retire from that team.
+- **Anti-pattern self-check** is part of the proposal brief — proposer
+  must name how the workflow avoids each of the four.
+- **No solo additions.** Even Bezalel cannot land a workflow alone; the
+  rules-rollout workflow exists precisely to prevent that drift.
+- **`proposed/` is not a parking lot.** Workflows there carry a written
+  promotion criterion (concrete fire-count, named use case).
+
+### Consequences
+
+**Positive.**
+- The portfolio stays legible. An engineer (or new agent) can read all 18
+  in an afternoon and know what each is for.
+- The cost ceiling is bounded. Worst-case spend is the sum of 18 known
+  shapes, not an unbounded sprawl.
+- The anti-pattern catalogue gives proposers concrete language for self-
+  review before bringing a brief, shortening the loop.
+- The PM+CTO gate replays the same discipline used for architecture (D-002,
+  D-007) — consistency across the harness's governance surfaces.
+
+**Negative.**
+- Some legitimate one-off orchestrations will fail the cap and have to wait
+  for a retirement slot. The escape valve is `proposed/` — the work is not
+  lost, just not active.
+- The fire-count rule is approximate; a workflow that fires 1× per sprint
+  but is genuinely load-bearing (e.g. quarterly audit) will trip the
+  retirement default and need to argue itself back each time. Tuned by
+  raising the window from 3 sprints to N if false-retirements appear.
+- "Anti-pattern self-check" relies on the proposer's honesty about their
+  candidate; a determined push can word-paint around it. Mitigation: the
+  CTO half of the gate has explicit authority to reject on shape.
+
+**Supersedes / amends:** none. Codifies the discipline implicit in D-002
+(Claude Code models only — capability discipline) and D-007 (separate stores
+— epistemic discipline) onto the orchestration layer.
 
 ---
 
