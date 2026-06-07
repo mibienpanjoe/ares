@@ -10,6 +10,8 @@ docs/engineer/profile-readable.md
 !**/.env.curated.example
 **/*.enc
 **/secrets/
+# Cognee access guide — plaintext URLs + creds for the local stack
+**/cognee/ACCESS.txt
 
 # Cognee + runtime data
 **/cognee/curated-resources.jsonl
