@@ -75,8 +75,33 @@ Plus a **live observability TUI** ([mishkan-watch](payload/mishkan/observability
 that shows every running agent, workflow, tool call, hook fire, token spend,
 and MCP/Cognee status — in real time, across every session, with no overload.
 **Eight tabs** (`1`–`8`): Live · Agents · Workflows · Knowledge · Activity ·
-Org-Ref · Usage · Skills. Project filter on `p`.
+Org-Ref · Usage · Skills. Project filter on `p`. Single command — the daemon
+auto-starts if its socket isn't present.
 See [`docs/design/MISHKAN_observability.md`](docs/design/MISHKAN_observability.md).
+
+#### Auto-routing across the stack
+
+Two PreToolUse hooks ship the discoverability layer of v0.2.3 so agents
+reach for the right surface without being asked:
+
+- **Skill discovery** ([D-011](docs/design/MISHKAN_decisions.md)) — a
+  universal indexer scans MISHKAN craft, community, plugin and project-
+  local skills (~200 entries on a clean install) and a 3-mechanism
+  router scores them against each `Task` dispatch's prompt. The hook
+  injects a 3-bucket recommendation (`must_load` / `should_consider` /
+  `adjacent`, cap 13) as `additionalContext` on the call. Telemetry on
+  empty-bucket queries via `/mishkan-skills-misses` feeds the
+  description-tuning loop at sprint close.
+- **Knowledge-route advisory** ([D-009 amendment](docs/design/MISHKAN_decisions.md))
+  — every structural `Read` on source or `Grep` on a bare identifier
+  fires a four-surface palette: **code structure** (Graphify),
+  **this project's memory** (Cognee work), **cross-project reference**
+  (Cognee curated), **literal content** (Read / Grep). Carries real
+  signals — graph node + edge count, last-scan staleness, per-route
+  token cost, and a `jq` check on `graph.json` that says whether the
+  Grep target is actually a node in the current graph so the agent
+  doesn't burn ~1.8k tokens on a seedless query. Advisory-only — the
+  Read / Grep always proceeds.
 
 ## The teams
 
@@ -133,16 +158,40 @@ installed.
 4. **`/sprint-close`** at a milestone. **`/mishkan-resume`** next session restores
    state and open blockers.
 
-### Commands
+### Slash commands inside a session
 
 | Command | Does |
 |---|---|
-| `/mishkan-init` | Scaffold a project; begin Sprint S0 |
-| `/mishkan-resume` | Restore sprint state + blockers |
+| `/mishkan-init` | Scaffold a project; spec chain → docs/ → Cognee → Sprint S0 |
+| `/mishkan-resume` | Restore sprint state + open blockers |
 | `/sprint-close` | Reporters → aggregate → docs pull → graph promote |
-| `/dep-audit` | Cross-project dependency & supply-chain audit |
-| `/promote` | Promote knowledge by blast radius |
+| `/mishkan-org-reference` | Print the 45-agent org inline (teams + roles + descriptions) |
+| `/code-graph status|open|scan` | Inspect / open / refresh the project's code-graph (Graphify) |
+| `/skills <task description>` | Skill-discovery router — 3-bucket result (`must_load` / `should_consider` / `adjacent`) |
+| `/mishkan-skills-reindex` | Rebuild the universal skill index from disk |
+| `/mishkan-skills-misses` | Aggregate miss-log signal for skill-discovery threshold tuning |
+| `/eval-baruch` | Run the Baruch contract eval (schema + golden case) |
+| `/dep-audit` | Cross-project dependency + supply-chain audit |
+| `/promote` | Promote a learning into Cognee by blast radius |
 | `/sefer-pull` | Trigger a documentation pull |
+
+### CLI commands from any terminal
+
+After `npx mishkan-harness install` the harness auto-symlinks
+`~/.local/bin/mishkan` if that dir exists, so the short form works
+once it's on your PATH. Otherwise use `npx mishkan-harness <sub>`.
+
+| Command | Does |
+|---|---|
+| `mishkan help` | Always-on detailed reference (detects the symlink and prints the right form) |
+| `mishkan install` | Install/refresh into `~/.claude` (idempotent) |
+| `mishkan configure-knowledge` | Wizard: LLM provider + Cognee `.env` (neo4j / pg / admin secrets) |
+| `mishkan observability` | Install only the daemon + TUI (needs `uv`) |
+| `mishkan org [--json]` | Print the 45-agent org reference |
+| `mishkan code-graph [status|open|scan]` | Inspect the project's Graphify graph |
+| `mishkan status` | Show install state, runtime profile, Cognee dir, version |
+| `mishkan-watch` | Open the live observability TUI (auto-starts the daemon) |
+| `mishkan-watchd start|stop|status` | Daemon lifecycle when you want manual control |
 
 ## Dynamic workflows
 
@@ -246,9 +295,14 @@ cross-project, near-zero overhead. Two `uv tool`-installable Python packages:
 # the installer offers this automatically; or run it standalone any time:
 npx mishkan-harness observability
 
-# then, in two tmux panes (or any two terminals):
-mishkan-watchd start                    # daemon — aggregates the bus
-mishkan-watch                           # TUI client — 8 tabs, project filter (p), status bar
+# Single command — the TUI auto-starts the daemon if its socket isn't
+# present and survives the TUI exit so a second window connects instantly.
+mishkan-watch                           # 8 tabs · project filter (p) · status bar
+
+# Power users can manage the daemon explicitly (logs in their face,
+# separate terminal). The TUI refuses to fork the daemon with --no-autostart:
+# mishkan-watchd start
+# mishkan-watch --no-autostart
 ```
 
 Full operator guide: [`docs/usage/10-observability.md`](docs/usage/10-observability.md).
