@@ -721,6 +721,42 @@ function status() {
   log(`cognee dir: ${existsSync(join(MISHKAN,"cognee")) ? "present (deploy the container to activate the graph)" : "missing"}`);
 }
 
+// ─── org reference ─────────────────────────────────────────────────────────
+function printOrgRef({ json = false } = {}) {
+  const candidates = [
+    join(MISHKAN, "org", "org.json"),
+    join(PKG, "payload", "mishkan", "org", "org.json"),
+  ];
+  let data = null;
+  for (const p of candidates) {
+    if (existsSync(p)) {
+      try { data = JSON.parse(readFileSync(p, "utf8")); break; } catch {}
+    }
+  }
+  if (!data) { console.error("org.json not found. Run `npx mishkan-harness install` first."); process.exit(2); }
+  if (json) { console.log(JSON.stringify(data, null, 2)); return; }
+  console.log(`\n${c.bold("MISHKAN")} — 45 agents across 8 groups\n`);
+  for (const grp of data.groups || []) {
+    const dom = grp.domain ? c.cyan(` · ${grp.domain}`) : "";
+    console.log(c.bold(grp.label) + dom + c.dim(`  (${(grp.agents||[]).length})`));
+    if (grp.hebrew) {
+      const meaning = grp.hebrew_meaning ? c.dim(` — ${grp.hebrew_meaning}`) : "";
+      console.log("  " + c.cyan(grp.hebrew) + meaning);
+    }
+    if (grp.mission) console.log("  " + c.dim("mission   ") + grp.mission);
+    if (grp.charter) console.log("  " + c.dim("charter   ") + grp.charter);
+    if (grp.relationships) console.log("  " + c.dim("links     ") + grp.relationships);
+    if (grp.mission || grp.charter || grp.relationships) console.log("");
+    for (const ag of grp.agents || []) {
+      const alias = ag.alias.charAt(0).toUpperCase() + ag.alias.slice(1);
+      console.log("  " + c.bold(alias.padEnd(14)) + c.dim("· ") + ag.role);
+      if (ag.description) console.log("    " + c.dim(ag.description));
+    }
+    console.log("");
+  }
+  console.log(c.dim(`source: ${data.generated_from || "docs/design/MISHKAN_agent_aliases.md"}`));
+}
+
 const cmd = process.argv[2];
 const flags = new Set(process.argv.slice(3));
 switch (cmd) {
@@ -729,12 +765,14 @@ switch (cmd) {
   case "status": status(); break;
   case "observability": installObservabilityStack(); break;
   case "configure-knowledge": await configureKnowledge(); break;
+  case "org": case "org-ref": printOrgRef({ json: flags.has("--json") }); break;
   default:
     console.log(`MISHKAN harness installer
 Usage:
   npx mishkan-harness install                Install/refresh into ~/.claude (idempotent)
   npx mishkan-harness configure-knowledge    Wizard for the Cognee .env (LLM + neo4j/pg/admin secrets)
   npx mishkan-harness observability          Install only the observability stack (daemon + TUI, needs uv)
+  npx mishkan-harness org [--json]           Print the 45-agent organisation reference (teams + roles + descriptions)
   npx mishkan-harness status                 Show install state
   npx mishkan-harness uninstall              Remove harness (keeps your CLAUDE.md & rules)
   npx mishkan-harness uninstall --purge      Also remove user-level rule`);
