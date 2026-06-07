@@ -3,6 +3,7 @@
   "$id": "mishkan://templates/observability-log.schema.json",
   "title": "MISHKAN Observability Log Entry",
   "description": "One entry per agent tool call, emitted by the PostToolUse hook (design §10).",
+  "$comment": "SPEC-ONLY artifact. The PostToolUse hook produces lines matching this shape but no runtime validator enforces it — the producer's discipline is the contract. To enforce, add a check in post-tool-observe.sh or a periodic conform pass.",
   "type": "object",
   "additionalProperties": false,
   "required": ["agent", "team", "sprint", "session", "tool_calls", "outcome", "timestamp"],

@@ -3,6 +3,7 @@
   "$id": "mishkan://templates/case-node.schema.json",
   "title": "MISHKAN Case Node",
   "description": "Written to Cognee when an agent solves a problem using a curated resource (design §8).",
+  "$comment": "SPEC-ONLY artifact. No runtime validator enforces this schema today — it is the canonical shape referenced from MISHKAN_harness_design.md and MISHKAN_ontology.md. To enforce at write time, plumb it through scripts/validate-research-log.sh or a Cognee write hook.",
   "type": "object",
   "additionalProperties": false,
   "required": ["type", "team", "agent", "problem_class", "resource_applied", "resolution", "outcome", "sprint", "task"],

@@ -80,6 +80,21 @@ Stateful operations hard stop. Sequence before implementation. Diagnose
 before fix. Durable solutions only. No scope expansion. No fabricated
 facts. English for all output.
 
+## Contract eval
+
+Output schema and golden-case semantic invariants exercised by
+`payload/mishkan/evals/baruch/`. Not LLM-live — schema + jq assertions
+on a frozen golden output. Run BEFORE any change to:
+
+- `payload/mishkan/templates/research-log.schema.json`
+- `payload/mishkan/scripts/validate-research-log.sh`
+- This file
+- The Baruch craft skill
+
+Invoke via `/eval-baruch` or `bash payload/mishkan/evals/baruch/run.sh`.
+CI workflow `.github/workflows/eval-baruch.yml` runs it on every PR
+touching one of those paths.
+
 ---
 
 ## Dynamic Context Injection Point

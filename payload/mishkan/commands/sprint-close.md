@@ -14,7 +14,9 @@ Then run:
    ADRs, API docs, runbooks, team docs updated in `docs/`.
 5. Resolved research + decisions promoted to the Cognee project graph
    (**cognee-promote** skill) — gated by Nehemiah + Bezalel.
-6. Observability aggregation runs; improvement-layer queries refresh.
+6. Observability aggregation runs (`bash {{MISHKAN}}/scripts/observability-aggregate.sh`)
+   to produce per-tool and per-outcome counts plus per-session activity from
+   `logs/*.jsonl`. Improvement-layer queries refresh from the produced summary.
 7. Update `./CLAUDE.md` to the next sprint (S+1) and reset milestone.
 
 Stateful operations stop at Y4NN's hands. Reporters surface structured summaries

@@ -1,0 +1,37 @@
+name: eval-baruch
+# Contract regression test for the Baruch research-log schema + validator +
+# golden case. Runs only when the contract surface changes.
+#
+# What's being protected:
+#   - payload/mishkan/templates/research-log.schema.json (the JSON schema)
+#   - payload/mishkan/scripts/validate-research-log.sh   (the validator)
+#   - payload/mishkan/agents/baruch.md                   (Baruch's prompt)
+#   - payload/mishkan/skills/baruch-research-reporting-craft/** (skill body)
+#   - payload/mishkan/evals/baruch/**                    (the eval itself)
+
+on:
+  pull_request:
+    paths:
+      - 'payload/mishkan/templates/research-log.schema.json'
+      - 'payload/mishkan/scripts/validate-research-log.sh'
+      - 'payload/mishkan/agents/baruch.md'
+      - 'payload/mishkan/skills/baruch-research-reporting-craft/**'
+      - 'payload/mishkan/evals/baruch/**'
+  workflow_dispatch:  # manual trigger from the Actions UI
+
+jobs:
+  run-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq and ajv-cli
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y jq
+          # ajv-cli provides JSON schema validation used by validate-research-log.sh
+          npm install -g ajv-cli@5.0.0 ajv-formats@3.0.1
+
+      - name: Run Baruch eval
+        working-directory: payload/mishkan/evals/baruch
+        run: ./run.sh
