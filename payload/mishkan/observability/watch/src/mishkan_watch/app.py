@@ -26,6 +26,7 @@ from .tabs.agents import AgentsTab
 from .tabs.knowledge import KnowledgeTab
 from .tabs.live import LiveTab
 from .tabs.org import OrgTab
+from .tabs.skills import SkillsTab
 from .tabs.usage import UsageTab
 from .tabs.workflows import WorkflowsTab
 
@@ -45,6 +46,7 @@ class MishkanWatch(App):
         Binding("5", "switch_tab('activity')", "Activity"),
         Binding("6", "switch_tab('org-ref')", "Org-Ref"),
         Binding("7", "switch_tab('usage')", "Usage"),
+        Binding("8", "switch_tab('skills')", "Skills"),
         Binding("p", "toggle_project_filter", "Project/All"),
         Binding("question_mark", "show_help", "help", show=False),
     ]
@@ -93,6 +95,8 @@ class MishkanWatch(App):
                 yield OrgTab(id="tab-org-ref")
             with TabPane("Usage", id="usage"):
                 yield UsageTab(id="tab-usage")
+            with TabPane("Skills", id="skills"):
+                yield SkillsTab(id="tab-skills")
         # Footer docked first so it lands at the very bottom; status-bar
         # yielded after so it sits just above. Otherwise both compete for
         # the same bottom slot and Footer wins (status-bar invisible).
@@ -163,7 +167,7 @@ class MishkanWatch(App):
 
     def _all_tabs(self) -> list[Any]:
         out = []
-        for sel in ("#tab-live", "#tab-agents", "#tab-workflows", "#tab-knowledge", "#tab-activity", "#tab-org-ref", "#tab-usage"):
+        for sel in ("#tab-live", "#tab-agents", "#tab-workflows", "#tab-knowledge", "#tab-activity", "#tab-org-ref", "#tab-usage", "#tab-skills"):
             try:
                 out.append(self.query_one(sel))
             except Exception:
@@ -256,7 +260,7 @@ class MishkanWatch(App):
         # Minimal help; expand into a modal in a follow-up.
         try:
             bar = self.query_one("#status-bar", Static)
-            help_text = Text("1-7 tabs · p project filter · / filter (Activity) · q quit",
+            help_text = Text("1-8 tabs · p project filter · / filter (Activity) · q quit",
                              style="bold")
             bar.update(help_text)
         except Exception:

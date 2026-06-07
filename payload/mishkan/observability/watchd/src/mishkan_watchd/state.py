@@ -43,6 +43,13 @@ class AgentState:
     tokens_in: int = 0
     tokens_out: int = 0
     cost_estimate_usd: float = 0.0
+    # Claude tier this agent runs on (opus / sonnet / haiku). Lifted from
+    # post-tool-observe.sh's `agent_spawn` payload, which already carries the
+    # model field that model-route.py injected. Consumed by the Usage tab to
+    # pick the per-agent context window (Sonnet 4.6 = 1M, Opus 4.x = 1M,
+    # Haiku 4.5 = 200k) instead of pinning the bar at a single fleet-wide
+    # default. Empty string when the spawner didn't surface a model.
+    model: str = ""
 
 
 @dataclass
@@ -295,11 +302,13 @@ class HarnessState:
         agent_name = event.get("agent") or (event.get("payload") or {}).get("subagent_type")
         if not agent_name:
             return
+        payload = event.get("payload") or {}
         sess.agents_active[agent_name] = AgentState(
             name=agent_name,
             started=event.get("ts") or _now(),
             last_tool=event.get("tool"),
             status="running",
+            model=str(payload.get("model") or ""),
         )
 
     def _on_agent_complete(self, sid: Optional[str], event: dict[str, Any]) -> None:

@@ -149,6 +149,13 @@ class WorkflowsTab(Container):
             self._catalogue = []
         self._render_list()
         self._render_tree()
+        # Re-render once after mount completes — when the tab is created
+        # before TabbedContent settles its layout, the first ListView paint
+        # can land before ListItem rows have a size computed and the items
+        # show as zero-height (visible as "header only, no rows"). A delayed
+        # repaint guarantees the second pass runs with the final container
+        # dimensions.
+        self.set_timer(0.1, self._render_list)
 
     # ----- snapshot / event application --------------------------------------
 
@@ -251,11 +258,8 @@ class WorkflowsTab(Container):
         # ----- Catalogue (bottom) --------------------------------------------
         if self._catalogue:
             head = Text()
-            if self._runs:
-                head.append("\nAVAILABLE\n", style="bold #00D4AA")
-            else:
-                head.append("AVAILABLE\n", style="bold #00D4AA")
-            head.append(f"({len(self._catalogue)} workflows · select for detail)", style="dim italic")
+            head.append("AVAILABLE", style="bold #00D4AA")
+            head.append(f"  ({len(self._catalogue)} workflows)", style="dim italic")
             lv.append(ListItem(Static(head)))
             for entry in self._catalogue:
                 name = entry.get("name", "?")

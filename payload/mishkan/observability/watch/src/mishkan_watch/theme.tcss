@@ -182,7 +182,7 @@ Tabs > Tab.-active {
 }
 
 #workflows-list {
-    width: 30%;
+    width: 38%;
     layout: vertical;
     border: solid $color-border-light;
     background: $color-surface;
@@ -190,7 +190,7 @@ Tabs > Tab.-active {
 }
 
 #workflows-detail {
-    width: 70%;
+    width: 62%;
     layout: vertical;
     border: solid $color-border-light;
     background: $color-surface;
@@ -199,6 +199,19 @@ Tabs > Tab.-active {
 
 #workflows-listview {
     height: 1fr;
+    overflow-y: scroll;
+}
+
+/* ListItem children (the Static we yield per row) are multi-line — name
+   on line 1, dim description on line 2. Without an explicit ListItem
+   height, Textual collapses each row to 1 line and the description (and
+   often the cursor highlight on long items) clips off. `height: auto`
+   tells the ListItem to size to its child's content height; `min-height: 3`
+   keeps the row tappable when the description happens to be empty. */
+#workflows-listview > ListItem {
+    height: auto;
+    min-height: 2;
+    padding: 0 1;
 }
 
 #workflows-tree {
@@ -281,6 +294,34 @@ Tabs > Tab.-active {
 
 #usage-detail {
     width: 36%;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 1 2;
+}
+
+/* ─── Tab: Skills ──────────────────────────────────────────────── */
+
+#skills-row {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#skills-tree {
+    width: 28%;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 0 1;
+}
+
+#skills-detail {
+    width: 44%;
+    border: solid $color-border-light;
+    background: $color-surface;
+    padding: 1 2;
+}
+
+#skills-adrs {
+    width: 28%;
     border: solid $color-border-light;
     background: $color-surface;
     padding: 1 2;
