@@ -7,7 +7,7 @@ description: |
   lifting the full source tree into context (verified on MISHKAN harness,
   POC 2026-06-07). Use BEFORE grep / Read on source files whenever the
   question is about code STRUCTURE rather than code SEMANTICS.
-  For Hizkiah, Salma, Nathan, Zadok, Oholiab (per D-009).
+  For every code-touching agent across the dev teams (per D-009 amended scope, 2026-06-07): Yasad backend (Hizkiah, Nathan, Zadok, Shallum, Uriah), Panim frontend (Salma, Oholiab, Asaph, Jahaziel), Chosheb UI (Hiram), Mishmar code-security (Ira, Joab, Hushai), Migdal infra-code (Palal, Meshullam, Meremoth, Hanun), Sefer documentation (Joah, Shevna, Jehonathan).
 ---
 
 # Graphify query craft

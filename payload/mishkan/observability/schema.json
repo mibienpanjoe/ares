@@ -85,7 +85,7 @@
             "type": "object",
             "required": ["hook"],
             "properties": {
-              "hook": {"type": "string", "description": "hook name: ira, model-route, graphify-nudge, trace, observe"},
+              "hook": {"type": "string", "description": "hook name: ira, model-route, knowledge-route, trace, observe"},
               "decision": {"type": "string", "enum": ["allow", "deny", "advise", "ok", "blocked"]},
               "reason": {"type": "string"}
             }
