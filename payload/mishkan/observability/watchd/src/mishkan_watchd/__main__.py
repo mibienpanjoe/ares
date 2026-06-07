@@ -20,8 +20,9 @@ from pathlib import Path
 from .lifecycle import install_systemd_user_unit
 from .server import WatchdServer
 from .state import HarnessState
-from .sources import (bus_tail, cognee_poll, mcp_probe, session_discover,
-                       session_tail, subagent_tail, worktree_poll)
+from .sources import (bus_tail, cognee_poll, graphify_tail, mcp_probe,
+                       session_discover, session_tail, subagent_tail,
+                       worktree_poll)
 
 
 HOME = Path(os.path.expanduser("~"))
@@ -56,15 +57,42 @@ def _active_sessions_provider(state: HarnessState):
     return _provider
 
 
+def _decode_project(p: str) -> str:
+    """Decode Claude Code's encoded project dir form (-home-ogu-...) to absolute.
+
+    session_discover sets sess.project to jsonl.parent.name which is the
+    Claude Code encoded form. Downstream consumers that open the path on
+    disk (worktree_poll, graphify_tail) must decode or they silently skip
+    every project. Idempotent on already-absolute paths.
+    """
+    if not p or p in ("", "unknown", "?"):
+        return p
+    if p.startswith("/"):
+        return p
+    if p.startswith("-"):
+        return p.replace("-", "/")
+    return p
+
+
 def _project_paths_provider(state: HarnessState):
-    """Return distinct project paths from active sessions, plus $PWD."""
+    """Return distinct project paths from active sessions, plus $PWD.
+
+    Decodes Claude Code's encoded project form so downstream sources can
+    actually open the project on disk.
+    """
     def _provider() -> list[Path]:
         seen: set[str] = set()
         out: list[Path] = []
         for s in state.sessions.values():
-            if s.project and s.project not in seen:
-                seen.add(s.project)
-                out.append(Path(s.project))
+            if not s.project or s.project in ("unknown", ""):
+                continue
+            decoded = _decode_project(s.project)
+            if decoded in seen:
+                continue
+            seen.add(decoded)
+            p = Path(decoded)
+            if p.is_dir():
+                out.append(p)
         try:
             cwd = os.getcwd()
             if cwd not in seen:
@@ -91,6 +119,8 @@ async def _run(log_dir: Path, projects_dir: Path, socket_path: Path) -> None:
         asyncio.create_task(cognee_poll.run(queue, projects_dir), name="cognee_poll"),
         asyncio.create_task(session_tail.run(queue, _active_sessions_provider(state)),
                             name="session_tail"),
+        asyncio.create_task(graphify_tail.run(queue, _project_paths_provider(state)),
+                            name="graphify_tail"),
         asyncio.create_task(subagent_tail.run(queue, _active_sessions_provider(state)),
                             name="subagent_tail"),
     ]

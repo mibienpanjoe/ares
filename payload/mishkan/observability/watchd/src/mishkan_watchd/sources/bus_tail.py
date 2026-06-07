@@ -74,14 +74,27 @@ class _TailHandler(FileSystemEventHandler):
 
 
 async def run(queue: asyncio.Queue[dict[str, Any]], log_dir: Path) -> None:
-    """Start a watchdog observer on log_dir. Backfills existing files first."""
+    """Start a watchdog observer on log_dir. Tails from EOF — no historical replay.
+
+    Why no backfill: hook log files accumulate session_ids from sessions
+    long gone. Replaying them on daemon start resurrected those sessions
+    as "phantoms" (project=unknown, stale agents_active) in the snapshot.
+    The daemon's source of truth for live sessions is session_discover,
+    which polls active JSONLs every 10s; bus_tail's job is only to forward
+    new hook events as they happen.
+    """
     log_dir.mkdir(parents=True, exist_ok=True)
     loop = asyncio.get_running_loop()
     handler = _TailHandler(queue, loop)
 
-    # Backfill: read each existing file from offset 0.
+    # Seek to EOF on each existing file. New writes after this point are
+    # emitted normally; everything before is treated as already-consumed
+    # by whichever daemon instance was alive at the time it was written.
     for f in log_dir.glob("*.jsonl"):
-        handler._drain(str(f))
+        try:
+            handler.offsets[str(f)] = os.path.getsize(str(f))
+        except OSError:
+            handler.offsets[str(f)] = 0
 
     observer = Observer()
     observer.schedule(handler, str(log_dir), recursive=False)

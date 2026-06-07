@@ -61,7 +61,11 @@ async def _poll_once(project_paths: list[Path], known: dict[str, dict[str, str]]
                 continue
             seen.add(path)
             if path not in known:
-                known[path] = wt
+                # Stamp the owner project so we only emit "remove" later
+                # if the OWNER was actually polled this round. Prevents the
+                # storm of phantom removes when project list temporarily
+                # drops (e.g. before session_discover's first confirmation).
+                known[path] = {**wt, "_project": str(proj)}
                 await queue.put({
                     "ts": _iso(),
                     "session": None,
@@ -72,13 +76,20 @@ async def _poll_once(project_paths: list[Path], known: dict[str, dict[str, str]]
                     "payload": {"op": "add", **wt},
                 })
 
+    polled_projects = {str(p) for p in project_paths}
     for path in list(known.keys()):
+        owner = known[path].get("_project", "")
+        if owner not in polled_projects:
+            # The project that owned this worktree wasn't polled this
+            # round — don't infer a removal from absence of evidence.
+            continue
         if path not in seen:
             wt = known.pop(path)
+            wt.pop("_project", None)
             await queue.put({
                 "ts": _iso(),
                 "session": None,
-                "project": "",
+                "project": owner,
                 "type": "worktree_change",
                 "tool": None,
                 "outcome": "completed",
