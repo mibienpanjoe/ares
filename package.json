@@ -1,6 +1,6 @@
 {
   "name": "mishkan-harness",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "MISHKAN — a personal advanced SWE R&D harness for Claude Code: 45 biblically-named agents across six teams, deterministic rules + hooks, a shared research pipeline, dependency/supply-chain vetting, and a Cognee-backed knowledge graph. Installs into ~/.claude.",
   "type": "module",
   "bin": {
