@@ -159,7 +159,7 @@ milestones. Sefer pulls at milestones and on trigger events.
 │  Each team: Lead → Specialists → QA/Advisor → Reporter           │
 │                                                                  │
 │  Collaboration model:                                            │
-│  Chosheb  ──→  Panim       design handoff · unidirectional       │
+│  Chosheb  →  Panim       design handoff · unidirectional       │
 │  Panim    ↔    Yasad       API contracts · bidirectional         │
 │  Yasad    ↔    Mishmar     audit + remediation · bidirectional   │
 │  Mishmar   →   Migdal      security gates infrastructure         │
@@ -777,38 +777,6 @@ already solved well.
         ├── case-node.json
         └── observability-log.json
 ```
-
----
-
-## 20. Open Design Questions
-
-Not blockers — next design layer.
-
-| Question | Status |
-|----------|--------|
-| SessionStart hook — what it loads · Cognee query on wake | Pending Claude Code feature validation |
-| ACI per team — how each team interacts with its environment | Next layer |
-| Cross-sprint knowledge compression — sprint memory → project graph | Next layer |
-| Self-improvement loop — frequency · who acts on outputs | Next layer |
-| Curated library bootstrap — how each team's library gets seeded | Next layer |
-| Sefer trigger events — full list of what fires an immediate pull | Next layer |
-
----
-
-## 21. What Is Not Yet Designed
-
-Explicitly out of scope — to be designed before building:
-
-- Agent specs (system prompts · input/output contracts · failure behavior)
-- Prompt engineering per agent
-- CLAUDE.md templates (user-level · project-level)
-- Rules files content per team
-- Hooks implementation (scripts)
-- Skills implementation (SKILL.md content)
-- Curated library initial content per team
-- Cognee graph schema (entity types · relationship types · ontology)
-- Observability pipeline (log aggregation · improvement layer queries)
-- Model routing configuration
 
 ---
 
