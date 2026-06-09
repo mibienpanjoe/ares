@@ -8,6 +8,14 @@ All notable changes to MISHKAN are documented here. Format:
 
 ### Fixed
 
+- **Selective ingest was broken on every project (file-permission bug).**
+  `mishkan-ingest.sh` staged its runner script via `mktemp` (mode 0600) and
+  `docker cp`-ed it into the Cognee container, which preserves the 0600 mode and
+  the host UID — so the container's non-root user could not read it and every
+  ingest died with `Errno 13 Permission denied` before `add`/`cognify`/`memify`
+  ever ran. `chmod 0644` the staged runner before the copy. Verified end-to-end:
+  a doc now flows add → cognify → memify and lands in the graph.
+
 - **Observability — active sessions were deleted mid-agent-run, so running
   agents never showed.** Session liveness was driven solely by the parent
   transcript's mtime (< 60s). But a subagent's activity is written to nested

@@ -87,6 +87,10 @@ async def m():
     print(">> memified", flush=True)
 asyncio.run(m())
 PY
+# mktemp creates the runner 0600; docker cp preserves mode + host uid, so the
+# container's non-root user can't read it (Errno 13 Permission denied). Make it
+# world-readable before staging — this was silently blocking ingest fleet-wide.
+chmod 0644 "$PY_SCRIPT"
 docker cp "$PY_SCRIPT" "${CONTAINER}:/home/cognee/_mishkan_ingest.py"
 rm -f "$PY_SCRIPT"
 docker exec -i -w /app/cognee-mcp "$CONTAINER" uv run python -u /home/cognee/_mishkan_ingest.py "$DATASET"
