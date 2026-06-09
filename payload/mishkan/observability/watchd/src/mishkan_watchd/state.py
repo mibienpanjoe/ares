@@ -39,6 +39,13 @@ _PENDING_TTL_S = 15.0
 # durable way to clear lingering "running" entries.
 WORKFLOW_STALE_TTL_S = 900
 
+# A session_stop from session_discover is ignored when the session is "busy":
+# either it still has active agents, or a real bus event was applied within
+# this window. Chosen comfortably above session_discover's 60 s active_window
+# so a session whose transcript goes quiet while a subagent is writing to its
+# own nested JSONL is not torn down mid-run.
+SESSION_KEEPALIVE_S = 90.0
+
 
 @dataclass
 class AgentState:
@@ -94,6 +101,12 @@ class SessionState:
     # get a meaningful fill fraction; the cumulative tokens_in alone reads ~0%
     # under prompt caching because cache_read tokens are not billed as input.
     last_context_tokens: int = 0
+    # Monotonic timestamp of the last bus event applied to this session.
+    # Used by the session_stop guard to keep a busy session (active agents or
+    # recent activity) alive when session_discover declares it stale because
+    # its parent transcript has not been written to (subagent writes go to
+    # nested subagents/agent-*.jsonl, leaving the parent file quiet).
+    last_event_mono: float = 0.0
 
 
 @dataclass
@@ -189,6 +202,14 @@ class HarnessState:
         This kills the phantom-session bug at its root: bus_tail can no
         longer resurrect stopped or never-alive sessions, no matter what
         old hook events surface from disk.
+
+        Liveness is now refreshed by bus activity (last_event_mono), not
+        transcript mtime alone. bus_tail seeks to EOF on startup so no
+        historical replay can resurrect a dead session via this path.
+        A session_stop from session_discover is ignored when the session
+        is busy (agents_active non-empty OR last_event_mono within
+        SESSION_KEEPALIVE_S); session_discover re-polls and re-emits
+        session_stop, so idle sessions are still cleaned up normally.
         """
         try:
             self._sweep_pending()
@@ -202,7 +223,7 @@ class HarnessState:
                     self._ensure_session(session_id, event.get("project") or "unknown")
                     self._flush_pending(session_id)
                 elif etype == "session_stop":
-                    # Honoured below; remove from confirmed + tombstone.
+                    # Busy-guard handled below; fall through.
                     pass
                 elif session_id in self._stopped_recently:
                     # Stopped session — drop silently. Tombstone window handles
@@ -240,6 +261,23 @@ class HarnessState:
                 pass  # ensured above
             elif etype == "session_stop":
                 if session_id:
+                    sess = self.sessions.get(session_id)
+                    busy = (
+                        sess is not None
+                        and (
+                            bool(sess.agents_active)
+                            or (monotonic() - sess.last_event_mono) < SESSION_KEEPALIVE_S
+                        )
+                    )
+                    if busy:
+                        # Session still has running agents or received a real
+                        # bus event recently — transcript staleness from
+                        # session_discover does not reflect true liveness here
+                        # (subagent writes go to nested JSONL files). Ignore
+                        # this stop; session_discover will re-emit on the next
+                        # poll cycle and the guard re-evaluates then.
+                        return
+                    # Genuinely idle: no active agents and no recent bus events.
                     self.sessions.pop(session_id, None)
                     self._confirmed_alive.discard(session_id)
                     self._pending.pop(session_id, None)
@@ -249,6 +287,10 @@ class HarnessState:
 
             if session_id and session_id in self.sessions:
                 self.sessions[session_id].recent_events.append(event)
+                # Stamp liveness so the session_stop busy-guard has a fresh
+                # monotonic reference. Any real bus event refreshes the window,
+                # keeping a session alive through a transcript-quiet subagent run.
+                self.sessions[session_id].last_event_mono = monotonic()
         except Exception:
             return  # fail-open on any state error
 

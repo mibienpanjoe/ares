@@ -83,9 +83,15 @@ def test_token_usage_accumulates_per_session():
 
 
 def test_session_stop_removes_session():
+    """An idle session (no agents, last_event_mono expired) is cleaned up on session_stop."""
+    import mishkan_watchd.state as state_mod
+    from time import monotonic
+
     s = HarnessState()
     s.apply({"ts": "x", "session": "drop-me", "type": "session_start", "project": "/p"})
     assert "drop-me" in s.sessions
+    # Simulate idleness: backdate last_event_mono past the keepalive window.
+    s.sessions["drop-me"].last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
     s.apply({"ts": "y", "session": "drop-me", "type": "session_stop"})
     assert "drop-me" not in s.sessions
 
@@ -293,6 +299,81 @@ def test_cold_start_has_no_workflows():
     assert snap["sessions"]["cold"]["workflows_active"] == {}
 
 
+# ---------------------------------------------------------------------------
+# Fix C — session_stop busy-guard (liveness via bus activity)
+# ---------------------------------------------------------------------------
+
+def test_session_stop_ignored_when_agent_active():
+    """A session with a running agent survives session_stop from session_discover."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "busy-1", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "busy-1", "type": "agent_spawn", "tool": "Task",
+        "agent": "bezalel",
+        "payload": {"subagent_type": "bezalel", "tool_use_id": "toolu_busy1"},
+    })
+    # Transcript goes quiet — session_discover emits session_stop.
+    s.apply({"ts": "y", "session": "busy-1", "type": "session_stop"})
+    # Session must still be present and agent still visible.
+    assert "busy-1" in s.sessions
+    assert "toolu_busy1" in s.sessions["busy-1"].agents_active
+
+
+def test_session_stop_ignored_when_recent_bus_event():
+    """A session whose last bus event is within SESSION_KEEPALIVE_S survives session_stop."""
+    import mishkan_watchd.state as state_mod
+
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "busy-2", "type": "session_start", "project": "/p"})
+    # A recent token_usage event stamps last_event_mono close to now.
+    s.apply({
+        "ts": "x", "session": "busy-2", "type": "token_usage",
+        "payload": {"tokens_in": 10, "tokens_out": 5, "cost_estimate_usd": 0.001},
+    })
+    # Confirm last_event_mono is within keepalive window.
+    from time import monotonic
+    assert (monotonic() - s.sessions["busy-2"].last_event_mono) < state_mod.SESSION_KEEPALIVE_S
+
+    s.apply({"ts": "y", "session": "busy-2", "type": "session_stop"})
+    assert "busy-2" in s.sessions
+
+
+def test_session_stop_drops_genuinely_idle_session():
+    """A session with no active agents and an old last_event_mono is cleaned up normally."""
+    import mishkan_watchd.state as state_mod
+    from time import monotonic
+
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "idle-1", "type": "session_start", "project": "/p"})
+    # Backdate last_event_mono to simulate a long-idle session.
+    sess = s.sessions["idle-1"]
+    sess.last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
+    # No agents_active (default empty dict).
+    s.apply({"ts": "y", "session": "idle-1", "type": "session_stop"})
+    assert "idle-1" not in s.sessions
+    assert "idle-1" in s._stopped_recently
+
+
+def test_phantom_protection_still_holds_after_idle_stop():
+    """Events for a tombstoned idle session are still dropped silently."""
+    import mishkan_watchd.state as state_mod
+    from time import monotonic
+
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "gone-1", "type": "session_start", "project": "/p"})
+    sess = s.sessions["gone-1"]
+    sess.last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
+    s.apply({"ts": "y", "session": "gone-1", "type": "session_stop"})
+    assert "gone-1" not in s.sessions
+
+    # A lagging agent_complete or tool_call must not resurrect the session.
+    s.apply({
+        "ts": "z", "session": "gone-1", "type": "agent_complete",
+        "payload": {"tool_use_id": "toolu_late"},
+    })
+    assert "gone-1" not in s.sessions
+
+
 if __name__ == "__main__":
     test_agent_spawn_creates_session_and_agent()
     test_agent_spawn_complete_pair_by_tool_use_id()
@@ -312,4 +393,8 @@ if __name__ == "__main__":
     test_workflow_fresh_run_not_staled()
     test_workflow_stale_field_not_in_snapshot()
     test_cold_start_has_no_workflows()
+    test_session_stop_ignored_when_agent_active()
+    test_session_stop_ignored_when_recent_bus_event()
+    test_session_stop_drops_genuinely_idle_session()
+    test_phantom_protection_still_holds_after_idle_stop()
     print("all state tests passed")

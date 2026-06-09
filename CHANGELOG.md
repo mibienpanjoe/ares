@@ -8,6 +8,20 @@ All notable changes to MISHKAN are documented here. Format:
 
 ### Fixed
 
+- **Observability — active sessions were deleted mid-agent-run, so running
+  agents never showed.** Session liveness was driven solely by the parent
+  transcript's mtime (< 60s). But a subagent's activity is written to nested
+  `subagents/agent-*.jsonl` files, so the parent transcript goes quiet during a
+  run — `session_discover` then declared the session dead, and the daemon
+  `pop`-ed the whole session (wiping `agents_active`) and tombstoned it, after
+  which the agent's own `tool_call`/`agent_complete` events were dropped. Net
+  effect: agents ran but never appeared in Active Agents/Agents, and
+  usage/graphify flickered to 0 whenever the transcript was quiet. Liveness is
+  now refreshed by any bus event (`last_event_mono`), and a `session_stop` is
+  ignored while the session is busy (active agents OR a bus event within
+  `SESSION_KEEPALIVE_S = 90s`); genuinely idle sessions are still cleaned up and
+  the phantom-session tombstone still holds.
+
 - **Observability — Usage "context" gauge read ~0% under prompt caching.** The
   gauge divided cumulative *uncached* `tokens_in` (a handful of tokens per turn
   once caching kicks in) by the context window, so it pinned near zero while the
