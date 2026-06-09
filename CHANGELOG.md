@@ -8,6 +8,26 @@ All notable changes to MISHKAN are documented here. Format:
 
 ### Fixed
 
+- **Observability — a tombstoned session's agents never reappeared.** When a
+  session went quiet (parent transcript stale during an agent run),
+  `session_discover` spuriously stopped it and the daemon tombstoned it; the
+  tombstone check then dropped every later event for it — *before*
+  confirm-on-first-event could re-admit it — so its running agents stayed
+  invisible. A live event for a tombstoned session now un-tombstones and
+  re-confirms it (safe: `bus_tail` seeks to EOF, so a fresh event is genuine
+  activity, never a replayed ghost; a truly-ended session produces no events
+  and stays gone).
+
+- **Observability — TUI rendered each agent on two rows.** The `agent_spawn`
+  key scheme evolved (older events carry the correlation id at top-level
+  `subagent_id`; newer ones carry `tool_use_id` in payload). When a snapshot
+  entry and a live delta for the same agent resolved different keys, the TUI
+  kept two `agents_active` entries with the same `name` → two rows. The key
+  chain is unified (`tool_use_id` → `subagent_id` → name) and same-name ghost
+  entries under a stale key are swept on spawn/complete. Trade-off: two
+  genuinely-concurrent agents of the *same* subagent_type now render as a
+  single row (display-only; the daemon still tracks them separately).
+
 - **Observability — running agents never appeared because their session was
   never confirmed.** The authority gate applied events only for sessions
   confirmed by `session_discover`, which confirms solely by the parent

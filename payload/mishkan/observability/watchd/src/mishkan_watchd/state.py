@@ -212,12 +212,17 @@ class HarnessState:
         session via mtime; but bus events (agent_spawn, tool_call, token_usage)
         stream in live, and tier 2 picks them up on the first one.
 
-        The _stopped_recently tombstone check runs before tier 2 and blocks
-        phantom-session resurrection for recently-stopped sessions. The phantom-
-        session bug this gate was originally built for (bus_tail replaying
-        historical hook events on start) no longer applies since bus_tail seeks
-        to EOF; the tombstone remains as the defence against lagging hook events
-        that arrive after a genuine stop.
+        Tombstone resurrection: because bus_tail seeks to EOF there is no
+        historical replay, so a fresh event for a tombstoned session is genuine
+        new activity — the session was spuriously stopped by session_discover
+        when its parent transcript went quiet during an agent run, not actually
+        dead. The tombstone branch un-tombstones, re-confirms, and falls through
+        so the triggering event is applied. A truly-ended session produces no new
+        events, so it stays tombstoned naturally. Lagging hook events (the
+        original phantom-resurrection concern) are distinguished by the busy-guard
+        on session_stop: a session that was genuinely busy was never tombstoned in
+        the first place. This branch therefore only fires for sessions that were
+        spuriously stopped while quiet-but-active (the quiet-then-active pattern).
 
         Liveness is refreshed by bus activity (last_event_mono). A session_stop
         from session_discover is ignored when the session is busy (agents_active
@@ -240,9 +245,21 @@ class HarnessState:
                     # Busy-guard handled below; fall through.
                     pass
                 elif session_id in self._stopped_recently:
-                    # Stopped session — drop silently. Tombstone window handles
-                    # lagging hook events for sessions whose stop just propagated.
-                    return
+                    # A live event for a tombstoned session. bus_tail seeks to
+                    # EOF (no historical replay), so this is genuine new activity
+                    # — the session was spuriously stopped by session_discover
+                    # when its parent transcript went quiet during an agent run,
+                    # not actually dead. Un-tombstone and re-confirm so its
+                    # agents/tokens reappear. (A truly-ended session produces no
+                    # new events, so it stays tombstoned.)
+                    try:
+                        self._stopped_recently.remove(session_id)
+                    except ValueError:
+                        pass
+                    self._confirmed_alive.add(session_id)
+                    self._ensure_session(session_id, event.get("project") or "unknown")
+                    self._flush_pending(session_id)
+                    # fall through (NO return) so this event is applied below
                 elif session_id not in self._confirmed_alive:
                     # bus_tail seeks to EOF (no historical replay), so a live
                     # event for a non-tombstoned, unconfirmed session is a

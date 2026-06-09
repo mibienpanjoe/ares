@@ -354,8 +354,14 @@ def test_session_stop_drops_genuinely_idle_session():
     assert "idle-1" in s._stopped_recently
 
 
-def test_phantom_protection_still_holds_after_idle_stop():
-    """Events for a tombstoned idle session are still dropped silently."""
+def test_live_event_after_idle_stop_resurrects_session():
+    """A live bus event for a tombstoned-but-spuriously-stopped session
+    un-tombstones and re-confirms the session (Fix E).
+
+    agent_complete for a session with no spawned agents is a harmless
+    fall-through: the session exists but agents_active stays empty. This
+    is correct — the event was genuine activity, not a phantom replay.
+    """
     import mishkan_watchd.state as state_mod
     from time import monotonic
 
@@ -365,13 +371,19 @@ def test_phantom_protection_still_holds_after_idle_stop():
     sess.last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
     s.apply({"ts": "y", "session": "gone-1", "type": "session_stop"})
     assert "gone-1" not in s.sessions
+    assert "gone-1" in s._stopped_recently
 
-    # A lagging agent_complete or tool_call must not resurrect the session.
+    # A live agent_complete arrives — session is resurrected (no agent to pop,
+    # but the session itself is re-confirmed and alive).
     s.apply({
         "ts": "z", "session": "gone-1", "type": "agent_complete",
         "payload": {"tool_use_id": "toolu_late"},
     })
-    assert "gone-1" not in s.sessions
+    assert "gone-1" in s.sessions
+    assert "gone-1" in s._confirmed_alive
+    assert "gone-1" not in s._stopped_recently
+    # No agent was ever spawned, so agents_active is empty — not an error.
+    assert s.sessions["gone-1"].agents_active == {}
 
 
 # ---------------------------------------------------------------------------
@@ -423,32 +435,89 @@ def test_token_usage_alone_confirms_session_and_applies_tokens():
     assert "tok-only-sess" in s._confirmed_alive
 
 
-def test_tombstoned_session_event_still_dropped_after_fix():
-    """Phantom protection holds: events for a recently-stopped session are dropped
-    even after the tier-2 live-event confirm path is in place.
+def test_tombstoned_session_untombstoned_on_live_agent_spawn():
+    """Core regression — Fix E: a tombstoned session that receives a live
+    agent_spawn is un-tombstoned, re-confirmed, and the agent appears in
+    agents_active immediately.
 
-    The _stopped_recently tombstone check runs before tier-2, so the session
-    must NOT be resurrected.
+    Scenario: session went quiet (parent transcript stale >60 s during an
+    agent run), session_discover spuriously emitted session_stop, session was
+    tombstoned. A fresh agent_spawn then arrives on the bus. With the fix the
+    session must come back alive and the agent must be visible.
     """
     import mishkan_watchd.state as state_mod
     from time import monotonic
 
     s = HarnessState()
-    # Start, let it idle, then stop it so it lands in _stopped_recently.
-    s.apply({"ts": "x", "session": "dead-sess", "type": "session_start", "project": "/p"})
-    s.sessions["dead-sess"].last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
-    s.apply({"ts": "y", "session": "dead-sess", "type": "session_stop"})
-    assert "dead-sess" not in s.sessions
-    assert "dead-sess" in s._stopped_recently
+    # Start and let it go idle so the stop is accepted (not busy-guarded).
+    s.apply({"ts": "x", "session": "quiet-sess", "type": "session_start", "project": "/p"})
+    s.sessions["quiet-sess"].last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
+    s.apply({"ts": "y", "session": "quiet-sess", "type": "session_stop"})
+    assert "quiet-sess" not in s.sessions
+    assert "quiet-sess" in s._stopped_recently
 
-    # A live-looking bus event must not resurrect it.
+    # Live agent_spawn arrives — session must be resurrected.
     s.apply({
-        "ts": "z", "session": "dead-sess",
-        "type": "agent_spawn", "tool": "Task", "agent": "caleb",
-        "payload": {"subagent_type": "caleb", "tool_use_id": "toolu_ghost"},
+        "ts": "z", "session": "quiet-sess",
+        "type": "agent_spawn", "tool": "Task", "agent": "bezalel",
+        "payload": {"subagent_type": "bezalel", "tool_use_id": "toolu_reborn"},
     })
-    assert "dead-sess" not in s.sessions
-    assert "dead-sess" not in s._confirmed_alive
+    assert "quiet-sess" in s.sessions, "session must be un-tombstoned and re-confirmed"
+    assert "quiet-sess" in s._confirmed_alive
+    assert "quiet-sess" not in s._stopped_recently
+    agents = s.sessions["quiet-sess"].agents_active
+    assert "toolu_reborn" in agents, "agent must appear in agents_active after resurrection"
+    assert agents["toolu_reborn"].name == "bezalel"
+    assert agents["toolu_reborn"].status == "running"
+
+
+def test_tombstoned_session_subsequent_agent_complete_works_normally():
+    """After resurrection via agent_spawn a following agent_complete removes
+    the agent normally — the un-tombstoned session behaves like any live session.
+    """
+    import mishkan_watchd.state as state_mod
+    from time import monotonic
+
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "revived", "type": "session_start", "project": "/p"})
+    s.sessions["revived"].last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
+    s.apply({"ts": "y", "session": "revived", "type": "session_stop"})
+    assert "revived" in s._stopped_recently
+
+    # Resurrect via spawn.
+    s.apply({
+        "ts": "z", "session": "revived",
+        "type": "agent_spawn", "tool": "Task", "agent": "caleb",
+        "payload": {"subagent_type": "caleb", "tool_use_id": "toolu_rev1"},
+    })
+    assert "toolu_rev1" in s.sessions["revived"].agents_active
+
+    # Complete the agent — must be removed cleanly.
+    s.apply({
+        "ts": "w", "session": "revived",
+        "type": "agent_complete", "tool": "Task", "agent": "caleb",
+        "payload": {"subagent_type": "caleb", "tool_use_id": "toolu_rev1"},
+    })
+    assert "toolu_rev1" not in s.sessions["revived"].agents_active
+    assert len(s.sessions["revived"].agents_active) == 0
+
+
+def test_tombstoned_session_with_no_further_events_stays_gone():
+    """A session that is tombstoned and receives no further events is never
+    resurrected — tombstone stays in place indefinitely.
+    """
+    import mishkan_watchd.state as state_mod
+    from time import monotonic
+
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "truly-dead", "type": "session_start", "project": "/p"})
+    s.sessions["truly-dead"].last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
+    s.apply({"ts": "y", "session": "truly-dead", "type": "session_stop"})
+
+    # No further events arrive for this session. It must remain absent.
+    assert "truly-dead" not in s.sessions
+    assert "truly-dead" in s._stopped_recently
+    assert "truly-dead" not in s._confirmed_alive
 
 
 def test_session_start_after_live_confirm_is_harmless_reconfirm():
@@ -500,9 +569,11 @@ if __name__ == "__main__":
     test_session_stop_ignored_when_agent_active()
     test_session_stop_ignored_when_recent_bus_event()
     test_session_stop_drops_genuinely_idle_session()
-    test_phantom_protection_still_holds_after_idle_stop()
+    test_live_event_after_idle_stop_resurrects_session()
     test_agent_spawn_alone_confirms_session_and_populates_agents_active()
     test_token_usage_alone_confirms_session_and_applies_tokens()
-    test_tombstoned_session_event_still_dropped_after_fix()
+    test_tombstoned_session_untombstoned_on_live_agent_spawn()
+    test_tombstoned_session_subsequent_agent_complete_works_normally()
+    test_tombstoned_session_with_no_further_events_stays_gone()
     test_session_start_after_live_confirm_is_harmless_reconfirm()
     print("all state tests passed")
