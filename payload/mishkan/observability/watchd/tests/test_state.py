@@ -154,6 +154,145 @@ def test_unknown_event_type_is_ignored_gracefully():
     assert "weird" in s.sessions
 
 
+# ---------------------------------------------------------------------------
+# Fix A — last_context_tokens
+# ---------------------------------------------------------------------------
+
+def test_last_context_tokens_set_not_accumulated():
+    """last_context_tokens reflects the MOST RECENT turn, not a running sum."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "ctx", "type": "session_start", "project": "/p"})
+    # Turn 1: small uncached input with large cache_read (typical caching profile).
+    s.apply({
+        "ts": "x", "session": "ctx", "type": "token_usage",
+        "payload": {
+            "tokens_in": 2, "tokens_out": 100,
+            "cache_read": 558453, "cache_write": 5141,
+            "cost_estimate_usd": 1.21,
+        },
+    })
+    sess = s.sessions["ctx"]
+    # last_context_tokens = cache_read + cache_write + tokens_in of THIS turn.
+    assert sess.last_context_tokens == 558453 + 5141 + 2
+    # Cumulative fields are unchanged.
+    assert sess.tokens_in == 2
+    assert sess.cache_read == 558453
+
+    # Turn 2: a different footprint — last_context_tokens is replaced, not added.
+    s.apply({
+        "ts": "y", "session": "ctx", "type": "token_usage",
+        "payload": {
+            "tokens_in": 5, "tokens_out": 200,
+            "cache_read": 600000, "cache_write": 0,
+            "cost_estimate_usd": 0.5,
+        },
+    })
+    assert sess.last_context_tokens == 600000 + 0 + 5
+    # Cumulative tokens_in did accumulate across both turns.
+    assert sess.tokens_in == 7
+
+
+def test_last_context_tokens_in_snapshot():
+    """last_context_tokens is present in the per-session snapshot dict."""
+    import json
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "ctx2", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "ctx2", "type": "token_usage",
+        "payload": {"tokens_in": 2, "tokens_out": 50,
+                    "cache_read": 558453, "cache_write": 5141,
+                    "cost_estimate_usd": 0.1},
+    })
+    snap = s.to_snapshot()
+    sess_snap = snap["sessions"]["ctx2"]
+    assert "last_context_tokens" in sess_snap
+    assert sess_snap["last_context_tokens"] == 558453 + 5141 + 2
+    # Verify it round-trips cleanly.
+    json.dumps(snap, default=str)
+
+
+def test_last_context_tokens_zero_on_fresh_session():
+    """A session with no token_usage events has last_context_tokens == 0."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "fresh", "type": "session_start", "project": "/p"})
+    snap = s.to_snapshot()
+    assert snap["sessions"]["fresh"]["last_context_tokens"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Fix B — workflow stale sweep
+# ---------------------------------------------------------------------------
+
+def test_workflow_start_creates_run_in_session():
+    """workflow_start populates workflows_active with phase 'running'."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "wf1", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "wf1", "type": "workflow_start",
+        "payload": {"name": "my-flow", "run_id": "run-abc", "scriptPath": "flow.yaml"},
+    })
+    wf = s.sessions["wf1"].workflows_active.get("run-abc")
+    assert wf is not None
+    assert wf.name == "my-flow"
+    assert wf.phase == "running"
+
+
+def test_workflow_stale_sweep_in_snapshot():
+    """A workflow whose last_activity_mono is > TTL shows phase='stale' in snapshot."""
+    import mishkan_watchd.state as state_mod
+    from time import monotonic
+
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "wf2", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "wf2", "type": "workflow_start",
+        "payload": {"name": "old-flow", "run_id": "run-old"},
+    })
+    # Backdate last_activity_mono to simulate a run that started long ago.
+    wf = s.sessions["wf2"].workflows_active["run-old"]
+    wf.last_activity_mono = monotonic() - (state_mod.WORKFLOW_STALE_TTL_S + 1)
+
+    snap = s.to_snapshot()
+    wf_snap = snap["sessions"]["wf2"]["workflows_active"]["run-old"]
+    assert wf_snap["phase"] == "stale"
+    # The live WorkflowState is NOT mutated — only the snapshot output changes.
+    assert wf.phase == "running"
+
+
+def test_workflow_fresh_run_not_staled():
+    """A recently-started workflow is NOT staled in the snapshot."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "wf3", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "wf3", "type": "workflow_start",
+        "payload": {"name": "new-flow", "run_id": "run-new"},
+    })
+    snap = s.to_snapshot()
+    wf_snap = snap["sessions"]["wf3"]["workflows_active"]["run-new"]
+    assert wf_snap["phase"] == "running"
+
+
+def test_workflow_stale_field_not_in_snapshot():
+    """last_activity_mono (internal float) is stripped from the snapshot wire shape."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "wf4", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "wf4", "type": "workflow_start",
+        "payload": {"name": "flow", "run_id": "run-x"},
+    })
+    snap = s.to_snapshot()
+    wf_snap = snap["sessions"]["wf4"]["workflows_active"]["run-x"]
+    assert "last_activity_mono" not in wf_snap
+
+
+def test_cold_start_has_no_workflows():
+    """A fresh daemon with no workflow events shows an empty workflows_active."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "cold", "type": "session_start", "project": "/p"})
+    snap = s.to_snapshot()
+    assert snap["sessions"]["cold"]["workflows_active"] == {}
+
+
 if __name__ == "__main__":
     test_agent_spawn_creates_session_and_agent()
     test_agent_spawn_complete_pair_by_tool_use_id()
@@ -165,4 +304,12 @@ if __name__ == "__main__":
     test_graphify_tail_stats_only_does_not_increment_scan_count()
     test_graphify_query_hook_event_increments_query_count()
     test_unknown_event_type_is_ignored_gracefully()
+    test_last_context_tokens_set_not_accumulated()
+    test_last_context_tokens_in_snapshot()
+    test_last_context_tokens_zero_on_fresh_session()
+    test_workflow_start_creates_run_in_session()
+    test_workflow_stale_sweep_in_snapshot()
+    test_workflow_fresh_run_not_staled()
+    test_workflow_stale_field_not_in_snapshot()
+    test_cold_start_has_no_workflows()
     print("all state tests passed")

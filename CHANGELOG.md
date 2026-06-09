@@ -8,6 +8,23 @@ All notable changes to MISHKAN are documented here. Format:
 
 ### Fixed
 
+- **Observability — Usage "context" gauge read ~0% under prompt caching.** The
+  gauge divided cumulative *uncached* `tokens_in` (a handful of tokens per turn
+  once caching kicks in) by the context window, so it pinned near zero while the
+  real footprint sat in `cache_read`. The daemon now tracks a per-session
+  `last_context_tokens` (the most-recent turn's `cache_read + cache_write +
+  tokens_in`, set not summed) and the TUI gauges against that, falling back to
+  `tokens_in` on older snapshots. The TOKENS table and cost stay cumulative.
+
+- **Observability — workflow runs stuck at "running" forever.** `workflow_start`
+  / `workflow_update` were falling through unhandled in the daemon (so
+  `workflows_active` was always empty), and no `workflow_complete` is ever
+  emitted (the Workflow tool returns at launch; completion arrives out-of-band).
+  The daemon now handles those events and ages a run with no activity for
+  `WORKFLOW_STALE_TTL_S` (900 s) to status `"stale"` in the snapshot, so zombie
+  `(unknown) [running]` rows clear instead of lingering. A cold-started daemon
+  with no workflow events shows none.
+
 - **Observability — agent tracking never showed live agents.** `agent_spawn`
   was emitted by the PostToolUse hook, so it fired when a subagent *finished*,
   and `agent_complete` was never emitted at all — the active-agent count only

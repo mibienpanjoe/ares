@@ -32,6 +32,13 @@ def _now() -> str:
 # a hook fires for a brand-new session before its first JSONL flush.
 _PENDING_TTL_S = 15.0
 
+# A workflow run that has received no workflow_* event for this many seconds
+# is transitioned to "stale" in the snapshot. The Workflow tool returns
+# immediately and reports completion via task-notification (not a tool call),
+# so workflow_complete is never emitted by any hook — a TTL is the only
+# durable way to clear lingering "running" entries.
+WORKFLOW_STALE_TTL_S = 900
+
 
 @dataclass
 class AgentState:
@@ -62,6 +69,10 @@ class WorkflowState:
     spend_usd: float = 0.0
     tokens_total: int = 0
     started: str = ""
+    # Monotonic timestamp of the last workflow_* event for this run. Used by
+    # the stale-sweep in to_snapshot() to transition runs that have received
+    # no activity for WORKFLOW_STALE_TTL_S to status "stale".
+    last_activity_mono: float = field(default_factory=monotonic)
 
 
 @dataclass
@@ -77,6 +88,12 @@ class SessionState:
     cache_read: int = 0
     cache_write: int = 0
     cost_estimate_usd: float = 0.0
+    # Most-recent turn's input footprint (SET, not accumulated). Equals
+    # cache_read + cache_write + tokens_in from the last token_usage event.
+    # This is what the TUI Usage gauge should divide by the context window to
+    # get a meaningful fill fraction; the cumulative tokens_in alone reads ~0%
+    # under prompt caching because cache_read tokens are not billed as input.
+    last_context_tokens: int = 0
 
 
 @dataclass
@@ -217,6 +234,8 @@ class HarnessState:
                 self._on_cognee_op(event)
             elif etype in ("graphify_scan", "graphify_query"):
                 self._on_graphify(event)
+            elif etype in ("workflow_start", "workflow_update"):
+                self._on_workflow_event(session_id, event)
             elif etype == "session_start":
                 pass  # ensured above
             elif etype == "session_stop":
@@ -348,6 +367,52 @@ class HarnessState:
         sess.cache_read += int(p.get("cache_read") or 0)
         sess.cache_write += int(p.get("cache_write") or 0)
         sess.cost_estimate_usd += float(p.get("cost_estimate_usd") or 0.0)
+        # SET (do not accumulate): the per-turn context footprint that the
+        # Usage gauge should display. Under prompt caching the vast majority
+        # of the context lives in cache_read, not tokens_in, so cumulative
+        # tokens_in alone would read ~0% of the context window.
+        sess.last_context_tokens = (
+            int(p.get("cache_read") or 0)
+            + int(p.get("cache_write") or 0)
+            + int(p.get("tokens_in") or 0)
+        )
+
+    def _on_workflow_event(self, sid: Optional[str], event: dict[str, Any]) -> None:
+        """Record a workflow_start or workflow_update into the owning session.
+
+        Stamps last_activity_mono on every call so the stale-sweep in
+        to_snapshot() has a fresh monotonic reference to work from.
+        workflow_complete is never emitted (the Workflow tool is fire-and-forget
+        from the hook's perspective); TTL-based staling in to_snapshot() is the
+        durable path to clearing "running" entries.
+        """
+        if not sid:
+            return
+        sess = self.sessions.get(sid)
+        if not sess:
+            return
+        p = event.get("payload") or {}
+        run_id = p.get("run_id") or p.get("workflow_id")
+        if not run_id:
+            return
+        etype = event.get("type")
+        if etype == "workflow_start":
+            sess.workflows_active[run_id] = WorkflowState(
+                name=p.get("name") or p.get("scriptPath") or run_id,
+                run_id=run_id,
+                phase="running",
+                started=event.get("ts") or _now(),
+                last_activity_mono=monotonic(),
+            )
+        elif etype == "workflow_update":
+            wf = sess.workflows_active.get(run_id)
+            if wf:
+                wf.phase = p.get("phase") or wf.phase
+                wf.phases_total = int(p.get("phases_total") or wf.phases_total)
+                wf.phases_done = int(p.get("phases_done") or wf.phases_done)
+                wf.spend_usd = float(p.get("spend_usd") or wf.spend_usd)
+                wf.tokens_total = int(p.get("tokens_total") or wf.tokens_total)
+                wf.last_activity_mono = monotonic()
 
     def _on_worktree(self, event: dict[str, Any]) -> None:
         p = event.get("payload") or {}
@@ -441,6 +506,25 @@ def _dc_to_dict(dc) -> dict[str, Any]:
     return {k: v for k, v in dc.__dict__.items()}
 
 
+def _workflow_dict(wf: WorkflowState) -> dict[str, Any]:
+    """Serialise a WorkflowState, substituting "stale" for any non-terminal
+    status whose last_activity_mono is older than WORKFLOW_STALE_TTL_S.
+
+    The live WorkflowState object is never mutated here — the substitution is
+    snapshot-only so the in-memory record stays authoritative if a late event
+    arrives for the same run_id.
+    """
+    d = _dc_to_dict(wf)
+    # last_activity_mono is an internal float; strip it from the wire shape.
+    d.pop("last_activity_mono", None)
+    terminal = {"stale", "completed", "failed", "cancelled"}
+    if d.get("phase") not in terminal:
+        age = monotonic() - wf.last_activity_mono
+        if age > WORKFLOW_STALE_TTL_S:
+            d["phase"] = "stale"
+    return d
+
+
 def _session_dict(s: SessionState) -> dict[str, Any]:
     # Truncate recent_events for the snapshot frame so the daemon doesn't
     # send 200 events × N sessions on connect — that easily exceeds the
@@ -454,11 +538,12 @@ def _session_dict(s: SessionState) -> dict[str, Any]:
         "project": s.project,
         "started": s.started,
         "agents_active": {k: _dc_to_dict(v) for k, v in s.agents_active.items()},
-        "workflows_active": {k: _dc_to_dict(v) for k, v in s.workflows_active.items()},
+        "workflows_active": {k: _workflow_dict(v) for k, v in s.workflows_active.items()},
         "recent_events": recent,
         "tokens_in": s.tokens_in,
         "tokens_out": s.tokens_out,
         "cache_read": s.cache_read,
         "cache_write": s.cache_write,
         "cost_estimate_usd": s.cost_estimate_usd,
+        "last_context_tokens": s.last_context_tokens,
     }
