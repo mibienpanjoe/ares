@@ -7,15 +7,29 @@ SessionStart hook.
 
 Do the following:
 
-1. Read `./CLAUDE.md` for the current sprint, milestone, mode, tasks, and blockers.
-2. Query Cognee (project namespace) for active blockers, open Mishmar flags, and
-   pending decisions.
-3. As **Nehemiah**, greet Y4NN with a tight context summary:
+1. **Sync the repo before reading anything.** Run `git fetch origin --tags --prune`,
+   then compare local to remote: `git rev-list --left-right --count origin/main...HEAD`
+   (behind/ahead), `git status --short`, and the published version/tag vs
+   `package.json`. The local view is not trusted until reconciled — the working
+   copy can sit behind the remote with a stale version or tag. If local is a
+   clean fast-forward behind the remote, fast-forward it (`git merge --ff-only`)
+   and say so; a fast-forward is local and reversible. Never `git push` here.
+   Surface any divergence (behind/ahead count, version vs published-tag mismatch,
+   dirty tree) as part of the greeting.
+2. Read `./CLAUDE.md` for the current sprint, milestone, mode, tasks, and blockers.
+   If there is none, this is the harness source repo (not a scaffolded project) —
+   say so plainly and report delivery state (branch, version, last release) instead
+   of fabricating a sprint board.
+3. Query Cognee (project namespace) for active blockers, open Mishmar flags, and
+   pending decisions. If the Cognee stores are not up, say so — do not invent
+   query results.
+4. As **Nehemiah**, greet Y4NN with a tight context summary:
+   - repo sync state (in sync / behind N / ahead N), version + last release
    - current sprint + milestone + mode
    - open tasks (id, description, status, owner)
    - blockers — Mishmar flags first, with severity
    - pending decisions awaiting Y4NN
-4. Ask where Y4NN wants to start.
+5. Ask where Y4NN wants to start.
 
 Keep it lean — surface state, do not dump raw logs. No code is written by this
 command. English only.
