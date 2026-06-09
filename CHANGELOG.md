@@ -8,6 +8,19 @@ All notable changes to MISHKAN are documented here. Format:
 
 ### Fixed
 
+- **Observability — running agents never appeared because their session was
+  never confirmed.** The authority gate applied events only for sessions
+  confirmed by `session_discover`, which confirms solely by the parent
+  transcript's mtime (< 60s). During an agent run the parent transcript is quiet
+  (the subagent writes to nested `subagents/agent-*.jsonl`), so the session was
+  never confirmed and every `agent_spawn`/`tool_call`/`token_usage` for it was
+  buffered and dropped — `agents_active` stayed empty even with spawns streaming
+  in the bus. The gate now confirms a session on its **first live bus event**
+  (not only via the transcript poll); safe because `bus_tail` seeks to EOF (no
+  historical replay can resurrect a dead session) and the tombstone still blocks
+  just-stopped sessions. Pairs with the keep-busy-sessions-alive fix: first
+  event gets a session in, activity keeps it in.
+
 - **Selective ingest was broken on every project (file-permission bug).**
   `mishkan-ingest.sh` staged its runner script via `mktemp` (mode 0600) and
   `docker cp`-ed it into the Cognee container, which preserves the 0600 mode and

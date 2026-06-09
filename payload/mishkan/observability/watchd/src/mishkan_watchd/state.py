@@ -193,23 +193,37 @@ class HarnessState:
     def apply(self, event: dict[str, Any]) -> None:
         """Apply a bus-format event to the state.
 
-        Authority gate: session_discover is the source of truth for alive
-        sessions. Only sessions confirmed by session_discover (via
-        session_start) are eligible to have events applied. Events for
-        unknown session_ids are buffered briefly (_PENDING_TTL_S) and
-        flushed if confirmation arrives; otherwise dropped.
+        Authority gate — two tiers:
 
-        This kills the phantom-session bug at its root: bus_tail can no
-        longer resurrect stopped or never-alive sessions, no matter what
-        old hook events surface from disk.
+        Tier 1 (session_discover path): session_discover emits session_start
+        when it observes an active JSONL file (transcript mtime < 60 s). That
+        adds the session to _confirmed_alive and flushes any buffered events.
+        session_stop is the stop authority; it removes from _confirmed_alive and
+        tombstones the session in _stopped_recently.
 
-        Liveness is now refreshed by bus activity (last_event_mono), not
-        transcript mtime alone. bus_tail seeks to EOF on startup so no
-        historical replay can resurrect a dead session via this path.
-        A session_stop from session_discover is ignored when the session
-        is busy (agents_active non-empty OR last_event_mono within
-        SESSION_KEEPALIVE_S); session_discover re-polls and re-emits
-        session_stop, so idle sessions are still cleaned up normally.
+        Tier 2 (live-event path): bus_tail seeks to EOF on startup — there is no
+        historical replay. Any event that arrives for a session_id that is not
+        tombstoned (_stopped_recently) is therefore a genuine live signal. On the
+        first such event for an unconfirmed session we confirm it immediately,
+        create the SessionState, and flush any buffered events, then fall through
+        to apply the triggering event. This fixes the agent-only session blindspot:
+        during an agent run the parent transcript is quiet (subagent writes go to
+        nested subagents/agent-*.jsonl), so session_discover never confirms the
+        session via mtime; but bus events (agent_spawn, tool_call, token_usage)
+        stream in live, and tier 2 picks them up on the first one.
+
+        The _stopped_recently tombstone check runs before tier 2 and blocks
+        phantom-session resurrection for recently-stopped sessions. The phantom-
+        session bug this gate was originally built for (bus_tail replaying
+        historical hook events on start) no longer applies since bus_tail seeks
+        to EOF; the tombstone remains as the defence against lagging hook events
+        that arrive after a genuine stop.
+
+        Liveness is refreshed by bus activity (last_event_mono). A session_stop
+        from session_discover is ignored when the session is busy (agents_active
+        non-empty OR last_event_mono within SESSION_KEEPALIVE_S); session_discover
+        re-polls and re-emits session_stop, so idle sessions are still cleaned up
+        normally.
         """
         try:
             self._sweep_pending()
@@ -230,12 +244,20 @@ class HarnessState:
                     # lagging hook events for sessions whose stop just propagated.
                     return
                 elif session_id not in self._confirmed_alive:
-                    # Unknown session. Buffer with TTL — if session_discover
-                    # confirms within _PENDING_TTL_S we replay in order;
-                    # otherwise the sweep drops it.
-                    buf = self._pending.setdefault(session_id, deque(maxlen=200))
-                    buf.append((monotonic(), event))
-                    return
+                    # bus_tail seeks to EOF (no historical replay), so a live
+                    # event for a non-tombstoned, unconfirmed session is a
+                    # genuine alive signal. Confirm on this first event rather
+                    # than waiting for session_discover's transcript-mtime poll
+                    # — which never fires for an agent-only session whose parent
+                    # transcript stays quiet while subagents write to their own
+                    # nested JSONL files. The _stopped_recently tombstone check
+                    # above still blocks resurrection of recently-stopped sessions.
+                    self._confirmed_alive.add(session_id)
+                    self._ensure_session(session_id, event.get("project") or "unknown")
+                    self._flush_pending(session_id)
+                    # Fall through (NO return) so this event reaches the
+                    # dispatch below and agents_active / tokens / etc. populate
+                    # immediately.
 
             if etype == "agent_spawn":
                 self._on_agent_spawn(session_id, event)

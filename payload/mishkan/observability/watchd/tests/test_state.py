@@ -374,6 +374,110 @@ def test_phantom_protection_still_holds_after_idle_stop():
     assert "gone-1" not in s.sessions
 
 
+# ---------------------------------------------------------------------------
+# Fix D — live-event confirm (agent-only session, no prior session_start)
+# ---------------------------------------------------------------------------
+
+def test_agent_spawn_alone_confirms_session_and_populates_agents_active():
+    """Core regression: agent_spawn for a never-seen session (no session_start)
+    must create+confirm the session and populate agents_active immediately.
+
+    This is the agent-only-session blindspot: the parent transcript is quiet
+    during an agent run, so session_discover never fires session_start; but
+    bus events stream in live and tier-2 confirmation must pick them up.
+    """
+    s = HarnessState()
+    s.apply({
+        "ts": "2026-06-09T10:00:00.000Z",
+        "session": "agent-only-sess",
+        "project": "/tmp/wisemoney",
+        "type": "agent_spawn",
+        "tool": "Task",
+        "agent": "bezalel",
+        "payload": {"subagent_type": "bezalel", "tool_use_id": "toolu_live01"},
+    })
+    # Session must exist — created by tier-2 confirm.
+    assert "agent-only-sess" in s.sessions
+    # Agent must be visible immediately — event fell through to dispatch.
+    agents = s.sessions["agent-only-sess"].agents_active
+    assert "toolu_live01" in agents
+    assert agents["toolu_live01"].name == "bezalel"
+    assert agents["toolu_live01"].status == "running"
+    # Session is now confirmed.
+    assert "agent-only-sess" in s._confirmed_alive
+
+
+def test_token_usage_alone_confirms_session_and_applies_tokens():
+    """token_usage for a never-seen session creates the session and lands tokens."""
+    s = HarnessState()
+    s.apply({
+        "ts": "2026-06-09T10:00:01.000Z",
+        "session": "tok-only-sess",
+        "type": "token_usage",
+        "payload": {"tokens_in": 42, "tokens_out": 7, "cost_estimate_usd": 0.005},
+    })
+    assert "tok-only-sess" in s.sessions
+    sess = s.sessions["tok-only-sess"]
+    assert sess.tokens_in == 42
+    assert sess.tokens_out == 7
+    assert "tok-only-sess" in s._confirmed_alive
+
+
+def test_tombstoned_session_event_still_dropped_after_fix():
+    """Phantom protection holds: events for a recently-stopped session are dropped
+    even after the tier-2 live-event confirm path is in place.
+
+    The _stopped_recently tombstone check runs before tier-2, so the session
+    must NOT be resurrected.
+    """
+    import mishkan_watchd.state as state_mod
+    from time import monotonic
+
+    s = HarnessState()
+    # Start, let it idle, then stop it so it lands in _stopped_recently.
+    s.apply({"ts": "x", "session": "dead-sess", "type": "session_start", "project": "/p"})
+    s.sessions["dead-sess"].last_event_mono = monotonic() - (state_mod.SESSION_KEEPALIVE_S + 10)
+    s.apply({"ts": "y", "session": "dead-sess", "type": "session_stop"})
+    assert "dead-sess" not in s.sessions
+    assert "dead-sess" in s._stopped_recently
+
+    # A live-looking bus event must not resurrect it.
+    s.apply({
+        "ts": "z", "session": "dead-sess",
+        "type": "agent_spawn", "tool": "Task", "agent": "caleb",
+        "payload": {"subagent_type": "caleb", "tool_use_id": "toolu_ghost"},
+    })
+    assert "dead-sess" not in s.sessions
+    assert "dead-sess" not in s._confirmed_alive
+
+
+def test_session_start_after_live_confirm_is_harmless_reconfirm():
+    """session_start arriving after tier-2 already confirmed the session is a
+    harmless re-confirm: no duplicate session created, project upgraded if needed.
+    """
+    s = HarnessState()
+    # Tier-2 confirm via agent_spawn (project unknown at this point).
+    s.apply({
+        "ts": "a", "session": "reconfirm-sess",
+        "type": "agent_spawn", "tool": "Task", "agent": "bezalel",
+        "payload": {"subagent_type": "bezalel", "tool_use_id": "toolu_rc1"},
+    })
+    assert "reconfirm-sess" in s.sessions
+    assert s.sessions["reconfirm-sess"].project == "unknown"
+
+    # session_discover fires session_start with the real project path.
+    s.apply({
+        "ts": "b", "session": "reconfirm-sess",
+        "type": "session_start", "project": "/real/project",
+    })
+    # Only one session entry — not duplicated.
+    assert len([sid for sid in s.sessions if sid == "reconfirm-sess"]) == 1
+    # Project upgraded from "unknown" to the real path.
+    assert s.sessions["reconfirm-sess"].project == "/real/project"
+    # Agent still present.
+    assert "toolu_rc1" in s.sessions["reconfirm-sess"].agents_active
+
+
 if __name__ == "__main__":
     test_agent_spawn_creates_session_and_agent()
     test_agent_spawn_complete_pair_by_tool_use_id()
@@ -397,4 +501,8 @@ if __name__ == "__main__":
     test_session_stop_ignored_when_recent_bus_event()
     test_session_stop_drops_genuinely_idle_session()
     test_phantom_protection_still_holds_after_idle_stop()
+    test_agent_spawn_alone_confirms_session_and_populates_agents_active()
+    test_token_usage_alone_confirms_session_and_applies_tokens()
+    test_tombstoned_session_event_still_dropped_after_fix()
+    test_session_start_after_live_confirm_is_harmless_reconfirm()
     print("all state tests passed")
