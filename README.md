@@ -14,7 +14,7 @@ MISHKAN turns Claude Code into a standing engineering organisation. Quality and 
 
 It's personal, opinionated infrastructure built around one engineer's standards. To make it yours, replace `docs/engineer/profile.md` and re-sync — nothing else hardcodes the author.
 
-> **v0.2.5** — agent fleet, rules, hooks, installer are stable. Cognee knowledge stack ready to bring up locally. Observability stack (watchd + TUI) available as two `uv tool`-installable packages.
+> **v0.2.6** — agent fleet, rules, hooks, installer are stable. Cognee knowledge stack ready to bring up locally. Observability stack (watchd + TUI) available as two `uv tool`-installable packages.
 
 ---
 

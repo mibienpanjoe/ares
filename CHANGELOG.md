@@ -6,6 +6,14 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+## [0.2.6] — 2026-06-09
+
+Observability hardening release. Live testing against a real multi-session,
+prompt-cached, mixed-hook-history project surfaced a stack of bugs in the watch
+daemon and TUI — running agents not appearing, duplicate rows, the context
+gauge reading zero, workflows stuck "running", and a fleet-wide selective-ingest
+permission bug. All fixed at the root. No API changes.
+
 ### Fixed
 
 - **Observability — a tombstoned session's agents never reappeared.** When a
@@ -382,7 +390,8 @@ Initial npm release. The harness becomes distributable via
 - Dependency-free `npx` installer with idempotent + non-clobbering semantics.
 - ADRs D-001 through D-007.
 
-[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.0...v0.2.3
