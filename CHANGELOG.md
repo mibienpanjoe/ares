@@ -6,6 +6,19 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+### Fixed
+
+- **Observability package versions caught up to reality.** `mishkan-watch`
+  and `mishkan-watchd` were still stamped `0.1.0` in `pyproject.toml` and
+  `__version__` despite shipping three added tabs (Org-Ref · Usage · Skills)
+  and several fixes across 0.2.0–0.2.4. Stamped `0.2.5`, aligned to the
+  harness version, so they stop lying about their own maturity. The
+  `mishkan-watch` description still said "5-tab dashboard" — now "8-tab".
+
+- **Stale install note.** `docs/usage/01-installation.md` claimed the npx
+  package was "published from v0.2.0"; the first npm release was 0.1.0.
+  Reworded to "published to npm" so it can't drift again.
+
 ## [0.2.4] — 2026-06-09
 
 Metadata-correction release. Functionally identical to 0.2.3 in code; it

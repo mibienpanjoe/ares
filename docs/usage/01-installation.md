@@ -59,7 +59,7 @@ cd ~/path/to/harness
 node bin/mishkan.js install
 ```
 
-Or via npx (published from v0.2.0):
+Or via npx (published to npm):
 
 ```bash
 npx mishkan-harness install

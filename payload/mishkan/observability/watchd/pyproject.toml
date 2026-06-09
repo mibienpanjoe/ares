@@ -1,6 +1,6 @@
 [project]
 name = "mishkan-watchd"
-version = "0.1.0"
+version = "0.2.5"
 description = "MISHKAN observability daemon — aggregates event bus + filesystem polls into a UNIX-socket snapshot+delta stream for mishkan-watch."
 readme = "../README.md"
 requires-python = ">=3.11"
