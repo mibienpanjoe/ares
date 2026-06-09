@@ -6,11 +6,39 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+## [0.2.4] — 2026-06-09
+
+Metadata-correction release. Functionally identical to 0.2.3 in code; it
+ships the version strings and changelog that 0.2.3 should have carried.
+0.2.3 is deprecated in its favour.
+
 ### Fixed
 
-- **Workflows tab crash on `DuplicateIds`** — `_render_list` called `lv.clear()` without awaiting the returned `AwaitRemove`, so the Textual DOM still held old items when `set_timer(0.1)` re-fired during mount. Made `_render_list` async with proper `await`, and `on_mount`/`apply_snapshot`/`apply_event` all coordinate through the async path or `call_later`.
+- **Version metadata realigned to the real release.** Published 0.2.3
+  shipped with its changelog section labelled `[0.2.1]`, its actually-
+  shipped items still parked under `[Unreleased]`, and the README status
+  line reading `v0.2.1`. `0.2.1` and `0.2.2` were never published to npm —
+  they existed only as git tags ("already taken"), which forced the real
+  publish to `0.2.3`. All references now name `0.2.3` as the release those
+  features shipped in, the shipped `[Unreleased]` items are folded into the
+  `[0.2.3]` section, and feature-attribution refs across the docs read
+  `v0.2.3`. The orphan `v0.2.1` git tag is retired.
 
-- **State tests stale after phantom-session gate** — four `test_state.py` assertions sent events without a preceding `session_start`, which the `_confirmed_alive` gate (de77c0c) now requires. Prefixed each with `session_start`.
+- **`mishkan-resume` reconciles the remote before reading local state.**
+  The command read `./CLAUDE.md` and the local working copy first, so a
+  local copy sitting behind the remote (stale version + tag) drove a wrong
+  "release pending" summary. It now runs `git fetch --tags --prune`,
+  reconciles behind/ahead and version-vs-published-tag, fast-forwards a
+  clean local move, and surfaces any divergence — before reasoning. Also
+  handles the harness-source-repo case (no project `CLAUDE.md`) and an
+  un-bootstrapped Cognee without fabricating state.
+
+## [0.2.3] — 2026-06-07
+
+The "discoverability + durability" release. Everything we'd promised becomes
+findable at runtime; the observability stack stops hallucinating sessions on
+restart; Graphify ships end-to-end and pays for itself in tokens; the workflow
+portfolio doubles under a written governance contract.
 
 ### Added
 
@@ -62,15 +90,6 @@ All notable changes to MISHKAN are documented here. Format:
   entries are tagged `(community)` in the injection block. Fail-open
   end-to-end — every hook exits 0 on any error and never blocks the
   Task call. The `mishkan-init` Phase 1 canary is unchanged.
-
-## [0.2.1] — 2026-06-07
-
-The "discoverability + durability" release. Everything we'd promised becomes
-findable at runtime; the observability stack stops hallucinating sessions on
-restart; Graphify ships end-to-end and pays for itself in tokens; the workflow
-portfolio doubles under a written governance contract.
-
-### Added
 
 - **Workflow portfolio expansion (ADR D-010).** 3 new org-level workflows
   (`mishkan-blast-radius`, `mishkan-knowledge-gap-discovery`,
@@ -147,6 +166,10 @@ portfolio doubles under a written governance contract.
   tag push so a human review precedes the npm publish.
 
 ### Fixed
+
+- **Workflows tab crash on `DuplicateIds`** — `_render_list` called `lv.clear()` without awaiting the returned `AwaitRemove`, so the Textual DOM still held old items when `set_timer(0.1)` re-fired during mount. Made `_render_list` async with proper `await`, and `on_mount`/`apply_snapshot`/`apply_event` all coordinate through the async path or `call_later`.
+
+- **State tests stale after phantom-session gate** — four `test_state.py` assertions sent events without a preceding `session_start`, which the `_confirmed_alive` gate (de77c0c) now requires. Prefixed each with `session_start`.
 
 - **Phantom session resurrection** — bus_tail no longer replays historical
   hook events on daemon start (seeks to EOF). The daemon's
@@ -234,7 +257,8 @@ Initial npm release. The harness becomes distributable via
 - Dependency-free `npx` installer with idempotent + non-clobbering semantics.
 - ADRs D-001 through D-007.
 
-[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.0...v0.2.1
+[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.0...v0.2.3
 [0.2.0]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Y4NN777/mishkan-cc-harness/releases/tag/v0.1.0
