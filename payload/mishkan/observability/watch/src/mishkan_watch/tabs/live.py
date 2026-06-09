@@ -203,9 +203,19 @@ class LiveTab(Container):
             if etype == "agent_spawn" and sid:
                 payload = ev.get("payload") or {}
                 name = ev.get("agent") or payload.get("subagent_type")
-                key = payload.get("tool_use_id") or name
+                # Resolve the stable key: prefer tool_use_id from payload,
+                # then top-level subagent_id (older hook schema), then name.
+                key = payload.get("tool_use_id") or ev.get("subagent_id") or name
                 if name and key:
-                    sessions[sid].setdefault("agents_active", {})[key] = {
+                    agents = sessions[sid].setdefault("agents_active", {})
+                    # Avoid a ghost duplicate: if an entry with the same .name
+                    # already exists under a different key (key-scheme mismatch
+                    # between snapshot and delta), remove the stale entry first.
+                    stale = [k for k, ag in agents.items()
+                             if ag.get("name") == name and k != key]
+                    for k in stale:
+                        del agents[k]
+                    agents[key] = {
                         "name": name,
                         "started": ev.get("ts"),
                         "last_tool": ev.get("tool"),
@@ -213,9 +223,17 @@ class LiveTab(Container):
                     }
             elif etype == "agent_complete" and sid:
                 payload = ev.get("payload") or {}
-                key = payload.get("tool_use_id") or ev.get("agent")
+                key = payload.get("tool_use_id") or ev.get("subagent_id") or ev.get("agent")
                 if key:
-                    sessions[sid].get("agents_active", {}).pop(key, None)
+                    agents = sessions[sid].get("agents_active", {})
+                    agents.pop(key, None)
+                    # Also sweep any same-named ghost entries left by a prior
+                    # key-scheme mismatch on spawn.
+                    name = ev.get("agent") or (ev.get("payload") or {}).get("subagent_type")
+                    if name:
+                        for k in [k for k, ag in agents.items()
+                                  if ag.get("name") == name]:
+                            del agents[k]
             elif etype == "tool_call" and sid:
                 name = ev.get("agent")
                 if name:
