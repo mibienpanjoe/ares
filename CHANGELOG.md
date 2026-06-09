@@ -6,6 +6,13 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+## [0.2.5] — 2026-06-09
+
+First complete stable release, cut through the proper draft → publish →
+CI gate (0.2.4 was published manually, bypassing the release notes).
+Functionally it is 0.2.4 plus the label/doc corrections below; no
+behavioural change. Supersedes and deprecates 0.2.4.
+
 ### Fixed
 
 - **Observability package versions caught up to reality.** `mishkan-watch`
@@ -270,7 +277,8 @@ Initial npm release. The harness becomes distributable via
 - Dependency-free `npx` installer with idempotent + non-clobbering semantics.
 - ADRs D-001 through D-007.
 
-[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.0...v0.2.3
 [0.2.0]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.1.0...v0.2.0
