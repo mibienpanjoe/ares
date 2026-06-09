@@ -165,10 +165,34 @@ def _clear_pid() -> None:
         pass
 
 
+def _socket_is_live(socket_path: Path) -> bool:
+    """Return True if a daemon is already listening on socket_path."""
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            s.connect(str(socket_path))
+        return True
+    except (OSError, socket.timeout):
+        return False
+
+
 def _cmd_start(args: argparse.Namespace) -> int:
+    # Check for a live daemon before writing the PID file or binding.
+    # The server.start() also performs this check, but the early exit here
+    # avoids overwriting a valid PID file with our own PID.
+    if args.socket.exists() and _socket_is_live(args.socket):
+        print("mishkan-watchd: daemon already running, nothing to do", file=sys.stderr)
+        return 0
     _write_pid()
     try:
         asyncio.run(_run(args.log_dir, args.projects_dir, args.socket))
+    except RuntimeError as e:
+        # server.start() raises RuntimeError when a live daemon is detected
+        # after the PID file was written (narrow race). Clean up and exit 0
+        # — another daemon is running, which is the desired state.
+        _clear_pid()
+        print(f"mishkan-watchd: {e}", file=sys.stderr)
+        return 0
     finally:
         _clear_pid()
     return 0
@@ -176,17 +200,41 @@ def _cmd_start(args: argparse.Namespace) -> int:
 
 def _cmd_stop(_args: argparse.Namespace) -> int:
     try:
-        pid = int(DEFAULT_PID.read_text().strip())
-    except Exception:
+        pid_text = DEFAULT_PID.read_text().strip()
+    except FileNotFoundError:
         print("mishkan-watchd: no PID file (daemon not running?)", file=sys.stderr)
+        return 0
+    except Exception as e:
+        print(f"mishkan-watchd: cannot read PID file: {e}", file=sys.stderr)
         return 1
+
+    try:
+        pid = int(pid_text)
+    except ValueError:
+        print("mishkan-watchd: malformed PID file, clearing", file=sys.stderr)
+        _clear_pid()
+        return 1
+
+    # Verify the PID is actually a live mishkan-watchd process before killing.
+    try:
+        # os.kill with signal 0 checks existence without sending a signal.
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        _clear_pid()
+        print("mishkan-watchd: process not found, cleared stale PID", file=sys.stderr)
+        return 0
+    except PermissionError:
+        # Process exists but is owned by another user — not ours to kill.
+        print(f"mishkan-watchd: PID {pid} exists but is not owned by this user", file=sys.stderr)
+        _clear_pid()
+        return 1
+
     try:
         os.kill(pid, signal.SIGTERM)
         print(f"mishkan-watchd: sent SIGTERM to {pid}", file=sys.stderr)
     except ProcessLookupError:
         _clear_pid()
-        print("mishkan-watchd: process not found, cleared stale PID", file=sys.stderr)
-        return 1
+        print("mishkan-watchd: process vanished before SIGTERM, cleared PID", file=sys.stderr)
     return 0
 
 

@@ -299,11 +299,15 @@ class HarnessState:
         if not sid:
             return
         sess = self.sessions[sid]
-        agent_name = event.get("agent") or (event.get("payload") or {}).get("subagent_type")
-        if not agent_name:
-            return
         payload = event.get("payload") or {}
-        sess.agents_active[agent_name] = AgentState(
+        # Key by tool_use_id so two concurrent agents of the same subagent_type
+        # do not collide. Fall back to agent_name when tool_use_id is absent
+        # (e.g. replayed legacy events that predate the new schema).
+        key = payload.get("tool_use_id") or event.get("agent") or payload.get("subagent_type")
+        if not key:
+            return
+        agent_name = (event.get("agent") or payload.get("subagent_type") or key)
+        sess.agents_active[key] = AgentState(
             name=agent_name,
             started=event.get("ts") or _now(),
             last_tool=event.get("tool"),
@@ -317,10 +321,13 @@ class HarnessState:
         sess = self.sessions.get(sid)
         if not sess:
             return
-        agent_name = event.get("agent")
-        if not agent_name:
+        payload = event.get("payload") or {}
+        # Mirror _on_agent_spawn: pop by tool_use_id first, fall back to
+        # agent field for legacy events.
+        key = payload.get("tool_use_id") or event.get("agent")
+        if not key:
             return
-        sess.agents_active.pop(agent_name, None)
+        sess.agents_active.pop(key, None)
 
     def _on_tool_call(self, sid: Optional[str], event: dict[str, Any]) -> None:
         if not sid:
@@ -390,24 +397,39 @@ class HarnessState:
     def _on_graphify(self, event: dict[str, Any]) -> None:
         """Aggregate Graphify scan/query events into a single rollup.
 
-        We don't break this down per-project here — the TUI cards show the
-        most recent scan's totals + a query counter, which is what a single
-        rollup needs. The snapshot serializer flattens this back to a dict
-        so the existing TUI Knowledge tab can read it directly.
+        Event source split (as of Fix ③):
+        - graphify_scan / graphify_query COUNTS come from the Bash hook
+          (post-tool-observe.sh), which detects real CLI invocations.
+          These events carry session_id so they also appear in session
+          recent_events correctly.
+        - graphify_tail is STATS-ONLY: it reads graph.json node/edge counts
+          and emits graphify_scan events that carry nodes/edges/communities
+          but whose 'stats_only' flag is set. Those update the size stats
+          WITHOUT incrementing the scan counter. This prevents double-counting
+          and eliminates the phantom-scan-on-restart from the old mtime=0 init.
+
+        The snapshot serializer flattens this to a dict for the TUI
+        Knowledge tab to read directly.
         """
         p = event.get("payload") or {}
         etype = event.get("type")
         g = self.graphify
         if etype == "graphify_scan":
+            # Always update node/edge/community stats when present —
+            # both hook events and graphify_tail stats events carry these.
             if p.get("nodes") is not None:
                 g.nodes = int(p["nodes"])
             if p.get("edges") is not None:
                 g.edges = int(p["edges"])
             if p.get("communities") is not None:
                 g.communities = int(p["communities"])
-            g.scans += 1
-            g.last_scan_project = p.get("project")
-            g.last_scan_at = p.get("scanned_at") or event.get("ts")
+            # Only increment the scan counter for real invocations (hook events).
+            # graphify_tail stats events set stats_only=True to signal they are
+            # size refreshes, not new scan invocations.
+            if not p.get("stats_only"):
+                g.scans += 1
+                g.last_scan_project = p.get("project")
+                g.last_scan_at = p.get("scanned_at") or event.get("ts")
         elif etype == "graphify_query":
             g.queries += 1
             g.last_query_project = p.get("project")

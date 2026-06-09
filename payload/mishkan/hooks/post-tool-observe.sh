@@ -6,7 +6,10 @@
 # all preserved) plus type-specific derived events:
 #
 #   - Write/Edit/MultiEdit    -> file_change (path + lines_added/removed)
-#   - Task                    -> agent_spawn (subagent_type + agentId)
+#   - Task                    -> agent_complete (subagent_type + tool_use_id)
+#                                (agent_spawn is emitted at PreToolUse by
+#                                pre-tool-trace.sh, when the agent starts)
+#   - Bash (graphify ...)     -> graphify_query / graphify_scan
 #   - Skill                   -> skill_invoke
 #   - ExitPlanMode            -> plan (exit + approved + excerpt)
 #   - WebFetch / WebSearch    -> web_query
@@ -138,15 +141,19 @@ case "$tool" in
     ;;
 
   Task|Agent)
+    # agent_spawn is emitted by pre-tool-trace.sh (PreToolUse) when the task
+    # starts. Here at PostToolUse we emit agent_complete so the daemon can
+    # decrement the active-agent count. Both events carry tool_use_id as the
+    # stable key so state.py can match spawn→complete even when two concurrent
+    # agents share the same subagent_type name.
     subagent="$(printf '%s' "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)"
-    desc="$(printf '%s' "$INPUT" | jq -r '.tool_input.description // empty' 2>/dev/null)"
-    model="$(printf '%s' "$INPUT" | jq -r '.tool_input.model // empty' 2>/dev/null)"
     agent_id="$(printf '%s' "$INPUT" | jq -r '.tool_response.agentId? // .tool_response.id? // empty' 2>/dev/null)"
-    if [ -n "$subagent" ]; then
+    if [ -n "$subagent" ] && [ -n "$tool_use_id" ]; then
       payload="$(jq -cn \
-        --arg s "$subagent" --arg d "$desc" --arg m "$model" \
-        '{subagent_type:$s} + (if $d=="" then {} else {description:$d} end) + (if $m=="" then {} else {model:$m} end)')"
-      bus_emit "$session" "agent_spawn" "$tool" "$outcome" "$payload" "$subagent" "$agent_id"
+        --arg s "$subagent" --arg tid "$tool_use_id" --arg aid "$agent_id" \
+        '{subagent_type:$s, tool_use_id:$tid}
+         + (if $aid=="" then {} else {agentId:$aid} end)')"
+      bus_emit "$session" "agent_complete" "$tool" "$outcome" "$payload" "$subagent" "$agent_id"
     fi
     ;;
 
@@ -210,6 +217,47 @@ case "$tool" in
   CronList)
     payload='{"action":"list"}'
     bus_emit "$session" "cron_event" "$tool" "$outcome" "$payload"
+    ;;
+
+  Bash)
+    # Detect graphify CLI invocations so the daemon can count real queries
+    # and scans. Only emit on completed calls — errored/blocked calls did
+    # not produce a graph result, so they must not count.
+    if [ "$outcome" = "completed" ]; then
+      cmd="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+      project_dir="$(printf '%s' "$INPUT" | jq -r '.tool_input.cwd // empty' 2>/dev/null)"
+      [ -z "$project_dir" ] && project_dir="$(pwd 2>/dev/null || printf 'unknown')"
+
+      # Match graphify query (with or without npx prefix, with or without
+      # leading cd; capture the quoted question argument).
+      if printf '%s' "$cmd" | grep -qE '(^|&&|;|\|\|)\s*(npx\s+graphify|graphify)\s+.*\bquery\b'; then
+        # Extract the quoted question: first double- or single-quoted string
+        # after the word "query", or bare word(s) after it. Truncate to 200.
+        question="$(printf '%s' "$cmd" | \
+          sed -E 's/.*\bquery\b[[:space:]]*//' | \
+          sed -E 's/^"([^"]{0,200}).*/\1/;t;s/^'"'"'([^'"'"']{0,200}).*/\1/;t;s/^(.{0,200}).*/\1/' \
+          2>/dev/null || true)"
+        # Detect traversal flag for query_type.
+        query_type=""
+        if printf '%s' "$cmd" | grep -qE '\-\-dfs'; then
+          query_type="dfs"
+        elif printf '%s' "$cmd" | grep -qE '\-\-context'; then
+          query_type="context"
+        fi
+        payload="$(jq -cn \
+          --arg q "$question" \
+          --arg p "$project_dir" \
+          --arg qt "$query_type" \
+          '{project:$p}
+           + (if $q=="" then {} else {question:$q} end)
+           + (if $qt=="" then {} else {query_type:$qt} end)' 2>/dev/null)"
+        bus_emit "$session" "graphify_query" "$tool" "$outcome" "$payload"
+
+      elif printf '%s' "$cmd" | grep -qE '(^|&&|;|\|\|)\s*(npx\s+graphify|graphify)\s+.*(update|scan)\b'; then
+        payload="$(jq -cn --arg p "$project_dir" '{project:$p}' 2>/dev/null)"
+        bus_emit "$session" "graphify_scan" "$tool" "$outcome" "$payload"
+      fi
+    fi
     ;;
 
   Workflow)

@@ -1,18 +1,22 @@
-"""Graphify daemon source — watch graphify-out/ for scans + queries.
+"""Graphify daemon source — stats-only watcher for graphify-out/.
 
 Graphify produces deterministic AST graphs under `<project>/graphify-out/`.
-This source watches every active session's project for changes in that
-directory and synthesises bus events that the Knowledge tab consumes.
+This source watches every active session's project for graph.json changes
+and surfaces current node/edge/community counts as state refreshes.
 
-Two event types emitted:
+STATS-ONLY (as of Fix ③): this source no longer owns scan or query COUNTS.
+Real graphify CLI invocations are detected by post-tool-observe.sh (Bash
+hook, PostToolUse) which emits the authoritative graphify_scan and
+graphify_query events that carry session_id and increment the counters in
+state.py. This source only emits graphify_scan events with stats_only=True
+so state.py updates the size display (nodes/edges/communities) WITHOUT
+incrementing the scan counter. This eliminates:
+  - double-counting (hook + tail both firing for one real scan), and
+  - the phantom scan on every daemon restart (old last_graph_mtime=0.0 init).
 
-- graphify_scan  : `graph.json` mtime changed → a `graphify update <path>`
-                   completed. Payload: project path, node count, edge
-                   count, community count (parsed from manifest.json
-                   when present).
-- graphify_query : a new file under `graphify-out/memory/` → a
-                   `graphify query` was saved via `graphify save-result`.
-                   Payload: question, answer excerpt (200 chars).
+The memory/ watcher is also removed: graphify query --save-result is not
+the documented workflow; the hook detects the real `graphify query` CLI
+invocation instead.
 
 Fail-open per the daemon contract. Missing graphify-out/ is silent —
 many projects don't use Graphify and that's fine.
@@ -34,36 +38,34 @@ def _iso(ts: float | None = None) -> str:
 
 
 class _ProjectWatcher:
-    """One watcher per project root that has a graphify-out/ dir."""
+    """One watcher per project root that has a graphify-out/ dir.
+
+    Stats-only: emits graphify_scan with stats_only=True when graph.json
+    mtime advances. This refreshes the node/edge/community display in the
+    Knowledge tab WITHOUT incrementing the scan counter in state.py.
+
+    The mtime baseline is initialised to the CURRENT mtime of graph.json
+    at construction time so an already-built graph does NOT fire a phantom
+    stats event on daemon restart. It fires only when the graph is actually
+    rebuilt after the daemon started.
+    """
 
     def __init__(self, project_path: Path, queue: asyncio.Queue[dict[str, Any]]) -> None:
         self.project_path = project_path
         self.queue = queue
         self.graph_dir = project_path / "graphify-out"
         self.graph_json = self.graph_dir / "graph.json"
-        self.manifest = self.graph_dir / "manifest.json"
-        self.memory_dir = self.graph_dir / "memory"
-        # Start at 0 so the first poll detects the current graph state and
-        # emits a graphify_scan event — otherwise the TUI shows "no scan"
-        # forever for projects whose graph predated the daemon. This costs
-        # one event per project per daemon restart; trivially cheap.
-        self.last_graph_mtime = 0.0
-        # Memory queries DO use seen-state to avoid replaying old queries
-        # on every restart (queries are append-only, replays would spam).
-        self.seen_memory: set[str] = set()
-        if self.memory_dir.is_dir():
-            try:
-                for f in self.memory_dir.iterdir():
-                    if f.is_file():
-                        self.seen_memory.add(f.name)
-            except OSError:
-                pass
+        # Initialise to the current mtime so pre-existing graphs do NOT
+        # produce a phantom stats event on the first poll.
+        try:
+            self.last_graph_mtime: float = self.graph_json.stat().st_mtime
+        except OSError:
+            self.last_graph_mtime = 0.0
 
     async def step(self) -> None:
         if not self.graph_dir.is_dir():
             return
         await self._check_graph()
-        await self._check_memory()
 
     async def _check_graph(self) -> None:
         try:
@@ -84,12 +86,15 @@ class _ProjectWatcher:
             "tool": None,
             "outcome": "completed",
             "payload": {
-                "op": "scan",
+                "op": "stats",
                 "project": str(self.project_path),
                 "nodes": stats.get("nodes"),
                 "edges": stats.get("edges"),
                 "communities": stats.get("communities"),
                 "scanned_at": _iso(mtime),
+                # stats_only=True signals state.py to update size fields
+                # but NOT increment the scan counter.
+                "stats_only": True,
             },
         })
 
@@ -119,37 +124,6 @@ class _ProjectWatcher:
             "edges": len(edges) if isinstance(edges, list) else None,
             "communities": len(communities) if isinstance(communities, list) else None,
         }
-
-    async def _check_memory(self) -> None:
-        if not self.memory_dir.is_dir():
-            return
-        try:
-            entries = [f for f in self.memory_dir.iterdir() if f.is_file()]
-        except OSError:
-            return
-        for f in entries:
-            if f.name in self.seen_memory:
-                continue
-            self.seen_memory.add(f.name)
-            payload = {"op": "query", "project": str(self.project_path), "file": f.name}
-            try:
-                data = json.loads(f.read_text())
-                if isinstance(data, dict):
-                    payload["question"] = (data.get("question") or "")[:200]
-                    answer = data.get("answer") or ""
-                    payload["answer_excerpt"] = answer[:200] if isinstance(answer, str) else ""
-                    payload["query_type"] = data.get("type") or data.get("query_type")
-            except Exception:
-                pass
-            await self.queue.put({
-                "ts": _iso(),
-                "session": None,
-                "project": str(self.project_path),
-                "type": "graphify_query",
-                "tool": None,
-                "outcome": "completed",
-                "payload": payload,
-            })
 
 
 def _decode_project(p: str) -> str:

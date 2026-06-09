@@ -67,11 +67,28 @@
         "properties": {
           "payload": {
             "type": "object",
-            "required": ["subagent_type"],
+            "required": ["subagent_type", "tool_use_id"],
             "properties": {
               "subagent_type": {"type": "string"},
+              "tool_use_id": {"type": "string", "description": "stable correlation key — matches the agent_complete event for this invocation"},
               "description": {"type": "string"},
               "model": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "agent_complete"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["subagent_type", "tool_use_id"],
+            "properties": {
+              "subagent_type": {"type": "string"},
+              "tool_use_id": {"type": "string", "description": "matches the agent_spawn event for this invocation"},
+              "agentId": {"type": "string", "description": "Claude runtime agentId from tool_response, when present"}
             }
           }
         }

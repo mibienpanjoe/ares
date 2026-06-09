@@ -6,6 +6,39 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+### Fixed
+
+- **Observability — agent tracking never showed live agents.** `agent_spawn`
+  was emitted by the PostToolUse hook, so it fired when a subagent *finished*,
+  and `agent_complete` was never emitted at all — the active-agent count only
+  ratcheted up and no running agent ever appeared. `agent_spawn` now fires at
+  PreToolUse (start), `agent_complete` at PostToolUse, and `agents_active` is
+  keyed by `tool_use_id` (daemon and TUI) so concurrent agents of the same
+  type don't collide. The TUI shows the human agent name, never the
+  `tool_use_id`.
+
+- **Observability — graphify query count was always 0.** Queries were detected
+  by watching `graphify-out/memory/`, which the interactive `graphify query`
+  never writes to. Detection moved to a `Bash` branch in `post-tool-observe.sh`
+  that observes real `graphify query` / `graphify update` invocations.
+  `graphify_tail` is demoted to stats-only (node/edge counts) and no longer
+  fires a phantom `graphify_scan` on every daemon restart; a `stats_only`
+  probe updates sizes but is not counted as a scan.
+
+- **Observability — Usage tab froze after connect.** The tab read the session
+  id under `session_id`/`sid`, but the daemon emits `session`; live deltas were
+  dropped (it only populated from the snapshot). Now reads `session` first.
+
+- **Observability — Workflows tab crashed on launch (`BadIdentifier`).** A run
+  whose id resolved to `(unknown)` produced an invalid Textual widget id
+  (`wf-(unknown)` — parentheses are illegal). List items now use index-based
+  ids and map back to the real id/name on selection; surfaced when a fresh
+  daemon re-ingested a workflow event the previous one had tailed past.
+
+- **Observability — duplicate daemons / unreliable stop.** `mishkan-watchd
+  start` refuses to steal a live socket (no more orphan daemons), and `stop`
+  verifies the PID before `SIGTERM` and exits cleanly when nothing is running.
+
 ## [0.2.5] — 2026-06-09
 
 First complete stable release, cut through the proper draft → publish →

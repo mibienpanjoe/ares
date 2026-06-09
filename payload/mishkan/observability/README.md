@@ -37,23 +37,26 @@ incrementally by the PostToolUse hook and pruned line-by-line.
 
 | Type | Source | Trigger |
 |---|---|---|
-| `tool_call` | post-tool-observe.sh | every tool call |
-| `file_change` | post-tool-observe.sh | Write / Edit / MultiEdit |
-| `agent_spawn` | post-tool-observe.sh | Task / Agent tool |
-| `skill_invoke` | post-tool-observe.sh | Skill tool |
-| `plan` | post-tool-observe.sh | ExitPlanMode |
-| `web_query` | post-tool-observe.sh | WebFetch / WebSearch |
-| `cron_event` | post-tool-observe.sh | CronCreate / CronDelete / CronList |
-| `error` | post-tool-observe.sh | outcome=errored OR blocked |
-| `hook_fire` | pre-tool-security.sh | Ira allow / deny |
-| `hook_fire` | model-route.py | model routing decision |
+| `tool_call` | post-tool-observe.sh (PostToolUse) | every tool call |
+| `file_change` | post-tool-observe.sh (PostToolUse) | Write / Edit / MultiEdit |
+| `agent_spawn` | pre-tool-trace.sh (PreToolUse) | Task / Agent tool starts — carries `tool_use_id` as stable correlation key |
+| `agent_complete` | post-tool-observe.sh (PostToolUse) | Task / Agent tool finishes — carries matching `tool_use_id` |
+| `skill_invoke` | post-tool-observe.sh (PostToolUse) | Skill tool |
+| `plan` | post-tool-observe.sh (PostToolUse) | ExitPlanMode |
+| `web_query` | post-tool-observe.sh (PostToolUse) | WebFetch / WebSearch |
+| `cron_event` | post-tool-observe.sh (PostToolUse) | CronCreate / CronDelete / CronList |
+| `graphify_query` | post-tool-observe.sh (PostToolUse, Bash branch) | `graphify query` CLI invocation detected in Bash tool_input.command |
+| `graphify_scan` (hook) | post-tool-observe.sh (PostToolUse, Bash branch) | `graphify update`/`graphify scan` CLI invocation detected |
+| `graphify_scan` (stats) | graphify_tail daemon source | graph.json mtime advance after daemon start — sets `stats_only=True`, updates node/edge counts only, does NOT increment scan counter |
+| `error` | post-tool-observe.sh (PostToolUse) | outcome=errored OR blocked |
+| `hook_fire` | pre-tool-security.sh (PreToolUse) | Ira allow / deny |
+| `hook_fire` | model-route.py (PreToolUse) | model routing decision |
 
 Deferred (next phases of the observability stack):
 
 - `token_usage` — Phase 1.5 (session JSONL `usage` block parser)
 - `inter_agent`, `compaction` — Phase 2 (daemon-side session JSONL tail)
-- `worktree_change`, `mcp_server`, `cognee_op`, `graphify_*`,
-  `workflow_*` — Phase 2/4 (daemon sources)
+- `worktree_change`, `mcp_server`, `cognee_op`, `workflow_*` — Phase 2/4 (daemon sources)
 
 ## Fail-open contract
 

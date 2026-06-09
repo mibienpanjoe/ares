@@ -10,6 +10,7 @@ from mishkan_watchd.state import HarnessState
 
 
 def test_agent_spawn_creates_session_and_agent():
+    """tool_use_id is the key; display name is preserved in AgentState.name."""
     s = HarnessState()
     s.apply({"ts": "x", "session": "sess-1", "type": "session_start", "project": "/tmp/proj"})
     s.apply({
@@ -19,11 +20,50 @@ def test_agent_spawn_creates_session_and_agent():
         "type": "agent_spawn",
         "tool": "Task",
         "agent": "bezalel",
-        "payload": {"subagent_type": "bezalel"},
+        "payload": {"subagent_type": "bezalel", "tool_use_id": "toolu_abc123"},
     })
     assert "sess-1" in s.sessions
-    assert "bezalel" in s.sessions["sess-1"].agents_active
-    assert s.sessions["sess-1"].agents_active["bezalel"].status == "running"
+    agents = s.sessions["sess-1"].agents_active
+    # Keyed by tool_use_id, not bare agent name.
+    assert "toolu_abc123" in agents
+    assert agents["toolu_abc123"].name == "bezalel"
+    assert agents["toolu_abc123"].status == "running"
+
+
+def test_agent_spawn_complete_pair_by_tool_use_id():
+    """spawn + complete keyed by tool_use_id correctly decrements active count."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "s", "type": "session_start", "project": "/p"})
+    # Spawn two concurrent agents with the same subagent_type.
+    for tid in ("tid-1", "tid-2"):
+        s.apply({
+            "ts": "x", "session": "s", "type": "agent_spawn", "tool": "Task",
+            "agent": "bezalel",
+            "payload": {"subagent_type": "bezalel", "tool_use_id": tid},
+        })
+    assert len(s.sessions["s"].agents_active) == 2
+    # Complete the first one.
+    s.apply({
+        "ts": "y", "session": "s", "type": "agent_complete", "tool": "Task",
+        "agent": "bezalel",
+        "payload": {"subagent_type": "bezalel", "tool_use_id": "tid-1"},
+    })
+    agents = s.sessions["s"].agents_active
+    assert "tid-1" not in agents
+    assert "tid-2" in agents
+    assert len(agents) == 1
+
+
+def test_agent_spawn_legacy_fallback_no_tool_use_id():
+    """Legacy events without tool_use_id still key by agent name."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "s", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "s", "type": "agent_spawn", "tool": "Task",
+        "agent": "caleb",
+        "payload": {"subagent_type": "caleb"},
+    })
+    assert "caleb" in s.sessions["s"].agents_active
 
 
 def test_token_usage_accumulates_per_session():
@@ -57,11 +97,53 @@ def test_snapshot_serializes_cleanly():
     s.apply({
         "ts": "x", "session": "snap", "project": "/p",
         "type": "agent_spawn", "tool": "Task", "agent": "caleb",
-        "payload": {"subagent_type": "caleb"},
+        "payload": {"subagent_type": "caleb", "tool_use_id": "toolu_snap1"},
     })
     snap = s.to_snapshot()
+    # Agent is present and keyed by tool_use_id.
+    assert "toolu_snap1" in snap["sessions"]["snap"]["agents_active"]
     # Round-trips through JSON without error.
     json.dumps(snap, default=str)
+
+
+def test_graphify_hook_event_increments_scan_count():
+    """graphify_scan from the Bash hook (no stats_only) increments scans."""
+    s = HarnessState()
+    assert s.graphify.scans == 0
+    s.apply({
+        "ts": "x", "session": None, "type": "graphify_scan",
+        "payload": {"project": "/p", "nodes": 100, "edges": 200},
+    })
+    assert s.graphify.scans == 1
+    assert s.graphify.nodes == 100
+    assert s.graphify.edges == 200
+
+
+def test_graphify_tail_stats_only_does_not_increment_scan_count():
+    """graphify_scan with stats_only=True updates sizes but not the counter."""
+    s = HarnessState()
+    s.apply({
+        "ts": "x", "session": None, "type": "graphify_scan",
+        "payload": {
+            "project": "/p", "nodes": 2798, "edges": 3102,
+            "stats_only": True,
+        },
+    })
+    assert s.graphify.scans == 0
+    assert s.graphify.nodes == 2798
+    assert s.graphify.edges == 3102
+
+
+def test_graphify_query_hook_event_increments_query_count():
+    """graphify_query from the Bash hook increments queries."""
+    s = HarnessState()
+    s.apply({"ts": "x", "session": "sq", "type": "session_start", "project": "/p"})
+    s.apply({
+        "ts": "x", "session": "sq", "type": "graphify_query",
+        "payload": {"project": "/p", "question": "who calls process_payment"},
+    })
+    assert s.graphify.queries == 1
+    assert s.graphify.last_query_text == "who calls process_payment"
 
 
 def test_unknown_event_type_is_ignored_gracefully():
@@ -74,8 +156,13 @@ def test_unknown_event_type_is_ignored_gracefully():
 
 if __name__ == "__main__":
     test_agent_spawn_creates_session_and_agent()
+    test_agent_spawn_complete_pair_by_tool_use_id()
+    test_agent_spawn_legacy_fallback_no_tool_use_id()
     test_token_usage_accumulates_per_session()
     test_session_stop_removes_session()
     test_snapshot_serializes_cleanly()
+    test_graphify_hook_event_increments_scan_count()
+    test_graphify_tail_stats_only_does_not_increment_scan_count()
+    test_graphify_query_hook_event_increments_query_count()
     test_unknown_event_type_is_ignored_gracefully()
     print("all state tests passed")

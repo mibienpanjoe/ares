@@ -36,9 +36,32 @@ class WatchdServer:
         self.lock = asyncio.Lock()
         self._heartbeat_task: asyncio.Task | None = None
 
+    @staticmethod
+    def _socket_is_live(socket_path: Path) -> bool:
+        """Return True if a daemon is already listening on socket_path.
+
+        Attempts a non-blocking connect and an immediate close. If it
+        succeeds the socket has a live owner; if it raises (connection
+        refused, file not found, timeout) the socket is stale or absent.
+        """
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                s.connect(str(socket_path))
+            return True
+        except (OSError, socket.timeout):
+            return False
+
     async def start(self) -> asyncio.AbstractServer:
-        # Ensure parent dir, remove stale socket.
+        # Ensure parent dir exists.
         self.socket_path.parent.mkdir(parents=True, exist_ok=True)
+        # Check liveness BEFORE unlinking: if a daemon is already serving
+        # this socket, do not steal it — return a no-op guard server instead.
+        # Only unlink a socket whose owner is gone (stale file).
+        if self.socket_path.exists() and self._socket_is_live(self.socket_path):
+            raise RuntimeError(
+                f"mishkan-watchd: daemon already running on {self.socket_path}"
+            )
         try:
             self.socket_path.unlink()
         except FileNotFoundError:
