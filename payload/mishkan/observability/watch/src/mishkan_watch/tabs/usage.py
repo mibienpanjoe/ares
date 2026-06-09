@@ -234,9 +234,16 @@ class UsageTab(Container):
         if sessions:
             best_pct = -1
             for sess in sessions:
-                tokens_in = int(sess.get("tokens_in") or 0)
+                # last_context_tokens is the most-recent turn's total input
+                # footprint (cache_read + cache_write + tokens_in for that
+                # turn), added by the daemon alongside Phase-4 token_usage
+                # events. It reflects what actually occupies the context window
+                # right now. Fall back to the cumulative tokens_in for old
+                # snapshots that predate the field — those will still under-
+                # report under caching, but gracefully rather than crashing.
+                ctx = int(sess.get("last_context_tokens") or sess.get("tokens_in") or 0)
                 window, label = _session_context_window(sess)
-                pct = int(100 * tokens_in / window) if window else 0
+                pct = int(100 * ctx / window) if window else 0
                 if pct > best_pct:
                     best_pct = pct
                     worst_label = label
