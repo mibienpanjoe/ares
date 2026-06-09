@@ -133,17 +133,20 @@ class AgentsTab(Container):
                     "agents_active": {},
                 }
             if etype == "agent_spawn" and sid:
-                name = ev.get("agent") or (ev.get("payload") or {}).get("subagent_type")
-                if name:
-                    sessions[sid].setdefault("agents_active", {})[name] = {
+                payload = ev.get("payload") or {}
+                name = ev.get("agent") or payload.get("subagent_type")
+                key = payload.get("tool_use_id") or name
+                if name and key:
+                    sessions[sid].setdefault("agents_active", {})[key] = {
                         "name": name,
                         "started": ev.get("ts"),
                         "status": "running",
                     }
             elif etype == "agent_complete" and sid:
-                name = ev.get("agent")
-                if name:
-                    sessions[sid].get("agents_active", {}).pop(name, None)
+                payload = ev.get("payload") or {}
+                key = payload.get("tool_use_id") or ev.get("agent")
+                if key:
+                    sessions[sid].get("agents_active", {}).pop(key, None)
         except Exception:
             return
 
@@ -205,7 +208,10 @@ class AgentsTab(Container):
                 sess_node.add_leaf(Text("(main only)", style="dim italic"),
                                    data={"kind": "agent", "sid": sid, "agent": "(main)"})
             else:
-                for name, ag in agents.items():
+                for _key, ag in agents.items():
+                    # Always display the stored name field, not the dict key
+                    # (which may be a tool_use_id from the daemon snapshot).
+                    name = ag.get("name") or _key
                     al = Text()
                     al.append("● ", style="#00D4AA")
                     al.append(name, style="bold")

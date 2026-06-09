@@ -155,7 +155,7 @@ class UsageTab(Container):
         nothing would refresh except on reconnect.
         """
         etype = ev.get("type")
-        sid = ev.get("session_id") or ev.get("sid")
+        sid = ev.get("session") or ev.get("session_id") or ev.get("sid")
         sessions = self._state.setdefault("sessions", {})
 
         if etype == "token_usage" and sid:

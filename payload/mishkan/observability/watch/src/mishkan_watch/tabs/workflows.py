@@ -239,12 +239,19 @@ class WorkflowsTab(Container):
         except Exception:
             return
         await lv.clear()
+        # Stable, index-based widget IDs. A run_id or workflow name can contain
+        # characters Textual rejects in an id (the "(unknown)" placeholder has
+        # parentheses; real names may have dots/spaces). Key list items by
+        # render position and map the position back to the real id/name on
+        # selection — never feed arbitrary data into a widget id.
+        self._wf_ids: list[str] = []
+        self._cat_ids: list[str] = []
         # ----- Recent runs (top) ---------------------------------------------
         if self._runs:
             head = Text()
             head.append("RECENT RUNS\n", style="bold #B794F4")
             lv.append(ListItem(Static(head)))
-            for run_id, run in list(self._runs.items())[-8:]:
+            for i, (run_id, run) in enumerate(list(self._runs.items())[-8:]):
                 t = Text()
                 mark = "║ " if self._selected == run_id else "  "
                 t.append(mark, style="#B794F4 bold")
@@ -257,14 +264,15 @@ class WorkflowsTab(Container):
                 cost = run.get("cost_usd") or 0.0
                 tok = run.get("tokens") or 0
                 t.append(f"   ${cost:.2f} · {tok/1000:.1f}k tok", style="#B794F4")
-                lv.append(ListItem(Static(t), id=f"wf-{run_id}"))
+                self._wf_ids.append(run_id)
+                lv.append(ListItem(Static(t), id=f"wf-{i}"))
         # ----- Catalogue (bottom) --------------------------------------------
         if self._catalogue:
             head = Text()
             head.append("AVAILABLE", style="bold #00D4AA")
             head.append(f"  ({len(self._catalogue)} workflows)", style="dim italic")
             lv.append(ListItem(Static(head)))
-            for entry in self._catalogue:
+            for i, entry in enumerate(self._catalogue):
                 name = entry.get("name", "?")
                 desc = entry.get("description") or ""
                 mark = "║ " if self._cat_selected == name else "  "
@@ -273,7 +281,8 @@ class WorkflowsTab(Container):
                 t.append(name[:30], style="bold")
                 if desc:
                     t.append(f"\n  {desc[:60]}", style="dim")
-                lv.append(ListItem(Static(t), id=f"cat-{name}"))
+                self._cat_ids.append(name)
+                lv.append(ListItem(Static(t), id=f"cat-{i}"))
         elif not self._runs:
             lv.append(ListItem(Static(Text(
                 "(no workflows installed and no runs yet)\n"
@@ -285,11 +294,21 @@ class WorkflowsTab(Container):
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         node_id = event.item.id or ""
         if node_id.startswith("wf-"):
-            self._selected = node_id[3:]
+            try:
+                idx = int(node_id[3:])
+            except ValueError:
+                return
+            wf_ids = getattr(self, "_wf_ids", [])
+            self._selected = wf_ids[idx] if 0 <= idx < len(wf_ids) else None
             self._cat_selected = None
             self._render_tree()
         elif node_id.startswith("cat-"):
-            self._cat_selected = node_id[4:]
+            try:
+                idx = int(node_id[4:])
+            except ValueError:
+                return
+            cat_ids = getattr(self, "_cat_ids", [])
+            self._cat_selected = cat_ids[idx] if 0 <= idx < len(cat_ids) else None
             self._selected = None
             self._render_tree()
 

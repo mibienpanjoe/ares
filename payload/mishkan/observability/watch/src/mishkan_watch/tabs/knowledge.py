@@ -86,12 +86,16 @@ class KnowledgeTab(Container):
             etype = ev.get("type")
             g = self._state.setdefault("graphify", {})
             if etype == "graphify_scan":
-                g["last_scan_project"] = p.get("project")
-                g["last_scan_at"] = p.get("scanned_at") or ev.get("ts")
                 g["nodes"] = p.get("nodes")
                 g["edges"] = p.get("edges")
                 g["communities"] = p.get("communities")
-                g["scans"] = (g.get("scans") or 0) + 1
+                # stats_only=True comes from the tail-side periodic size probe
+                # (session:null). It updates the size display but is NOT a real
+                # scan triggered by a hook — do not increment the scan counter.
+                if not p.get("stats_only"):
+                    g["last_scan_project"] = p.get("project")
+                    g["last_scan_at"] = p.get("scanned_at") or ev.get("ts")
+                    g["scans"] = (g.get("scans") or 0) + 1
             elif etype == "graphify_query":
                 g["last_query_project"] = p.get("project")
                 g["last_query_at"] = ev.get("ts")

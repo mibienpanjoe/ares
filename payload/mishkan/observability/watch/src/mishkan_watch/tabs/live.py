@@ -201,25 +201,30 @@ class LiveTab(Container):
                     "workflows_active": {},
                 }
             if etype == "agent_spawn" and sid:
-                name = ev.get("agent") or (ev.get("payload") or {}).get("subagent_type")
-                if name:
-                    sessions[sid].setdefault("agents_active", {})[name] = {
+                payload = ev.get("payload") or {}
+                name = ev.get("agent") or payload.get("subagent_type")
+                key = payload.get("tool_use_id") or name
+                if name and key:
+                    sessions[sid].setdefault("agents_active", {})[key] = {
                         "name": name,
                         "started": ev.get("ts"),
                         "last_tool": ev.get("tool"),
                         "status": "running",
                     }
             elif etype == "agent_complete" and sid:
-                name = ev.get("agent")
-                if name:
-                    sessions[sid].get("agents_active", {}).pop(name, None)
+                payload = ev.get("payload") or {}
+                key = payload.get("tool_use_id") or ev.get("agent")
+                if key:
+                    sessions[sid].get("agents_active", {}).pop(key, None)
             elif etype == "tool_call" and sid:
                 name = ev.get("agent")
                 if name:
-                    ag = sessions[sid].get("agents_active", {}).get(name)
-                    if ag:
-                        ag["last_tool"] = ev.get("tool")
-                        ag["last_activity"] = ev.get("ts")
+                    # tool_call carries agent name, not tool_use_id; find by name
+                    for ag in sessions[sid].get("agents_active", {}).values():
+                        if ag.get("name") == name:
+                            ag["last_tool"] = ev.get("tool")
+                            ag["last_activity"] = ev.get("ts")
+                            break
             elif etype == "worktree_change":
                 p = ev.get("payload") or {}
                 path = p.get("path")
@@ -261,8 +266,10 @@ class LiveTab(Container):
                     g["nodes"] = p.get("nodes")
                     g["edges"] = p.get("edges")
                     g["communities"] = p.get("communities")
-                    g["scans"] = (g.get("scans") or 0) + 1
-                    g["last_scan_at"] = p.get("scanned_at") or ev.get("ts")
+                    # stats_only probes update size display but are not real scans
+                    if not p.get("stats_only"):
+                        g["scans"] = (g.get("scans") or 0) + 1
+                        g["last_scan_at"] = p.get("scanned_at") or ev.get("ts")
                 else:
                     g["queries"] = (g.get("queries") or 0) + 1
                     g["last_query_at"] = ev.get("ts")
@@ -319,8 +326,12 @@ class LiveTab(Container):
         for sid, sess in sessions.items():
             if not self._session_matches_filter(sess):
                 continue
-            for name, ag in (sess.get("agents_active") or {}).items():
+            for _key, ag in (sess.get("agents_active") or {}).items():
                 any_agent = True
+                # Always use the stored name field — the key may be a tool_use_id
+                # (from daemon snapshot) or a legacy name; the name field is always
+                # the human-readable subagent_type.
+                name = ag.get("name") or _key
                 started = (ag.get("started") or "")[11:19]
                 last_tool = ag.get("last_tool") or "-"
                 status = ag.get("status") or "running"
