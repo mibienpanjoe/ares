@@ -24,6 +24,10 @@ export const meta = {
   ],
 };
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 const concepts = args?.concepts;
 const DRY_ROUNDS = args?.dry_rounds ?? 2;
 const RESEARCH_BUDGET = args?.research_budget_per_gap ?? 5000;

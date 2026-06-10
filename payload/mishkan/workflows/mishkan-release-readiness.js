@@ -32,6 +32,10 @@ export const meta = {
   ],
 }
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 if (!args?.project_root || !args?.release_tag) {
   throw new Error('mishkan-release-readiness requires: { project_root, release_tag, verify_commands?, audit_security? }')
 }

@@ -20,6 +20,10 @@ export const meta = {
   phases: [{ title: "Discover" }, { title: "Transform" }, { title: "Review" }],
 };
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 const tokenChange = args?.token_change;
 const project = args?.project ?? ".";
 if (!tokenChange) throw new Error("args.token_change is required (e.g. {token: 'color.primary', from: '#1A73E8', to: '#0B5FCC'})");

@@ -43,6 +43,10 @@ export const meta = {
   ],
 }
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 if (!args?.project_name || !args?.project_root || !args?.raw_intent) {
   throw new Error('mishkan-init requires: { project_name, project_root, raw_intent, stack_hint? }')
 }

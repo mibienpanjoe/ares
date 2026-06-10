@@ -18,6 +18,10 @@ export const meta = {
   phases: [{ title: "Analyze" }, { title: "Review" }, { title: "Verify" }],
 };
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 const migrationPlan = args?.migration_plan;
 const project = args?.project ?? ".";
 const verifyCmd = args?.verify_command;

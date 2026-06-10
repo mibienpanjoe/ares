@@ -118,8 +118,8 @@ All notable changes to MISHKAN are documented here. Format:
   `args?.x` silently read `undefined` and arg-guarded workflows threw
   "X is required" on a valid invocation. The five feature-ship / gate workflows
   now normalize (`if (typeof args === "string") args = JSON.parse(args)`) at the
-  top — robust to both shapes. (The remaining ~15 portfolio workflows share the
-  latent issue; a separate sweep will normalize them.)
+  top — robust to both shapes. The remaining 15 portfolio workflows were swept
+  the same way, so all 20 accept `args` uniformly.
 
 ## [0.2.6] — 2026-06-09
 

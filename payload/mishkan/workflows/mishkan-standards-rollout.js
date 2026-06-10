@@ -32,6 +32,10 @@ export const meta = {
   ],
 };
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 const ruleText = args?.rule_text;
 const ruleId = args?.rule_id ?? `RULE-${new Date().toISOString().slice(0,10)}`;
 const scopeHint = args?.scope_hint ?? "code";

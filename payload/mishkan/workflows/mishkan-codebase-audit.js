@@ -29,6 +29,10 @@ export const meta = {
   ],
 }
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 if (!args?.project_root || !args?.lenses || args.lenses.length === 0) {
   throw new Error('mishkan-codebase-audit requires args: { project_root, lenses: [...], target_glob?, max_files? }')
 }

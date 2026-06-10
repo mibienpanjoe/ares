@@ -16,6 +16,10 @@ export const meta = {
   phases: [{ title: "Plan" }, { title: "Validate" }, { title: "Runbook" }],
 };
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 const change = args?.change;
 const project = args?.project ?? ".";
 if (!change) throw new Error("args.change is required (e.g. {from: 'users.email_text', to: 'users.email_normalized', rationale: '...'})");

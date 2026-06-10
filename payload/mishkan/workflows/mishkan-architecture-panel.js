@@ -28,6 +28,10 @@ export const meta = {
   ],
 }
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 if (!args?.decision || !args?.context) {
   throw new Error('mishkan-architecture-panel requires: { decision, context, horizon? }')
 }

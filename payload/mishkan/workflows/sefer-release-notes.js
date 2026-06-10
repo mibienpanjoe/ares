@@ -19,6 +19,10 @@ export const meta = {
   phases: [{ title: "Collect" }, { title: "Summarise" }, { title: "Publish" }],
 };
 
+// The workflow runner may deliver `args` as a JSON string; normalize to an
+// object so the `args?.x` reads work — and stay robust if passed already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
+
 const fromRef = args?.from_ref;
 const toRef = args?.to_ref ?? "HEAD";
 const project = args?.project ?? ".";
