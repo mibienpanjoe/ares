@@ -31,6 +31,16 @@ WORKDIR /app
 RUN git clone https://github.com/topoteretes/cognee.git . \
  && git checkout "$COGNEE_MCP_REF"
 WORKDIR /app/cognee-mcp
+
+# MISHKAN overlay patch — cognee-mcp recall()/search() omit `user=` (upstream
+# cognee issue #2855, unfixed through v1.1.2), which breaks the read/search path
+# with "'NoneType' object has no attribute 'id'". Apply to the checked-out
+# source before uv sync. Idempotent + fail-loud: the build fails if the anchor
+# call-sites move on a COGNEE_MCP_REF bump, so we never ship a silently-unpatched
+# (still-broken) image. Drop this COPY/RUN once a fixed cognee-mcp ref is pinned.
+COPY --chown=cognee:cognee patches/cognee-mcp-recall-user.py /app/_mishkan_patch.py
+RUN python /app/_mishkan_patch.py
+
 RUN uv sync --all-extras
 
 # Pre-create the persisted-storage root owned by cognee (uid 10001). A named
