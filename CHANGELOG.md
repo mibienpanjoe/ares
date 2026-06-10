@@ -71,6 +71,29 @@ All notable changes to MISHKAN are documented here. Format:
   return the wrong schema there; that is a model-quality issue, not the recall
   path.) Drop both overlays once cognee-mcp pins its core tightly upstream.
 
+- **Selective-ingest swallowed cognify/memify failures (silent partial ingest).**
+  `mishkan-ingest.sh`'s runner called `cognee.cognify()` / `cognee.memify()` and
+  printed `>> cognified` / `>> memified` *unconditionally*, then exited 0 — even
+  when a data item failed mid-run (a transient `neo4j:7687` timeout surfaces as
+  `PipelineRunErrored` / status 422, which cognee returns rather than raises). A
+  partial ingest therefore read as a clean "done". The runner now inspects the
+  `{dataset_id: PipelineRunInfo}` return (cognee v1.1.0, the pinned ref): any
+  `status` that is not `PipelineRunCompleted` / `PipelineRunAlreadyCompleted`
+  (and not an intermediate `Started`/`Yield`) prints the errored run to stderr
+  and exits non-zero — fail-loud, so a partial back-fill can no longer pass as
+  complete.
+
+- **Neo4j under-resourced for bulk cognify (`ServiceUnavailable … Timed out`).**
+  The self-hosted Neo4j ran with `memory: 2g` and *no* explicit heap/pagecache
+  config, so under a bulk cognify (APOC label/edge writes across many docs at
+  once) the JVM auto-sized against the cap, GC-paused, and made bolt briefly
+  unresponsive — the connection the ingest pipeline used timed out mid-run (the
+  partial-ingest symptom above). `docker-compose.selfhosted.yml` now sets an
+  explicit heap (initial==max 1g, no resize pause) + pagecache (1g) and raises
+  the limit to 4g / 2 cpus, giving real headroom for off-heap + OS. Apply on the
+  next `--force-recreate` of the neo4j service. (Confirming the exact stall vs.
+  a different cause would mean reading the Neo4j log around the timestamp.)
+
 ## [0.2.6] — 2026-06-09
 
 Observability hardening release. Live testing against a real multi-session,

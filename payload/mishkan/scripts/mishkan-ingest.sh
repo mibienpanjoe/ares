@@ -74,17 +74,55 @@ done
 PY_SCRIPT="$(mktemp)"
 cat > "$PY_SCRIPT" <<'PY'
 import asyncio, glob, sys, cognee
+
 DATASET = sys.argv[1]
 FILES = sorted(glob.glob("/home/cognee/ingest_buf/*"))
+
+# cognify()/memify() return {dataset_id: PipelineRunInfo} (cognee v1.1.0, the ref
+# this image pins) and do NOT raise on a per-dataset pipeline failure — they
+# return a run-info object whose .status is "PipelineRunErrored" (e.g. a mid-run
+# Neo4j timeout surfaces as status 422 -> errored, not an exception). Inspect the
+# status and FAIL LOUD, so a partial ingest can never print ">> cognified" and
+# exit 0, reading as a clean "done". Known terminal statuses in v1.1.0:
+#   PipelineRunCompleted / PipelineRunAlreadyCompleted (ok) · PipelineRunErrored
+#   (fail) · PipelineRunStarted / PipelineRunYield (intermediate, not a result).
+OK = {"PipelineRunCompleted", "PipelineRunAlreadyCompleted"}
+INTERMEDIATE = {"PipelineRunStarted", "PipelineRunYield"}
+
+def failures(result, stage):
+    if isinstance(result, dict):
+        runs = list(result.values())
+    elif isinstance(result, (list, tuple)):
+        runs = list(result)
+    else:
+        runs = [result]
+    bad = []
+    for r in runs:
+        status = getattr(r, "status", None)
+        if status is None or status in OK or status in INTERMEDIATE:
+            continue
+        bad.append((stage, getattr(r, "dataset_name", "?"), status, repr(r)))
+    return bad
+
 async def m():
     if not FILES:
         print(">> no files"); return
     await cognee.add(FILES, dataset_name=DATASET)
     print(f">> added {len(FILES)} file(s) -> {DATASET}", flush=True)
-    await cognee.cognify(datasets=[DATASET])
+
+    bad = []
+    bad += failures(await cognee.cognify(datasets=[DATASET]), "cognify")
     print(">> cognified", flush=True)
-    await cognee.memify(dataset=DATASET)
+    bad += failures(await cognee.memify(dataset=DATASET), "memify")
     print(">> memified", flush=True)
+
+    if bad:
+        print(f"!! MISHKAN ingest FAILED — {len(bad)} errored pipeline run(s); the "
+              f"dataset is PARTIAL, not complete:", file=sys.stderr)
+        for stage, ds, status, detail in bad:
+            print(f"   [{stage}] dataset={ds} status={status}\n       {detail}", file=sys.stderr)
+        sys.exit(1)
+
 asyncio.run(m())
 PY
 # mktemp creates the runner 0600; docker cp preserves mode + host uid, so the
