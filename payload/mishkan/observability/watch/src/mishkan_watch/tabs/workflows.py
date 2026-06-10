@@ -160,10 +160,31 @@ class WorkflowsTab(Container):
     # ----- snapshot / event application --------------------------------------
 
     def apply_snapshot(self, state: dict[str, Any]) -> None:
-        # Walk recent_events of all sessions for workflow events
+        # Rebuild _runs from the authoritative snapshot rather than
+        # appending to the existing dict. This clears phantom runs that
+        # accumulated from a previous daemon session or malformed events —
+        # anything the daemon no longer reports is gone after this call.
+        self._runs = OrderedDict()
         for sess in (state.get("sessions") or {}).values():
+            # First, seed completed/live run state from workflows_active so
+            # that runs without a workflow_start recent_event are still shown.
+            for wf_id, wf_info in (sess.get("workflows_active") or {}).items():
+                if wf_id not in self._runs:
+                    self._runs[wf_id] = {
+                        "run_id": wf_id,
+                        "name": (wf_info or {}).get("name") or wf_id,
+                        "started": (wf_info or {}).get("started"),
+                        "status": "running",
+                        "phases": OrderedDict(),
+                        "cost_usd": 0.0,
+                        "tokens": 0,
+                    }
+            # Then replay recent_events so phase/agent detail is populated.
             for ev in (sess.get("recent_events") or []):
                 self._ingest_event(ev)
+        # If the selection no longer exists in the rebuilt dict, clear it.
+        if self._selected and self._selected not in self._runs:
+            self._selected = None
         self._render_tree()
         self.call_later(self._re_render_list)
 

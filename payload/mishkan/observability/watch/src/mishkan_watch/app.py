@@ -8,6 +8,7 @@ UNIX socket and dispatches snapshot + deltas to the appropriate tab.
 from __future__ import annotations
 
 import os
+import signal
 import time
 from pathlib import Path
 
@@ -51,9 +52,17 @@ class MishkanWatch(App):
         Binding("question_mark", "show_help", "help", show=False),
     ]
 
-    def __init__(self, socket_path: Path | None = None, **kwargs) -> None:
+    def __init__(
+        self,
+        socket_path: Path | None = None,
+        owned_daemon_pid: int | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self._socket_path = socket_path or DEFAULT_SOCKET
+        # PID of the daemon we forked, or None if we attached to a
+        # pre-existing one. Only non-None daemons are stopped on quit.
+        self._owned_daemon_pid: int | None = owned_daemon_pid
         self._client: DaemonClient | None = None
         self._started_at = time.time()
         # Project filter — at startup, prefer CLAUDE_PROJECT_DIR (set by
@@ -125,6 +134,24 @@ class MishkanWatch(App):
     async def on_unmount(self) -> None:
         if self._client:
             await self._client.stop()
+
+    def action_quit(self) -> None:
+        """Quit the TUI.
+
+        If this TUI forked the daemon (owned_daemon_pid is set) we stop
+        it with SIGTERM and best-effort unlink the socket so the next
+        ``mishkan-watch`` invocation starts clean. A daemon that was
+        already running before this TUI launched is left untouched.
+        The kill is fire-and-forget — we don't block TUI teardown on it.
+        """
+        if self._owned_daemon_pid is not None:
+            try:
+                os.kill(self._owned_daemon_pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+            self._socket_path.unlink(missing_ok=True)
+            self._owned_daemon_pid = None
+        self.exit()
 
     # ----- daemon frame handling --------------------------------------------
 
@@ -290,7 +317,10 @@ class MishkanWatch(App):
         return self._current_project if self._filter_to_current else None
 
 
-def run(socket_path: Path | None = None) -> int:
-    app = MishkanWatch(socket_path=socket_path)
+def run(
+    socket_path: Path | None = None,
+    owned_daemon_pid: int | None = None,
+) -> int:
+    app = MishkanWatch(socket_path=socket_path, owned_daemon_pid=owned_daemon_pid)
     app.run()
     return 0

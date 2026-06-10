@@ -8,6 +8,16 @@ All notable changes to MISHKAN are documented here. Format:
 
 ### Fixed
 
+- **Observability — mishkan-watch daemon lifecycle hardened.** Auto-start now
+  *liveness-probes* the socket (connect-test) instead of checking the file
+  exists, so a stale socket left by an unclean exit no longer blocks a fresh
+  fork — the stale file is unlinked and a new daemon started. Quitting the TUI
+  with `q` now stops the daemon **it forked** (a pre-existing daemon, started
+  separately, is left alone). And the Workflows tab rebuilds its run list from
+  each snapshot, so a phantom `(unknown) [running]` row clears on the next
+  reconnect instead of lingering forever. (Agent/Live rows already reconcile —
+  their `apply_snapshot` replaces state wholesale.)
+
 - **Cognee recall was broken (upstream cognee-mcp #2855).** `CogneeClient.recall()`
   and `.search()` (direct mode) call `cognee.recall()` / `cognee.search()` without
   a `user=` argument — so the core resolves the user itself and the read path

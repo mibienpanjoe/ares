@@ -2,10 +2,12 @@
 
 UX contract: ``mishkan-watch`` is a single command. If the daemon isn't
 already running we fork it as a child process, wait briefly for its
-socket to appear, then launch the TUI. On TUI exit we leave the daemon
-alive so other clients (a second ``mishkan-watch`` window, the TUI on
-another tmux pane) can use it. ``mishkan-watchd stop`` remains the
-explicit shutdown.
+socket to appear, then launch the TUI. When this process forked the
+daemon, quitting the TUI with ``q`` sends SIGTERM to that daemon — no
+lingering processes. A daemon that was already running before the TUI
+launched is left alive on quit (other clients may be using it).
+``mishkan-watchd stop`` remains the explicit shutdown for pre-existing
+daemons.
 
 The dual-terminal flow (one for ``mishkan-watchd start``, one for the
 TUI) still works for power users — pass ``--no-autostart`` and the
@@ -16,6 +18,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import socket as _socket
 import subprocess
 import sys
 import time
@@ -27,23 +30,55 @@ WATCHD_BOOT_TIMEOUT_S = 8.0
 WATCHD_BOOT_POLL_MS = 100
 
 
-def _ensure_daemon(socket_path: Path, *, allow_autostart: bool) -> int:
-    """Return 0 on success, 1 on failure.
+def _probe_socket(socket_path: Path) -> bool:
+    """Return True if a daemon is actively listening on *socket_path*.
 
-    If the socket already exists we assume the daemon is up — this is
-    the common case (daemon already running across sessions). Otherwise,
-    when autostart is allowed and ``mishkan-watchd`` is on PATH, we
-    fork it and poll for the socket up to WATCHD_BOOT_TIMEOUT_S.
+    Attempts a real UNIX-socket connect with a 0.5 s timeout. A
+    successful connect means the daemon is live. Any error (file not
+    found, connection refused, timeout) means it is not.
     """
-    if socket_path.exists():
-        return 0
+    s = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+    try:
+        s.settimeout(0.5)
+        s.connect(str(socket_path))
+        s.close()
+        return True
+    except OSError:
+        return False
+
+
+def _ensure_daemon(
+    socket_path: Path, *, allow_autostart: bool
+) -> tuple[int, int | None]:
+    """Return ``(rc, owned_pid)``.
+
+    *rc* is 0 on success, 1 on failure. *owned_pid* is the PID of the
+    daemon child this call forked, or ``None`` when we connected to an
+    already-running daemon (the caller must not kill a daemon it didn't
+    start).
+
+    Liveness check: we attempt a real UNIX-socket connect rather than
+    a plain ``exists()`` test. A dead daemon leaves a stale socket file
+    on disk; ``exists()`` would return True and the TUI would then
+    enter a reconnect loop against a dead socket. The probe catches that
+    case: if the connect fails and the file exists, we unlink the stale
+    file before forking a fresh daemon.
+    """
+    if _probe_socket(socket_path):
+        # A daemon is already live — leave it alone.
+        return 0, None
+
+    # Socket file might still be present but dead — remove it so the
+    # daemon we are about to fork can bind its own socket cleanly.
+    socket_path.unlink(missing_ok=True)
+
     if not allow_autostart:
         print(
             "mishkan-watch: daemon socket not found and --no-autostart was "
             "passed.\n  Start the daemon manually:  mishkan-watchd start",
             file=sys.stderr,
         )
-        return 1
+        return 1, None
     watchd = shutil.which("mishkan-watchd")
     if not watchd:
         print(
@@ -52,12 +87,12 @@ def _ensure_daemon(socket_path: Path, *, allow_autostart: bool) -> int:
             "    npx mishkan-harness observability",
             file=sys.stderr,
         )
-        return 1
+        return 1, None
     print("mishkan-watch: starting daemon …", file=sys.stderr)
     # Detached child — survives this process. stdout/stderr go to /dev/null
     # so the TUI doesn't get polluted by daemon log lines.
     try:
-        subprocess.Popen(
+        proc = subprocess.Popen(
             [watchd, "start"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -67,14 +102,15 @@ def _ensure_daemon(socket_path: Path, *, allow_autostart: bool) -> int:
         )
     except OSError as e:
         print(f"mishkan-watch: failed to fork daemon: {e}", file=sys.stderr)
-        return 1
+        return 1, None
+    owned_pid = proc.pid
     # Poll for socket. Bounded; the daemon binds the socket within the
     # first ~200 ms in normal conditions, but uv tool first runs and
     # cold imports can push it higher on slow disks.
     deadline = time.monotonic() + WATCHD_BOOT_TIMEOUT_S
     while time.monotonic() < deadline:
         if socket_path.exists():
-            return 0
+            return 0, owned_pid
         time.sleep(WATCHD_BOOT_POLL_MS / 1000)
     print(
         f"mishkan-watch: daemon socket {socket_path} did not appear within "
@@ -82,7 +118,7 @@ def _ensure_daemon(socket_path: Path, *, allow_autostart: bool) -> int:
         "mishkan-watchd status",
         file=sys.stderr,
     )
-    return 1
+    return 1, owned_pid
 
 
 def cli(argv: list[str] | None = None) -> int:
@@ -97,14 +133,16 @@ def cli(argv: list[str] | None = None) -> int:
                    help="don't fork the daemon; refuse if socket missing")
     args = p.parse_args(argv)
 
-    rc = _ensure_daemon(args.socket, allow_autostart=not args.no_autostart)
+    rc, owned_pid = _ensure_daemon(
+        args.socket, allow_autostart=not args.no_autostart
+    )
     if rc != 0:
         return rc
 
     # Importing the app lazily keeps CLI startup fast even when Textual is
     # heavy to import.
     from .app import run
-    return run(socket_path=args.socket)
+    return run(socket_path=args.socket, owned_daemon_pid=owned_pid)
 
 
 if __name__ == "__main__":
