@@ -750,6 +750,19 @@ async function install() {
       "    npm install -g mishkan-harness                                     # global npm bin\n" +
       "    mkdir -p ~/.local/bin && ln -sf " + linkTarget + " ~/.local/bin/mishkan  # symlink"));
   }
+
+  // Knowledge stack (Cognee) is opt-in — name the two bring-up steps + the key
+  // URLs right here, so they're visible at install time rather than only after
+  // the user discovers `configure-knowledge`. The wizard prints the full URL
+  // list + ACCESS.txt; this is the signpost to it.
+  const kCmd = (directAccess === "linked" && pathHasLocalBin) ? "mishkan" : "npx mishkan-harness";
+  console.log();
+  console.log(c.bold("  Knowledge stack (optional — Cognee work + curated graphs):"));
+  console.log(c.dim(
+    `    1. ${kCmd} configure-knowledge   # LLM provider + secrets → writes .env + ACCESS.txt\n` +
+    `    2. cd ${tilde(join(MISHKAN, "cognee"))} && docker compose \\\n` +
+    "         -f docker-compose.yml -f docker-compose.hardening.yml up -d --build\n" +
+    "    URLs (full list in ACCESS.txt):  work MCP http://127.0.0.1:7777/mcp   ·   curated MCP http://127.0.0.1:7730/mcp"));
 }
 
 function uninstallObservabilityHint() {

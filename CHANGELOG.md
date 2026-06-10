@@ -6,6 +6,15 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+### Changed
+
+- **Installer signposts the knowledge stack at install time.** The post-install
+  output now names the two Cognee bring-up steps (`configure-knowledge` →
+  `docker compose … up`) and the work/curated MCP URLs (`:7777` / `:7730`),
+  instead of leaving them to be discovered only after the user happens to run
+  `configure-knowledge`. The wizard still prints the full URL list + writes
+  `ACCESS.txt`; this is just the signpost to it.
+
 ### Fixed
 
 - **Observability — daemon self-shuts-down when idle (no orphan daemons).** The
