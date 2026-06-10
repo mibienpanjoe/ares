@@ -59,6 +59,23 @@ stays as-is.
 - One doc per `--dataset` per run is fine; rerun for additional datasets.
 - Does NOT delete existing data — additive. Use `cognee.prune` if you need a reset.
 
+## Security — the work store is a shared single trust domain
+
+Until per-project physical stores land (**ADR D-012**), the work store at `:7777`
+holds **every project in one Neo4j graph**, and cognee's `datasets=` filter does
+**not** isolate them — it's advisory-only with access control off (verified,
+cognee v1.1.0 / issue #1023). Anything ingested here is readable by **every**
+project's agents. Treat it as a single trust domain:
+
+- **No secrets, no credentials, no PII** into the work store — a prior aiobi-mail
+  ingestion leaked a real Gemini API key into the graph exactly this way.
+- **Scrub before `cognee.add`** — strip keys/tokens/PII from a doc before ingesting,
+  even an explicitly-listed one. The opt-in default (a `mishkan: ingest` tag or an
+  explicit path, **never a bulk tree**) is a *security control*, not just a sizing
+  one.
+- A doc that genuinely must hold sensitive data does not belong in shared memory —
+  it waits for the project's own store (D-012), or stays out.
+
 ## Default behaviour (zero args)
 
 Walks `./docs/` looking for `mishkan: ingest` tags. If none, exits cleanly with

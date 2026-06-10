@@ -1057,4 +1057,78 @@ savings carry through to those workflows.
 
 ---
 
+## D-012 — Per-project isolation of the cognee work store (added 2026-06-10)
+
+**Status:** adopted (per-project physical isolation); engine **resolved** to
+embedded Ladybug (Benaiah-vetted, see below); the provisioning migration is a
+follow-on plan. Co-owned by Bezalel (CTO) + Phinehas (security).
+
+**Decision:** each project gets its **own physically-separate cognee work store**,
+instead of all projects sharing the single work box on `:7777`. Isolation is by
+**topology** (separate process + separate data), never by cognee's `datasets=`
+filter. This extends D-007's physical-separation principle from *curated vs work*
+to *project vs project* within work. The curated store (`:7730`) is unchanged —
+one corpus, no projects to isolate from each other.
+
+**Why (the assumption that broke):** D-007 separated curated from work but assumed
+`datasets=` would scope projects *within* the work store. It does not. Verified
+against cognee v1.1.0 source + issue #1023: with `ENABLE_BACKEND_ACCESS_CONTROL=
+false` (required because cognee's access control is Neo4j-incompatible), the
+`datasets=` filter is **advisory only** — search runs against the whole graph.
+cognee's only real isolation is a physical per-dataset DB created in access-control
+mode, and Neo4j is not a supported backend for it. A `datasets=["wisemoney"]`
+query returned aiobi-mail content **including a live Gemini API key** — a
+cross-tenant confidentiality failure (Phinehas: CRITICAL), not a latent weakness.
+
+**Engine (resolved — Benaiah dependency vet against cognee v1.1.0):** **embedded
+Ladybug.** `GRAPH_DATABASE_PROVIDER=ladybug` is cognee's *default* at v1.1.0 —
+`ladybug==0.16.0` is a core (non-optional) dependency with a fully-implemented
+adapter (`infrastructure/databases/graph/get_graph_engine.py`; the `kuzu` token
+aliases to the same `LadybugAdapter`). Each project = **one cognee-mcp (stdio, no
+container or port) with its own `GRAPH_FILE_PATH` directory** → physical isolation
+by filesystem path, no N×4g Neo4j memory floor, no reliance on the failed
+`datasets=` filter. The Neo4j-per-project fallback is **not needed**. Supply-chain:
+Ladybug is a credible MIT fork of the Apple-archived Kuzu (founder ex-FB/Google),
+actively maintained (v0.17.1, Jun 2026), no known CVEs, version-pinned — acceptable
+for an embedded local store with no network exposure; **re-vet at 12 months** (watch
+items: ~8-month-old fork, PyPI `ladybug` namespace recently reclaimed from an
+unrelated tools suite).
+
+**Provisioning:** lazy, per project at `/mishkan-init` — the project's `.mcp.json`
+`cognee` alias points at *its own* store (embedded stdio path, or a per-project
+port on fallback), not the shared `:7777`. Isolation rides on the per-project
+instance; the dataset name (still `basename $PWD`) becomes cosmetic.
+
+**Security posture (Phinehas, gating):** the boundary must be physical and
+verifiable by topology; an application-layer filter whose enforcement just failed
+(#1023) is rejected *as the boundary* (acceptable only as defense-in-depth on top).
+**Interim controls, mandatory until per-project stores land:** the shared `:7777`
+is a **single trust domain** — no secrets, no PII; ingest opt-in + scrubbed only;
+a loud advisory-only warning at the boundary; and the already-leaked Gemini key is
+**revoked (engineer) then purged from the graph (engineer-run, Mishmar-specified)**.
+
+**Alternatives considered:**
+1. *Re-enable access control on Neo4j.* Rejected — `multi_user_support_possible()`
+   raises `EnvironmentError` for Neo4j; needs a backend migration first.
+2. *Neo4j Enterprise multi-DB (one DB per project).* Rejected as primary — standing
+   license liability for a single-engineer harness; still N cognee-mcp instances;
+   one Neo4j process still spans tenants. Last-resort fallback only.
+3. *Wrapper-side post-filter on the shared graph.* Rejected — no reliable per-node
+   dataset tag to filter on; a non-durable workaround (rule 3).
+
+**Consequences.** *Positive:* per-project confidentiality by construction, no
+reliance on cognee's filter, bounded per-project cost (embedded ≈ free; fallback ≈
+one small Neo4j). *Negative:* loses the work-store Neo4j browser (static-HTML
+`visualize_graph` export is the fallback); existing work graphs are re-ingested
+against the new backend (cheap, idempotent via `mishkan-ingest`); a dependency on
+Ladybug's maintenance health (Benaiah-vetted; Kuzu is archived).
+
+**Supersedes / amends:** extends **D-007** (physical store separation) to a
+per-project axis within work — D-007 stands unchanged. Touches **D-008**'s Cognee
+work store. The provisioning migration (`mishkan-init` rework, per-project store
+creation, re-ingest) is a follow-on `/plan` routed to Migdal, gated on the engine
+vet + Y4NN ratification.
+
+---
+
 *Decisions locked May 2026. Revisit only with a dated amendment below.*
