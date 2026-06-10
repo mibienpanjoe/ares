@@ -612,7 +612,7 @@ worth reaching for.
   `mishkan-blast-radius`, `mishkan-knowledge-gap-discovery`,
   `mishkan-standards-rollout`. Adding an 11th forces a retirement vote.
 - **4 team-level workflows per team.** Current shipped count varies by team
-  (Chosheb 1, Panim 1, Yasad 2, Mishmar 1, Migdal 2, Sefer 1). Spare slots
+  (Chosheb 1, Panim 2, Yasad 3, Mishmar 1, Migdal 2, Sefer 1). Spare slots
   per team are deliberately left open — candidates compete for them at
   PM+CTO review, not on a team lead's word.
 
@@ -716,6 +716,52 @@ upcoming-use justification.
 - "Anti-pattern self-check" relies on the proposer's honesty about their
   candidate; a determined push can word-paint around it. Mitigation: the
   CTO half of the gate has explicit authority to reject on shape.
+
+### Amendment (2026-06-10) — loop-until-QA-passes feature-ship workflows
+
+**Trigger.** The engineer observed that the designed Lead → Specialist → QA
+collaboration was not enforced in practice — the main session dispatched
+specialists directly and self-graded, bypassing the chain, with no loop driving
+work to a QA-clean state. The remedy is two-layer: a cross-cutting discipline in
+`team-lead-craft` §6.1 (all six teams), and a deterministic, unskippable workflow
+form where stakes justify it.
+
+**Portfolio change (PM + CTO joint brief).**
+
+- **Two NEW team workflows:** `yasad-feature-ship`, `panim-feature-ship`.
+- **Three AMENDED workflows** gain a bounded retry loop in place (no new slot):
+  `chosheb-feature-ship` (loop-until-ready), `mishmar-security-gate` and
+  `migdal-infra-change` (conservative — one remediation-proposal cycle then
+  escalate). Sefer is covered by the discipline layer only (no product to gate —
+  a workflow there would be anti-pattern #4).
+
+**Brief, per the proposal format.**
+
+- *Problem.* The chain is bypassable; QA convergence is not enforced.
+- *Fan-out shape.* `route → implement → parallel orthogonal QA panel →
+  loop-until-zero-blockers (cap 3; 1–2 conservative for security/infra) →
+  escalate`. ≥6 agents across panel × cycles.
+- *Termination predicate.* Zero `blocker`-severity findings (keys off the
+  existing structured QA verdicts — Uriah/Jahaziel agent contracts and the
+  existing workflow `{ready}`/`{decision}`/`{safe}` fields; no new contract).
+- *Expected fire-count.* High — once per shipped feature on the active team;
+  comfortably clears the ≥10/quarter bar.
+- *Anti-pattern self-check.* #1 cleared (termination predicate + parallel panel,
+  not a linear skill); #2 cleared (no nesting); #3 cleared (panels are
+  orthogonal — contract/tests/data; a11y/DS/QA; the panel excludes the
+  implementer so no lens self-reviews); #4 cleared (synthesis is a QA-clean
+  artifact or a structured escalation).
+
+**Caps after this amendment.** Team-level total 8 → 10. Per-team: Yasad 3/4,
+Panim 2/4; Chosheb/Mishmar/Migdal/Sefer unchanged (amendments use no new slot).
+All within the 4/team cap.
+
+**Loop-until-X is no longer single-use.** This supersedes the earlier framing
+(`workflows/README.md`) that `knowledge-gap-discovery` was the only legitimate
+loop-until-X. Bounded QA-convergence is now a sanctioned second case; the bound
+(hard cycle cap + mandatory escalation, never silent settle) is what keeps it
+inside the discipline. Security and infra loops are deliberately conservative:
+no stateful op runs inside the loop (asymmetric delegation, rules §5).
 
 **Supersedes / amends:** none. Codifies the discipline implicit in D-002
 (Claude Code models only — capability discipline) and D-007 (separate stores

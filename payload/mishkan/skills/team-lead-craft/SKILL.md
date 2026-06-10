@@ -214,6 +214,53 @@ specialist-level review) and a Reporter (one per team).
   not implement (§5); the team's QA evaluates implementations; no
   cycle.
 
+### 6.1 The mandatory chain — route → specialist → QA → loop → escalate
+
+A specialist's output is **not done when the specialist says it is** —
+it is done when the team's QA (or designated reviewer) says it is. The
+chain is not optional and the Lead does not shortcut it:
+
+1. **Route to the specialist who owns the domain** (§2.1). The Lead
+   never implements the artefact themselves (§5).
+2. **Route the result to evaluation — never the implementer.** Where a
+   dedicated QA agent exists (Yasad → Uriah, Panim → Jahaziel) it
+   evaluates. Where one does not (Chosheb, Mishmar, Migdal, Sefer), a
+   **designated reviewer who is not the author** does — the lens
+   specialist on the team (e.g. Mishmar's security lenses, Migdal's
+   five lenses, Sefer's style/Diátaxis review). Self-review is not
+   review.
+3. **Loop on blockers.** If evaluation returns a **blocker**-severity
+   finding, the Lead re-dispatches **the same specialist** with the
+   findings attached and the work re-evaluates. This repeats up to a
+   **cap of 3 cycles**.
+4. **Escalate at the cap — do not settle.** If blockers remain after
+   the cap, the Lead **stops and escalates to the engineer** with the
+   outstanding blocker findings verbatim. A Lead never declares "good
+   enough" to break the loop, and never silently drops a blocker.
+
+Two teams carry a **conservative variant** because their blockers
+usually need a human decision, not another agent attempt:
+
+- **Mishmar (Phinehas)** and **Migdal (Eliashib):** the cap is **1–2**,
+  and on any *remaining* block the Lead escalates rather than iterating.
+  The loop only ever touches the generative/review portion — **no
+  stateful security action, infra apply, or deploy happens inside the
+  loop** (asymmetric delegation, §5 cross-ref; those stay the
+  engineer's hands).
+
+The deterministic, *unskippable* form of this chain — for the work
+where a model-driven loop is not enough — is the per-team feature-ship
+workflow the Lead may request the main session run (§11).
+
+### 6.2 Sefer's form of the chain
+
+Sefer (Jehoshaphat) is pull-based and ships no product to gate, so its
+chain is the doc-equivalent: a doc is routed to a layer specialist,
+then reviewed against the style guide and Diátaxis quadrant until
+clean, with Jehoshaphat's architecture review as the terminal check.
+The discipline (route → produce → review-until-clean → escalate) holds;
+the "QA" is editorial conformance, not a product blocker panel.
+
 ---
 
 ## 7. Worked example A — Huram coordinating a contract change
@@ -393,6 +440,25 @@ A Lead surfaces the workflow recommendation; the main session decides.
 
 The shape: surface a clear ask to the main session naming the workflow
 and the args. The main session reviews the cost-gate and decides.
+
+### 11.1 The deterministic chain workflows (loop-until-QA)
+
+The §6.1 chain has a deterministic, unskippable form per team — the one
+a Lead requests when a model-driven loop is not strong enough and the
+work must *provably* not ship until QA is clean:
+
+| Lead | Workflow | Shape |
+|---|---|---|
+| Zerubbabel | `yasad-feature-ship` | implement → 3-lens QA panel (contract / tests / Uriah rules) → loop on blockers (cap 3) → escalate |
+| Huram | `panim-feature-ship` | implement → 3-lens QA panel (a11y / DS-fit / Jahaziel) → loop on blockers (cap 3) → escalate |
+| Aholiab | `chosheb-feature-ship` | 4-lens audit → loop on blockers (cap 3) → escalate (now loops to ready) |
+| Phinehas | `mishmar-security-gate` | find → refute → decide → **conservative** loop (cap 1–2, escalate on residual block) |
+| Eliashib | `migdal-infra-change` | 5-lens review → **conservative** loop (cap 1–2, escalate on residual no-go) |
+
+Phinehas and Eliashib run the **conservative** variant (§6.1): the loop
+touches only the generative/review portion; no stateful security or
+infra action runs inside it. Sefer has no product-QA workflow — its
+chain is editorial (§6.2).
 ## 12. The recurring traps every Team Lead rejects on sight
 
 1. **"I'll just do this myself; it's faster."** §5. Faster-by-skipping-

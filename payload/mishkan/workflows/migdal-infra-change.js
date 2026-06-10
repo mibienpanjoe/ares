@@ -10,13 +10,25 @@
 //   - panel orthogonality: design / systems / devops / observability / health
 //     are distinct domains.
 //   - synthesis: structured go/no-go with rollback path attached.
+//
+// CONSERVATIVE loop variant (team-lead-craft §6.1): an infra no-go usually needs
+// a HUMAN decision, not another agent attempt. On no-go this workflow runs at
+// most ONE remediation-PROPOSAL step (Meshullam consolidates a concrete fix plan
+// from the lens blockers + mitigations — generative advice only) and then
+// ESCALATES to the engineer. It NEVER applies infra, deploys, or runs a stateful
+// op inside the loop (asymmetric delegation); the engineer applies and re-runs.
 
 export const meta = {
   name: "migdal-infra-change",
-  description: "Infra change validated by 5 orthogonal lenses (design / systems / devops / observability / health).",
+  description: "Infra change validated by 5 orthogonal lenses (design / systems / devops / observability / health), with a conservative remediation-proposal + escalate on no-go.",
   whenToUse: "Before applying any infra change with non-trivial blast radius (network, IAM, scaling, cross-service deps).",
-  phases: [{ title: "Review" }, { title: "Decide" }],
+  phases: [{ title: "Review" }, { title: "Decide" }, { title: "Remediate" }],
 };
+
+// The workflow runner may deliver `args` as a JSON string (observed in this
+// runtime); normalize to an object so the `args?.x` reads work — and stay robust
+// if a caller passes it already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
 
 const changeDescription = args?.change_description;
 const changeFiles = args?.change_files ?? [];
@@ -51,17 +63,46 @@ const allMitigations = valid.flatMap(v => v.mitigations ?? []);
 const rollback = valid.flatMap(v => v.rollback_steps ?? []);
 
 phase("Decide");
+const allSafe = safeCount === LENSES.length;
+if (allSafe) {
+  return {
+    change: changeDescription,
+    change_files: changeFiles,
+    lens_verdicts: valid,
+    safe_count: safeCount,
+    all_safe: true,
+    blockers: allBlockers,
+    mitigations: allMitigations,
+    rollback_plan: rollback,
+    decision: "go",
+    escalate_to_engineer: false,
+    summary: `Infra change GO. ${safeCount}/5 lenses safe. Rollback path: ${rollback.length} steps documented.`,
+  };
+}
+
+// Conservative loop: ONE remediation-proposal cycle, then escalate. No infra
+// apply, no deploy, no stateful op inside the loop (asymmetric delegation).
+phase("Remediate");
+const REMEDIATION_SCHEMA = {
+  type: "object", required: ["remediations"],
+  properties: { remediations: { type: "array", items: { type: "object", required: ["blocker", "fix"], properties: { blocker: {type:"string"}, fix: {type:"string"}, files: {type:"array", items:{type:"string"}} } } } },
+};
+const plan = await agent(
+  `You are Meshullam. Consolidate a concrete, durable remediation plan for these infra-change blockers — generative advice ONLY: do NOT apply infra, do NOT deploy. Blockers: ${JSON.stringify(allBlockers)}. Known mitigations: ${JSON.stringify(allMitigations)}. Return the schema.`,
+  { schema: REMEDIATION_SCHEMA, agentType: "meshullam", label: "remediate", phase: "Remediate" },
+);
+
 return {
   change: changeDescription,
   change_files: changeFiles,
   lens_verdicts: valid,
   safe_count: safeCount,
-  all_safe: safeCount === LENSES.length,
+  all_safe: false,
   blockers: allBlockers,
   mitigations: allMitigations,
   rollback_plan: rollback,
-  decision: safeCount === LENSES.length ? "go" : "no-go",
-  summary: safeCount === LENSES.length
-    ? `Infra change GO. ${safeCount}/5 lenses safe. Rollback path: ${rollback.length} steps documented.`
-    : `Infra change NO-GO. ${LENSES.length - safeCount}/5 lenses flagged blockers. Address: ${allBlockers.slice(0,3).join(" | ")}`,
+  decision: "no-go",
+  escalate_to_engineer: true,
+  remediation_plan: plan?.remediations ?? [],
+  summary: `Infra change NO-GO → ESCALATED to engineer. ${LENSES.length - safeCount}/5 lenses flagged blockers. Remediation proposed; the engineer applies the fix and re-runs. No infra applied, no deploy (asymmetric delegation).`,
 };

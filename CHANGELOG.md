@@ -94,6 +94,33 @@ All notable changes to MISHKAN are documented here. Format:
   next `--force-recreate` of the neo4j service. (Confirming the exact stall vs.
   a different cause would mean reading the Neo4j log around the timestamp.)
 
+### Added
+
+- **Enforce the Team Lead → Specialist → QA collaboration chain (loop-until-QA).**
+  The designed collaboration was bypassable — the main session dispatched
+  specialists directly and self-graded. Two layers fix it. (1) Discipline: the
+  shared `team-lead-craft` skill (§6.1/§6.2, §11.1) now mandates route →
+  specialist → QA/reviewer (never the implementer) → loop-on-blockers → escalate,
+  for all six teams. (2) Deterministic, unskippable workflows: two new
+  (`yasad-feature-ship`, `panim-feature-ship`) run implement → 3-lens orthogonal
+  QA panel → loop-until-zero-blockers (cap 3) → escalate; three existing gate
+  workflows (`chosheb-feature-ship`, `mishmar-security-gate`,
+  `migdal-infra-change`) gain a bounded retry — security/infra are *conservative*
+  (cap 1–2, escalate on residual block, no stateful op inside the loop). QA
+  termination keys off existing structured verdicts (no agent-contract change).
+  ADR **D-010** amended: PM+CTO proposal brief recorded, and the "only candidate
+  for loop-until-X" claim corrected (QA-convergence is the second sanctioned
+  case). Validated end-to-end with live agents: happy path ships QA-clean in 1
+  cycle; a contradictory contract loops to the cap and escalates without shipping.
+
+- **Workflows tolerate `args` arriving as a JSON string.** The workflow runner
+  can deliver the `args` global as a JSON string rather than a parsed object, so
+  `args?.x` silently read `undefined` and arg-guarded workflows threw
+  "X is required" on a valid invocation. The five feature-ship / gate workflows
+  now normalize (`if (typeof args === "string") args = JSON.parse(args)`) at the
+  top — robust to both shapes. (The remaining ~15 portfolio workflows share the
+  latent issue; a separate sweep will normalize them.)
+
 ## [0.2.6] — 2026-06-09
 
 Observability hardening release. Live testing against a real multi-session,

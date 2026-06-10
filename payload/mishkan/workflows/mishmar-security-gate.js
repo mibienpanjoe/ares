@@ -10,13 +10,27 @@
 //     Joab (surface attack vectors), Hushai (advisor on threat model) —
 //     distinct evaluation domains.
 //   - synthesis: pass/block decision with finding list.
+//
+// CONSERVATIVE loop variant (team-lead-craft §6.1): a security block usually
+// needs a HUMAN decision, not another agent attempt. So on block this gate runs
+// at most ONE remediation-PROPOSAL step (Ira drafts concrete fixes for the
+// confirmed blockers — generative advice only) and then ESCALATES to the
+// engineer. It deliberately does NOT auto-iterate or re-verify a fix that was
+// not actually applied, and it NEVER applies a fix or merges (no stateful op
+// inside the gate — asymmetric delegation). The loop touches only the
+// generative/review portion.
 
 export const meta = {
   name: "mishmar-security-gate",
-  description: "Security gate before merge on sensitive surface — 3 orthogonal lenses + adversarial refute.",
+  description: "Security gate before merge on sensitive surface — 3 orthogonal lenses + adversarial refute, with a conservative remediation-proposal + escalate on block.",
   whenToUse: "Before merging changes that touch auth, payment, PII, secrets, RBAC, crypto.",
-  phases: [{ title: "Find" }, { title: "Refute" }, { title: "Decide" }],
+  phases: [{ title: "Find" }, { title: "Refute" }, { title: "Decide" }, { title: "Remediate" }],
 };
+
+// The workflow runner may deliver `args` as a JSON string (observed in this
+// runtime); normalize to an object so the `args?.x` reads work — and stay robust
+// if a caller passes it already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
 
 const diffRef = args?.diff_ref;
 const surface = args?.surface;
@@ -31,6 +45,10 @@ const FINDING_SCHEMA = {
 const REFUTE_SCHEMA = {
   type: "object", required: ["refuted", "rationale"],
   properties: { refuted: {type:"boolean"}, rationale: {type:"string"} },
+};
+const REMEDIATION_SCHEMA = {
+  type: "object", required: ["remediations"],
+  properties: { remediations: { type: "array", items: { type: "object", required: ["finding", "fix"], properties: { finding: {type:"string"}, fix: {type:"string"}, files: {type:"array", items:{type:"string"}} } } } },
 };
 
 phase("Find");
@@ -70,14 +88,35 @@ const blockingSeverities = ["high", "critical"];
 const blockers = confirmed.filter(f => blockingSeverities.includes(f.severity));
 
 phase("Decide");
+if (blockers.length === 0) {
+  return {
+    surface,
+    diff_ref: diffRef,
+    total_findings_raw: allFindings.length,
+    confirmed_findings: confirmed,
+    blockers,
+    decision: "pass",
+    escalate_to_engineer: false,
+    summary: `Security gate PASS. ${confirmed.length} non-blocking findings (info/low/medium). Merge allowed.`,
+  };
+}
+
+// Conservative loop: ONE remediation-proposal cycle, then escalate. No re-verify
+// of an unapplied fix; no change applied; no merge (asymmetric delegation).
+phase("Remediate");
+const plan = await agent(
+  `You are Ira. For each confirmed BLOCKER on the ${surface} surface, draft a concrete, durable remediation — generative advice ONLY: do NOT apply changes and do NOT merge. Blockers: ${JSON.stringify(blockers)}. Return the schema.`,
+  { schema: REMEDIATION_SCHEMA, agentType: "ira", label: "remediate", phase: "Remediate" },
+);
+
 return {
   surface,
   diff_ref: diffRef,
   total_findings_raw: allFindings.length,
   confirmed_findings: confirmed,
   blockers,
-  decision: blockers.length === 0 ? "pass" : "block",
-  summary: blockers.length === 0
-    ? `Security gate PASS. ${confirmed.length} non-blocking findings (info/low/medium). Merge allowed.`
-    : `Security gate BLOCK. ${blockers.length} confirmed high/critical findings on ${surface}. Address before merge.`,
+  decision: "block",
+  escalate_to_engineer: true,
+  remediation_plan: plan?.remediations ?? [],
+  summary: `Security gate BLOCK → ESCALATED to engineer. ${blockers.length} confirmed high/critical finding(s) on ${surface}. Remediation proposed per blocker; the engineer applies the fix and re-runs the gate. No change applied, no merge (asymmetric delegation).`,
 };

@@ -5,9 +5,15 @@
 // QA visual matrix. Replaces the back-and-forth ping-pong that currently
 // burns 2-3 days per feature.
 //
-// Pattern: barrier `parallel()` per dimension + synthesis.
+// The audit panel now LOOPS (team-lead-craft §6.1): if any lens is not ready,
+// Hiram revises the design against the blockers and the panel re-audits, up to
+// a cycle cap, then escalates to the engineer. The package is only produced
+// once the design is ready-to-ship (or the loop escalates).
+//
+// Pattern: (audit panel → revise → loop-until-ready) + synthesis.
 // Per ADR D-010 anti-pattern check:
-//   - skill-in-workflow-clothing: no — 4 dimensions in parallel, panel.
+//   - skill-in-workflow-clothing: no — 4 dimensions in parallel + a termination
+//     predicate (all lenses ready) + bounded loop.
 //   - workflow-calling-workflow-without-contract: no — no nesting.
 //   - non-orthogonal panel: no — DS-fit / a11y / assets / QA are distinct
 //     evaluation domains.
@@ -15,13 +21,19 @@
 
 export const meta = {
   name: "chosheb-feature-ship",
-  description: "Design → complete handoff package for Panim (DS fit + a11y + assets + QA).",
+  description: "Design → complete handoff package for Panim (DS fit + a11y + assets + QA), looping until the design is ready-to-ship.",
   whenToUse: "When Chosheb has a converged design and Huram needs to start implementation.",
-  phases: [{ title: "Audit" }, { title: "Package" }],
+  phases: [{ title: "Audit" }, { title: "Revise" }, { title: "Package" }],
 };
+
+// The workflow runner may deliver `args` as a JSON string (observed in this
+// runtime); normalize to an object so the `args?.x` reads work — and stay robust
+// if a caller passes it already-parsed.
+if (typeof args === "string") args = JSON.parse(args);
 
 const design = args?.design_ref;
 const feature = args?.feature_context;
+const MAX_CYCLES = args?.max_cycles ?? 3;
 if (!design) throw new Error("args.design_ref is required (Figma URL / asset path)");
 if (!feature) throw new Error("args.feature_context is required (1-paragraph feature description)");
 
@@ -36,7 +48,6 @@ const AUDIT_SCHEMA = {
   },
 };
 
-phase("Audit");
 const LENSES = [
   { key: "ds-fit",   agent: "aholiab",  prompt: "Design system fit: does this design reuse existing tokens / components / patterns? List net-new additions to the DS." },
   { key: "a11y",     agent: "asaph",    prompt: "Accessibility + SEO audit: contrast ratios, keyboard flow, ARIA needs, semantic structure, meta requirements." },
@@ -44,16 +55,50 @@ const LENSES = [
   { key: "qa",       agent: "jahaziel", prompt: "Visual QA matrix: states (default/hover/active/disabled/error), breakpoints, edge cases, browser/device coverage." },
 ];
 
-const audits = await parallel(LENSES.map(L => () =>
-  agent(
-    `Feature: ${feature}\nDesign: ${design}\nYour lens: ${L.prompt}\nReturn the schema.`,
-    { schema: AUDIT_SCHEMA, label: `audit:${L.key}`, agentType: L.agent, phase: "Audit" },
-  ).then(a => ({ ...L, ...a }))
-));
+let cycle = 0;
+let valid = [];
+let allBlockers = [];
+let allReady = false;
 
-const valid = audits.filter(Boolean);
-const allBlockers = valid.flatMap(a => a.blockers ?? []);
-const allReady = valid.every(a => a.ready);
+while (cycle < MAX_CYCLES) {
+  cycle++;
+
+  if (cycle > 1) {
+    phase("Revise");
+    await agent(
+      `You are Hiram. Revise the design for "${feature}" (${design}) to clear these handoff blockers from cycle ${cycle - 1} — address EVERY one, do not expand scope: ${JSON.stringify(allBlockers)}. Return a concise summary of the design revisions.`,
+      { agentType: "hiram", label: `revise:${cycle}`, phase: "Revise" },
+    );
+  }
+
+  phase("Audit");
+  const audits = await parallel(LENSES.map(L => () =>
+    agent(
+      `Feature: ${feature}\nDesign: ${design}\nCycle: ${cycle}\nYour lens: ${L.prompt}\nReturn the schema.`,
+      { schema: AUDIT_SCHEMA, label: `audit:${L.key}:${cycle}`, agentType: L.agent, phase: "Audit" },
+    ).then(a => ({ ...L, ...a }))
+  ));
+
+  valid = audits.filter(Boolean);
+  allBlockers = valid.flatMap(a => a.blockers ?? []);
+  allReady = valid.every(a => a.ready);
+  log(`Cycle ${cycle}/${MAX_CYCLES}: ${valid.length}/${LENSES.length} lenses ready, ${allBlockers.length} blockers.`);
+
+  if (allReady) break;
+}
+
+if (!allReady) {
+  return {
+    feature_context: feature,
+    design_ref: design,
+    audits: valid,
+    ready_to_ship: false,
+    escalate_to_engineer: true,
+    cycles_run: cycle,
+    blockers: allBlockers,
+    summary: `Handoff ESCALATED to engineer after ${cycle} cycles — ${allBlockers.length} blockers unresolved across ${valid.length} lenses. Human decision required before handoff.`,
+  };
+}
 
 phase("Package");
 const handoff = await agent(
@@ -66,10 +111,10 @@ return {
   feature_context: feature,
   design_ref: design,
   audits: valid,
-  ready_to_ship: allReady,
+  ready_to_ship: true,
+  escalate_to_engineer: false,
+  cycles_run: cycle,
   blockers: allBlockers,
   handoff_document: handoff,
-  summary: allReady
-    ? `Handoff package ready. ${valid.length}/4 lenses passed. Hand to Huram (Panim).`
-    : `Handoff BLOCKED. ${allBlockers.length} blockers across ${valid.length} lenses. Resolve before handoff.`,
+  summary: `Handoff package ready after ${cycle} cycle(s). ${valid.length}/${LENSES.length} lenses passed. Hand to Huram (Panim).`,
 };
