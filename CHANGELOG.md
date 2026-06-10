@@ -8,6 +8,16 @@ All notable changes to MISHKAN are documented here. Format:
 
 ### Fixed
 
+- **Observability — daemon self-shuts-down when idle (no orphan daemons).** The
+  defensive backstop for the lifecycle: the daemon tracks connected clients and,
+  when none has been connected for `DAEMON_IDLE_SHUTDOWN_S` (default 300s;
+  override with `--idle-timeout` or `MISHKAN_WATCHD_IDLE_TIMEOUT`, `0`/negative
+  disables), exits gracefully (unlinks the socket, cancels tasks). This catches
+  the orphan paths a `q`-quit can't — a TUI crash, `kill -9`, or an auto-start
+  whose TUI died before connecting. Multi-window-safe: it only counts down once
+  the *last* client is gone, and the startup-grace clock means a healthy
+  auto-started daemon (connected within ~1s) is never killed.
+
 - **Observability — mishkan-watch daemon lifecycle hardened.** Auto-start now
   *liveness-probes* the socket (connect-test) instead of checking the file
   exists, so a stale socket left by an unclean exit no longer blocks a fresh

@@ -9,6 +9,34 @@ Protocol is intentionally simple:
   - No versioning, no auth beyond filesystem 0600 perms on the socket.
   - Clients connect, optionally send {"op":"subscribe"} (the server
     treats every client as subscribed by default), and read.
+
+Idle-shutdown contract
+----------------------
+The daemon self-exits when no TUI client has been connected for
+``idle_timeout_s`` seconds (default 300 — 5 min).
+
+Lifecycle:
+  - ``_idle_since`` is set to the current monotonic clock at construction
+    time, providing a startup-grace period: a daemon that is auto-started
+    but never connected to will exit after the timeout rather than running
+    forever.
+  - ``_idle_since`` is cleared (set to ``None``) the moment a client
+    connects (``_handle`` adds it to ``self.clients``).
+  - ``_idle_since`` is reset to *now* whenever the active client count
+    drops back to zero — either via the normal ``_handle`` finally path
+    or via the dead-writer eviction in ``_broadcast_raw``.
+  - An ``_idle_watcher`` task (10 s tick) checks the condition. When idle
+    for more than ``idle_timeout_s`` it logs one line and invokes
+    ``_shutdown_cb()``, which is ``stop_event.set()`` wired from
+    ``__main__._run``; the normal SIGTERM teardown path then runs.
+
+To disable idle-shutdown entirely: pass ``idle_timeout_s=0`` (or any
+value <= 0). This is intended for power users running the daemon as a
+persistent background service (e.g. via systemd --user).
+
+Multi-window safety: as long as ANY client is connected ``len(self.clients) > 0``
+and the daemon never idle-exits; the countdown only begins after the LAST
+client disconnects.
 """
 from __future__ import annotations
 
@@ -16,10 +44,16 @@ import asyncio
 import json
 import os
 import socket
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+# Default idle-shutdown window in seconds.  Overridable via --idle-timeout
+# CLI arg or MISHKAN_WATCHD_IDLE_TIMEOUT env var.  Set to 0 or negative to
+# disable entirely.
+DAEMON_IDLE_SHUTDOWN_S: float = 300.0
 
 
 def _iso() -> str:
@@ -28,13 +62,26 @@ def _iso() -> str:
 
 
 class WatchdServer:
-    def __init__(self, socket_path: Path, state, heartbeat_s: float = 5.0) -> None:
+    def __init__(
+        self,
+        socket_path: Path,
+        state,
+        heartbeat_s: float = 5.0,
+        idle_timeout_s: float = DAEMON_IDLE_SHUTDOWN_S,
+        shutdown_cb: Callable[[], None] | None = None,
+    ) -> None:
         self.socket_path = socket_path
         self.state = state
         self.heartbeat_s = heartbeat_s
+        self.idle_timeout_s = idle_timeout_s
+        self._shutdown_cb = shutdown_cb
         self.clients: set[asyncio.StreamWriter] = set()
         self.lock = asyncio.Lock()
         self._heartbeat_task: asyncio.Task | None = None
+        self._idle_watcher_task: asyncio.Task | None = None
+        # Start the idle clock at construction time (startup-grace: a daemon
+        # that is auto-started but never connected to exits after the timeout).
+        self._idle_since: float | None = time.monotonic()
 
     @staticmethod
     def _socket_is_live(socket_path: Path) -> bool:
@@ -72,15 +119,18 @@ class WatchdServer:
         except OSError:
             pass
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+        if self.idle_timeout_s > 0:
+            self._idle_watcher_task = asyncio.create_task(self._idle_watcher_loop())
         return server
 
     async def stop(self) -> None:
-        if self._heartbeat_task:
-            self._heartbeat_task.cancel()
-            try:
-                await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
+        for task in (self._heartbeat_task, self._idle_watcher_task):
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
         for w in list(self.clients):
             try:
                 w.close()
@@ -107,6 +157,10 @@ class WatchdServer:
                     w.close()
                 except Exception:
                     pass
+            # If dead-writer eviction drained the last client, start the idle
+            # clock so the idle watcher can eventually shut the daemon down.
+            if dead and not self.clients:
+                self._idle_since = time.monotonic()
 
     async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         # On connect: send snapshot.
@@ -127,6 +181,8 @@ class WatchdServer:
 
         async with self.lock:
             self.clients.add(writer)
+            # A client is now connected — clear the idle clock.
+            self._idle_since = None
 
         # Drain incoming control frames (subscribe / filter), but the
         # daemon's policy is "every connected client is subscribed to all
@@ -142,10 +198,48 @@ class WatchdServer:
         finally:
             async with self.lock:
                 self.clients.discard(writer)
+                # If this was the last client, start the idle countdown.
+                if not self.clients:
+                    self._idle_since = time.monotonic()
             try:
                 writer.close()
             except Exception:
                 pass
+
+    async def _idle_watcher_loop(self) -> None:
+        """Periodically check whether the daemon has been client-free too long.
+
+        Tick every 10 s.  When no client has been connected for at least
+        ``idle_timeout_s`` seconds, log a single line and invoke the shutdown
+        callback (which sets the stop event in ``_run``, triggering the normal
+        SIGTERM teardown path).
+
+        The check is skipped when ``idle_timeout_s <= 0`` (disabled) — the
+        task is not even started in that case; this branch exists only as a
+        belt-and-suspenders guard.
+        """
+        _TICK = 10.0
+        try:
+            while True:
+                await asyncio.sleep(_TICK)
+                if self.idle_timeout_s <= 0:
+                    continue
+                async with self.lock:
+                    idle_since = self._idle_since
+                    n_clients = len(self.clients)
+                if n_clients > 0 or idle_since is None:
+                    continue
+                elapsed = time.monotonic() - idle_since
+                if elapsed >= self.idle_timeout_s:
+                    print(
+                        f"mishkan-watchd: no clients for {elapsed:.0f}s, shutting down",
+                        file=sys.stderr,
+                    )
+                    if self._shutdown_cb is not None:
+                        self._shutdown_cb()
+                    return
+        except asyncio.CancelledError:
+            return
 
     async def _heartbeat_loop(self) -> None:
         try:

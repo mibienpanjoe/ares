@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 from .lifecycle import install_systemd_user_unit
-from .server import WatchdServer
+from .server import DAEMON_IDLE_SHUTDOWN_S, WatchdServer
 from .state import HarnessState
 from .sources import (bus_tail, cognee_poll, graphify_tail, mcp_probe,
                        session_discover, session_tail, subagent_tail,
@@ -103,10 +103,21 @@ def _project_paths_provider(state: HarnessState):
     return _provider
 
 
-async def _run(log_dir: Path, projects_dir: Path, socket_path: Path) -> None:
+async def _run(
+    log_dir: Path,
+    projects_dir: Path,
+    socket_path: Path,
+    idle_timeout_s: float = DAEMON_IDLE_SHUTDOWN_S,
+) -> None:
     state = HarnessState()
     queue: asyncio.Queue = asyncio.Queue()
-    server = WatchdServer(socket_path, state)
+    stop = asyncio.Event()
+    server = WatchdServer(
+        socket_path,
+        state,
+        idle_timeout_s=idle_timeout_s,
+        shutdown_cb=stop.set,
+    )
     srv = await server.start()
 
     tasks = [
@@ -124,8 +135,6 @@ async def _run(log_dir: Path, projects_dir: Path, socket_path: Path) -> None:
         asyncio.create_task(subagent_tail.run(queue, _active_sessions_provider(state)),
                             name="subagent_tail"),
     ]
-
-    stop = asyncio.Event()
 
     def _stop_handler(*_):
         stop.set()
@@ -185,7 +194,7 @@ def _cmd_start(args: argparse.Namespace) -> int:
         return 0
     _write_pid()
     try:
-        asyncio.run(_run(args.log_dir, args.projects_dir, args.socket))
+        asyncio.run(_run(args.log_dir, args.projects_dir, args.socket, args.idle_timeout))
     except RuntimeError as e:
         # server.start() raises RuntimeError when a live daemon is detected
         # after the PID file was written (narrow race). Clean up and exit 0
@@ -285,8 +294,27 @@ def cli(argv: list[str] | None = None) -> int:
     p.add_argument("--projects-dir", type=Path, default=DEFAULT_PROJECTS_DIR,
                    help=f"Claude Code projects dir (default: {DEFAULT_PROJECTS_DIR})")
 
+    # Idle-shutdown default: CLI arg > env var > compiled constant.
+    _env_idle = os.environ.get("MISHKAN_WATCHD_IDLE_TIMEOUT", "")
+    try:
+        _default_idle: float = float(_env_idle) if _env_idle else DAEMON_IDLE_SHUTDOWN_S
+    except ValueError:
+        _default_idle = DAEMON_IDLE_SHUTDOWN_S
+
     sub = p.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("start", help="run the daemon in foreground")
+    start_p = sub.add_parser("start", help="run the daemon in foreground")
+    start_p.add_argument(
+        "--idle-timeout",
+        type=float,
+        default=_default_idle,
+        metavar="SECONDS",
+        dest="idle_timeout",
+        help=(
+            f"exit after SECONDS with no connected client "
+            f"(default: {_default_idle}; 0 or negative disables; "
+            f"env: MISHKAN_WATCHD_IDLE_TIMEOUT)"
+        ),
+    )
     sub.add_parser("stop", help="send SIGTERM to running daemon")
     sub.add_parser("status", help="connect and print snapshot")
     sub.add_parser("install-service", help="write a systemd --user unit")
