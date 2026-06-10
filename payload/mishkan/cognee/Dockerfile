@@ -32,7 +32,17 @@ RUN git clone https://github.com/topoteretes/cognee.git . \
  && git checkout "$COGNEE_MCP_REF"
 WORKDIR /app/cognee-mcp
 
-# MISHKAN overlay patch — cognee-mcp recall()/search() omit `user=` (upstream
+# MISHKAN overlay patch 1/2 — align cognee CORE to the pinned wrapper ref.
+# cognee-mcp pins the core LOOSELY against PyPI (>=1.0.0,<2.0.0), so uv sync
+# would install a different core version than the checked-out wrapper. That skew
+# is what makes the recall patch below collide with the core's own user= pass
+# ("authorized_search() got multiple values for keyword argument 'user'"). This
+# rewrites the core dep to a `@ file:///app` direct reference so uv builds the
+# core from the same checkout. Idempotent + fail-loud. Must run before uv sync.
+COPY --chown=cognee:cognee patches/cognee-mcp-core-align.py /app/_mishkan_core_align.py
+RUN python /app/_mishkan_core_align.py
+
+# MISHKAN overlay patch 2/2 — cognee-mcp recall()/search() omit `user=` (upstream
 # cognee issue #2855, unfixed through v1.1.2), which breaks the read/search path
 # with "'NoneType' object has no attribute 'id'". Apply to the checked-out
 # source before uv sync. Idempotent + fail-loud: the build fails if the anchor

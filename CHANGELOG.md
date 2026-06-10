@@ -53,6 +53,24 @@ All notable changes to MISHKAN are documented here. Format:
   recall fully. The wrapper remains unpatched on `main` as of this writing, so no
   upstream ref bump fixes it — the overlay is the durable fix until then.
 
+- **Cognee recall — second fix: align the core to the pinned wrapper.** The
+  recall patch above alone only moved the error forward (to
+  `authorized_search() got multiple values for keyword argument 'user'`). Root
+  cause: a **version skew** — the Dockerfile checks out the cognee-mcp *wrapper*
+  at `COGNEE_MCP_REF` (v1.1.0), but `cognee-mcp/pyproject.toml` pins the *core*
+  loosely against PyPI (`cognee[...]>=1.0.0,<2.0.0`), so `uv sync` installed a
+  *different* core whose `recall()` passes `user` both positionally and as a
+  keyword, colliding with the wrapper's injected `user=`. A second build-time
+  overlay (`payload/mishkan/cognee/patches/cognee-mcp-core-align.py`, idempotent
+  + fail-loud, applied before `uv sync`) rewrites the core dependency to a
+  `@ file:///app` direct reference so uv builds the core from the *same* v1.1.0
+  checkout — wrapper, core, and their deps all coherent. **Validated end-to-end
+  after rebuild:** single-dataset recall returns ingested content; the `NoneType`
+  and double-`user` errors are both gone. (The `GRAPH_COMPLETION` synthesis step
+  still depends on the configured LLM — a flaky free model can time out or
+  return the wrong schema there; that is a model-quality issue, not the recall
+  path.) Drop both overlays once cognee-mcp pins its core tightly upstream.
+
 ## [0.2.6] — 2026-06-09
 
 Observability hardening release. Live testing against a real multi-session,
