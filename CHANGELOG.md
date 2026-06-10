@@ -48,9 +48,10 @@ All notable changes to MISHKAN are documented here. Format:
   `delete()` / `list_datasets()` already do it. The patch is idempotent and
   fail-loud (the build fails if the anchor sites move on a `COGNEE_MCP_REF` bump),
   and should be dropped once a fixed cognee-mcp ref is pinned. Apply by rebuilding
-  the cognee image. Note: on a Neo4j backend with multiple datasets, a *second*
-  upstream path (`dataset = search_datasets[0] if len == 1 else None`) can still
-  surface — recall with a single explicit dataset name as the interim workaround.
+  the cognee image. Per the issue, the `dataset.id`-on-None is a *consequence* of
+  the missing user (not a separate multi-dataset bug), so passing `user=` fixes
+  recall fully. The wrapper remains unpatched on `main` as of this writing, so no
+  upstream ref bump fixes it — the overlay is the durable fix until then.
 
 ## [0.2.6] — 2026-06-09
 
