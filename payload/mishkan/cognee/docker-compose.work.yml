@@ -1,0 +1,145 @@
+# MISHKAN — per-project cognee work store (decision D-012).
+#
+# Each project gets its OWN physically-separate cognee-mcp instance with an
+# embedded Ladybug graph + LanceDB vector + SQLite relational store. Isolation
+# is by topology (separate container + separate named volume + separate on-disk
+# graph file), NOT by cognee's datasets= filter (D-012 §Why: filter is advisory-
+# only with ENABLE_BACKEND_ACCESS_CONTROL=false; see issue #1023).
+#
+# Reuses the already-patched mishkan/cognee-mcp image — DO NOT rebuild from a
+# host source checkout. The recall fix (cognee-mcp-recall-user.py + core-align)
+# is baked into that image. Ref: decision D-012, amendment 2026-06-10.
+#
+# REQUIRED env vars (caller must export or set in the shell):
+#   COGNEE_MCP_REF   — pinned image tag (same ref used to build the base image)
+#   WORK_PROJECT     — project slug (e.g. "wisemoney", "harness"); becomes part of
+#                      container_name, volume name, and compose project name
+#   WORK_PORT        — host port the MCP endpoint binds on (127.0.0.1 only)
+#
+# Bring-up (always with the hardening overlay):
+#   export WORK_PROJECT=<slug> WORK_PORT=<port> COGNEE_MCP_REF=<ref>
+#   docker compose \
+#     -f docker-compose.work.yml \
+#     -f docker-compose.hardening.yml \
+#     -p mishkan-work-${WORK_PROJECT} \
+#     up -d
+#
+# The ensure-work-store.sh script wraps this with port assignment, health-wait,
+# and idempotency — prefer that over calling compose directly.
+#
+# Ollama (embeddings): the cognee-mcp container joins the EXTERNAL network
+# mishkan-cognee_cognee_net (created by docker-compose.selfhosted.yml) so it can
+# reach mishkan-ollama for embedding inference. The shared Ollama is model data,
+# not project data — sharing it does not breach the isolation boundary. If Ollama
+# is not running, cognee will fall back to whatever LLM_PROVIDER / LLM_API_KEY
+# is set in .env (a cloud provider), or fail at cognify time with a clear error.
+#
+# GRAPH_DATABASE_URL: if .env carries a stale NEO4J bolt URI for the old shared
+# work store, it is harmless here: when GRAPH_DATABASE_PROVIDER=ladybug the
+# cognee graph engine factory selects the LadybugAdapter directly and never
+# reads GRAPH_DATABASE_URL. No explicit unset is required; the environment
+# override below ensures the correct provider is always used.
+#
+# Volume layout — the per-project named volume mounts at the Dockerfile-owned,
+# cognee-owned /app/cognee-mcp/.cognee_system (writable by uid 10001). cognee
+# auto-places the embedded stores under the data/system roots (graph_file_path
+# has no env binding in v1.1.0 — it derives from SYSTEM_ROOT_DIRECTORY):
+#   .../system/databases/   — Ladybug graph (auto-named cognee_graph_kuzu)
+#   .../data , .../system   — LanceDB tables + SQLite relational + system metadata
+# This whole tree is the physical isolation boundary — never shared across projects.
+#
+# Migdal compliance: pinned image (no :latest), 127.0.0.1-bound, resource limits,
+# healthcheck, hardening overlay re-applied on every recreate (see Dockerfile
+# comment in docker-compose.hardening.yml).
+
+name: mishkan-work-${WORK_PROJECT:?set WORK_PROJECT to a project slug}
+
+services:
+  cognee-mcp:
+    image: mishkan/cognee-mcp:${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
+    container_name: mishkan-work-${WORK_PROJECT:?set WORK_PROJECT to a project slug}
+    restart: unless-stopped
+
+    # .env supplies LLM/embedding credentials (SOPS-managed by the engineer).
+    # The environment: block below OVERRIDES any stale graph/vector/relational
+    # provider vars that may be present in .env from the old shared Neo4j stack.
+    env_file:
+      - .env
+
+    environment:
+      COGNEE_PORT: "7777"
+
+      # Embedded backends — no server processes. We pin the PROVIDERS explicitly
+      # (a future .env change cannot silently redirect to a shared Neo4j), but we
+      # do NOT set graph/vector/relational FILE paths: in cognee v1.1.0
+      # `graph_file_path` has no env binding (verified, graph/config.py) — it is
+      # auto-derived under SYSTEM_ROOT_DIRECTORY. cognee places every embedded
+      # store under the data/system roots below, so the roots are what bind the
+      # stores to the per-project volume.
+      GRAPH_DATABASE_PROVIDER: "ladybug"   # cognee v1.1.0 default; embedded, file-based
+      VECTOR_DB_PROVIDER: "lancedb"        # embedded, file-based
+      DB_PROVIDER: "sqlite"                # embedded, file-based
+
+      # Data/system roots MUST live under /app/cognee-mcp/.cognee_system — the path
+      # the Dockerfile pre-creates and chowns to the non-root cognee user (uid
+      # 10001). A fresh volume at an un-pre-created path (e.g. /app/data) is
+      # root-owned and cognee cannot write to it (the persistence/ownership
+      # constraint documented in .env.example).
+      DATA_ROOT_DIRECTORY: "/app/cognee-mcp/.cognee_system/data"
+      SYSTEM_ROOT_DIRECTORY: "/app/cognee-mcp/.cognee_system/system"
+
+      # Access control off (cognee's multi-user mode needs a per-dataset DB which
+      # these embedded backends don't provide — see D-012). Isolation is by
+      # topology: this container + its own volume, not the datasets= filter.
+      ENABLE_BACKEND_ACCESS_CONTROL: "false"
+
+    ports:
+      # Bound to loopback only. WORK_PORT is assigned by ensure-work-store.sh
+      # (deterministic: base 7800 + hash of slug, no conflict with 7777/7730).
+      - "127.0.0.1:${WORK_PORT:?set WORK_PORT to the desired host port}:7777"
+
+    volumes:
+      # Per-project named volume mounted at the Dockerfile-owned .cognee_system
+      # path (writable by the non-root cognee user). The compose project name
+      # (mishkan-work-<slug>) is prepended by Docker → mishkan-work-<slug>_work_data.
+      # This volume is the physical isolation boundary: each project's graph,
+      # vector, and relational files live here and are never visible to others.
+      - work_data:/app/cognee-mcp/.cognee_system
+
+    networks:
+      # Join the shared network so this container can reach mishkan-ollama for
+      # embedding inference. This network is created by docker-compose.selfhosted.yml
+      # (name: mishkan-cognee, network alias cognee_net → external name
+      # mishkan-cognee_cognee_net). If the selfhosted stack is not running, bring
+      # it up first or point the embedding config at a cloud provider via .env.
+      - cognee_shared_net
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',7777),2); s.close()"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+    deploy:
+      resources:
+        limits:
+          # Lighter than the Neo4j-backed store (no JVM): 1.5 CPU / 2 GB.
+          # Ladybug + LanceDB + SQLite are all in-process — no separate server
+          # processes sharing the cgroup. Raise if bulk cognify is slow.
+          cpus: "1.5"
+          memory: 2g
+
+volumes:
+  work_data:
+    # Unnamed here; Docker prefixes the compose project name automatically:
+    #   mishkan-work-<WORK_PROJECT>_work_data
+    # Each project therefore owns a distinct, unambiguously-named volume.
+
+networks:
+  cognee_shared_net:
+    # External: created by the selfhosted stack (mishkan-cognee project,
+    # network cognee_net). Join it to reach mishkan-ollama for embeddings.
+    # Do NOT re-declare subnet here — Docker will reject a conflicting config.
+    external: true
+    name: mishkan-cognee_cognee_net

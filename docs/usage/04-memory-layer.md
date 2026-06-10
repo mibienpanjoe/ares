@@ -37,6 +37,23 @@ The `claude_code_memory` dataset is the **per-client session memory**, created
 on demand by cognee-mcp when Claude Code connects. **It belongs in the work
 store and must never be pruned** (D-007 calls this out explicitly).
 
+### Per-project work stores (decision D-012)
+
+D-007 separated *work* from *curated*. **D-012** extends the same physical-
+separation principle one axis further: each project gets its **own** work store,
+not a shared dataset in one box. The trigger was a confidentiality bug — with
+`ENABLE_BACKEND_ACCESS_CONTROL=false` (required on Neo4j) cognee's `datasets=`
+filter is **advisory only**: it is silently ignored and search runs the whole
+graph, so a query scoped to one project returned another project's data (with a
+live API key among it). Verified against cognee v1.1.0 / issue #1023.
+
+The fix: each project runs its own lightweight cognee-mcp container with an
+**embedded Ladybug** graph (no Neo4j) and its own volume — `mishkan-work-<slug>`
+on its own port, provisioned by `ensure-work-store.sh` at `/mishkan-init`. The
+project's `.mcp.json` `cognee` alias points at *that* store. Isolation is by
+topology (container + volume + on-disk graph file), never the `datasets=` filter.
+The shared `:7777` Neo4j work box is retired in favour of these per-project stores.
+
 ## The data flow
 
 ```
@@ -97,25 +114,25 @@ So when an agent searches, it can target either store explicitly:
 MCP servers connect at **session start**. A fresh session is needed for
 `/mishkan-init`-written `.mcp.json` to take effect.
 
-## Datasets — the logical layer inside each store
+## Datasets — a label inside a store, NOT an isolation boundary
 
-Datasets are cognee's logical partitioning. In the work store, every project
-gets its own dataset (named after the project directory by convention). A
-typical work store after a few projects:
+Within a single store, `datasets` is cognee's logical *label* — by convention the
+project dir name (plus `claude_code_memory` for per-client session memory). It is
+**not a security boundary**: with access control off (the only mode that works on
+Neo4j), `datasets=[...]` on `cognee.search` is **advisory only** — cognee ignores
+it and searches the whole graph (verified, cognee v1.1.0 / issue #1023). Do not
+rely on it to keep one project's retrieval clean of another's.
 
-```
-datasets (work / cognee_db)
-├── aiobi-mail              (14 docs, project knowledge)
-├── claude_code_memory      (per-client session memory)
-└── <next-project>          (created on its first ingest)
-```
+Real isolation is **physical — separate stores**:
 
-In the curated store there is one dataset (`curated_library`) — the cross-project
-reference seed.
+- Curated is a separate store from work (**D-007**).
+- Each project is a separate work store from every other (**D-012** — per-project
+  embedded Ladybug containers).
 
-To query a specific dataset, pass `datasets=[...]` to `cognee.search`. This is
-the only way to keep retrieval *logically* clean within a store; the *physical*
-isolation between work and curated is by separate Neo4j containers.
+So with per-project stores, a project's `cognee` store contains only that
+project's data; the dataset label is cosmetic and a cross-project read is
+impossible by construction. The curated store holds one dataset
+(`curated_library`), the cross-project reference seed.
 
 ## Visualising the graph
 

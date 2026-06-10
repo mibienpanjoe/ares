@@ -9,14 +9,16 @@ graph persistence is deferred until it's up.
 New to Cognee setup? Run the **cognee-quickstart** skill first — it walks the
 Python env, provider keys, and backend choices.
 
-> ⚠️ **Project isolation (read before ingesting sensitive data).** The work store
-> currently holds **all projects in one shared Neo4j graph**. With
-> `ENABLE_BACKEND_ACCESS_CONTROL=false` (required on Neo4j), cognee's `datasets=`
-> filter is **advisory only** — search runs against the whole graph, so one
-> project can read another project's data (verified, cognee v1.1.0 / issue #1023).
-> Until per-project physical stores land (**ADR D-012**), treat `:7777` as a
-> **single trust domain**: no secrets, no PII, ingest opt-in + scrubbed only (see
-> `mishkan-ingest`). `datasets=` organises; it does **not** isolate.
+> ⚠️ **Project isolation.** Per **ADR D-012**, each project gets its **own**
+> physically-separate work store — a lightweight cognee-mcp container with an
+> embedded **Ladybug** graph + its own volume (`mishkan-work-<slug>`, own port),
+> provisioned by `ensure-work-store.sh` at `/mishkan-init`. Isolation is by
+> topology, **not** cognee's `datasets=` filter: with
+> `ENABLE_BACKEND_ACCESS_CONTROL=false` (required on Neo4j) that filter is
+> advisory-only and does **not** isolate (cognee v1.1.0 / issue #1023).
+> **Legacy / transition:** the old shared `:7777` Neo4j work box holds all
+> projects in one graph — treat it as a single trust domain (no secrets/PII,
+> scrubbed opt-in ingest) until each project is migrated to its own store.
 
 ## Bring it up
 

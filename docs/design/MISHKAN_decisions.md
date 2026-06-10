@@ -1084,10 +1084,23 @@ cross-tenant confidentiality failure (Phinehas: CRITICAL), not a latent weakness
 Ladybug.** `GRAPH_DATABASE_PROVIDER=ladybug` is cognee's *default* at v1.1.0 —
 `ladybug==0.16.0` is a core (non-optional) dependency with a fully-implemented
 adapter (`infrastructure/databases/graph/get_graph_engine.py`; the `kuzu` token
-aliases to the same `LadybugAdapter`). Each project = **one cognee-mcp (stdio, no
-container or port) with its own `GRAPH_FILE_PATH` directory** → physical isolation
-by filesystem path, no N×4g Neo4j memory floor, no reliance on the failed
-`datasets=` filter. The Neo4j-per-project fallback is **not needed**. Supply-chain:
+aliases to the same `LadybugAdapter`). Each project = **one cognee-mcp container
+(the already-patched `mishkan/cognee-mcp` image) on its own port + own volume, with
+`GRAPH_DATABASE_PROVIDER=ladybug` and a per-project `GRAPH_FILE_PATH`** → physical
+isolation by container + volume + on-disk graph file, no Neo4j (embedded), no N×4g
+memory floor, no reliance on the failed `datasets=` filter. The Neo4j-per-project
+fallback is **not needed**.
+
+*Implementation note — container, not stdio (2026-06-10).* Bezalel proposed
+evaluating a host **stdio** cognee-mcp (zero container) as the default. Evaluated and
+rejected: the recall fix (`cognee-mcp-recall-user.py` + `cognee-mcp-core-align.py`)
+lives only in the **built Docker image**, so a host checkout (`_src/cognee`, unpatched
++ core not version-aligned) would reintroduce the recall bug and require maintaining
+the patches in two places. The container path reuses the image where recall is
+*proven* working — physical isolation is identical (separate container + volume), the
+only loss vs stdio is one lightweight container per active project (no Neo4j, so far
+cheaper than today's shared Neo4j-backed store). Revisit stdio if/when cognee-mcp
+ships the #2855 fix upstream and the patches can be dropped. Supply-chain:
 Ladybug is a credible MIT fork of the Apple-archived Kuzu (founder ex-FB/Google),
 actively maintained (v0.17.1, Jun 2026), no known CVEs, version-pinned — acceptable
 for an embedded local store with no network exposure; **re-vet at 12 months** (watch

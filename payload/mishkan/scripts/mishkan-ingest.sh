@@ -12,7 +12,11 @@ set -euo pipefail
 TAGGED_ONLY=false
 DATASET="$(basename "$PWD")"
 PATHS=()
-CONTAINER="${COGNEE_CONTAINER:-mishkan-cognee-mcp}"
+# Per-project work store (ADR D-012): the default container is THIS project's own
+# store, mishkan-work-<slug> (provisioned by ensure-work-store.sh). Override with
+# COGNEE_CONTAINER=mishkan-cognee-mcp for a project still on the legacy shared store.
+_SLUG="$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//')"
+CONTAINER="${COGNEE_CONTAINER:-mishkan-work-${_SLUG}}"
 
 while [ $# -gt 0 ]; do
   case "$1" in

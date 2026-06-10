@@ -25,27 +25,38 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
    `/plan` first.
 7. **Jehoshaphat** (Sefer) — scaffold `docs/README.md`, `docs/adr/`,
    `docs/runbooks/` (stub runbooks per team). `/plan` first.
-8. **Automated** — Cognee setup (two physically-separate stores, decision D-007):
+8. **Automated** — Cognee setup (separate stores, decisions D-007 + D-012):
    - **Curated box (global singleton):** run
-     `bash ~/.claude/mishkan/scripts/ensure-curated-box.sh`. It is idempotent —
+     `bash ~/.claude/mishkan/scripts/ensure-curated-box.sh`. Idempotent —
      creates `curated_db`, brings up the curated box (`mishkan-curated-*` on :7730),
-     and seeds the reference library only if empty. Never reseeds a populated box.
-   - **Work store (per-project):** **never bulk-ingest** the `docs/` tree —
-     memory is opt-in. Use `mishkan-ingest` (the skill) which selects docs
-     either (a) by `mishkan: ingest` YAML frontmatter tag, or (b) explicit
-     paths. The skill runs `add → cognify → memify` in one shot, throttled
-     and on persistent storage. Tag docs you want in project memory; everything
-     else stays out of the graph (no PII bleed, no oversized-doc embedding
-     failures). At init, run `mishkan-ingest.sh --tagged-only` so anything
-     already tagged enters memory; the rest is added per-doc as you go.
-   If the work stack is not running (`~/.claude/mishkan/cognee/`), skip both
+     seeds the reference library only if empty. Never reseeds a populated box.
+   - **Work store (per-project, ADR D-012):** each project gets its OWN
+     physically-isolated work store (embedded Ladybug; own container + volume +
+     port — never the shared `:7777`). Provision it and capture the port:
+     ```bash
+     WORK_PORT=$(bash ~/.claude/mishkan/scripts/ensure-work-store.sh)
+     ```
+     (slug defaults to the project dir name). The printed port is substituted into
+     `.mcp.json` in step 9. Isolation rides on this container/volume, not `datasets=`.
+   - **Ingest (opt-in, never bulk):** then
+     `bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only` adds anything
+     already tagged `mishkan: ingest` into THIS project's store; the rest is added
+     per-doc as you go. The skill runs `add → cognify → memify`, throttled, on the
+     per-project volume. Never bulk-ingest the tree, and scrub secrets/PII before
+     ingest (see the `mishkan-ingest` skill's security section).
+   If the cognee stack is not running (`~/.claude/mishkan/cognee/`), skip
    gracefully and note it — agents still work; persistence resumes when it's up.
 9. **Automated** — write `./CLAUDE.md` from
    `~/.claude/mishkan/templates/project-CLAUDE.md`, fill placeholders, set Sprint
    S0. Copy `~/.claude/mishkan/templates/settings.json` → `.claude/settings.json`,
    the team rules from `~/.claude/mishkan/rules/*` → `.claude/rules/*` for
-   path-scoped loading, and `~/.claude/mishkan/templates/mcp.json` → `./.mcp.json`
-   so agents can reach the Cognee knowledge-graph MCP.
+   path-scoped loading, and **render** `~/.claude/mishkan/templates/mcp.json` →
+   `./.mcp.json`, substituting `__MISHKAN_WORK_PORT__` with the work-store port
+   captured in step 8 so the `cognee` MCP points at THIS project's own store:
+   ```bash
+   sed "s/__MISHKAN_WORK_PORT__/${WORK_PORT}/" \
+     ~/.claude/mishkan/templates/mcp.json > ./.mcp.json
+   ```
 10. **Automated — Graphify code graph** (the third store of the knowledge stack,
     per D-008): if `graphify` is on PATH (`uv tool install graphifyy` provides
     it), run an initial scan so the project has a structure graph from Sprint
@@ -69,8 +80,8 @@ docs/{PRD,SRS,CONTRACT,ARCHITECTURE,THREAT_MODEL,README}.md
 docs/adr/  docs/runbooks/  docs/diagrams/C4/
 ./CLAUDE.md  (sprint S0)
 .claude/settings.json  .claude/rules/{common,frontend,backend,infrastructure,documentation}/
-.mcp.json  (cognee = work store, cognee-curated = reference)
-Cognee: curated box ensured (:7730) + this project's dataset seeded in work (:7777)
+.mcp.json  (cognee = this project's OWN per-project work store, cognee-curated = shared reference)
+Cognee: curated box ensured (:7730) + this project's per-project work store provisioned (own port) + tagged docs ingested
 ```
 
 ## Constraints
