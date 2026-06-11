@@ -96,7 +96,11 @@ Each phase, in words:
 - **`cognify`** is the LLM-heavy step. It chunks each document, calls the LLM
   to extract entities and relationships as structured output (instructor mode),
   embeds chunks + entities, and writes to Neo4j + pgvector. This is the step
-  that costs LLM tokens and runs into rate caps.
+  that costs LLM tokens and runs into rate caps. `mishkan-ingest` also hands
+  cognify the **MISHKAN ontology** (`ontology.ttl`, the machine form of
+  `ontology.md` — ADR D-013): entities whose extracted type matches a schema
+  class are validated (`ontology_valid: true`) and enriched with parent-class /
+  object-property edges. It fails open — a missing ontology ingests unconstrained.
 - **`memify`** is the enrichment step that runs **after** cognify. The default
   enrichment embeds the **edge / triplet** layer into the vector store
   (`EdgeType_relationship_name` and `graph_relationship_ledger` tables in

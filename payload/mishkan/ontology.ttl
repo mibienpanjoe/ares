@@ -1,0 +1,188 @@
+# MISHKAN — Cognee Graph Ontology (machine form of ontology.md).
+#
+# Turtle/OWL. Attached to cognee.cognify() at ingest time (ADR D-013) so entities
+# the extraction surfaces that match these classes are validated (ontology_valid=
+# true) and enriched with parent-class / object-property edges. The canonical,
+# human-readable source of truth is ontology.md; this file mirrors it 1:1. Keep
+# them in sync — every entity/edge in ontology.md must appear here.
+#
+# Locked v1 (May 2026). Amend with a dated entry in ontology.md, then mirror here.
+
+@prefix mishkan: <https://mishkan.dev/ontology#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+mishkan: a owl:Ontology ;
+    rdfs:label "MISHKAN Cognee Graph Ontology" ;
+    owl:versionInfo "v1 — machine form of ontology.md, attached at cognify (D-013)" .
+
+####################################################################
+## Entity types (nodes) — mirror the entity table in ontology.md  ##
+####################################################################
+
+mishkan:Agent a owl:Class ;
+    rdfs:label "Agent" ;
+    rdfs:comment "One of the 45 MISHKAN agents." .
+
+mishkan:Team a owl:Class ;
+    rdfs:label "Team" ;
+    rdfs:comment "One of the six teams." .
+
+mishkan:Project a owl:Class ;
+    rdfs:label "Project" ;
+    rdfs:comment "A repo MISHKAN was initialised on." .
+
+mishkan:Sprint a owl:Class ;
+    rdfs:label "Sprint" ;
+    rdfs:comment "A delivery cycle within a project." .
+
+mishkan:Task a owl:Class ;
+    rdfs:label "Task" ;
+    rdfs:comment "A scoped unit of work." .
+
+mishkan:Decision a owl:Class ;
+    rdfs:label "Decision" ;
+    rdfs:comment "An architectural or scope decision." .
+
+mishkan:ResearchOutput a owl:Class ;
+    rdfs:label "ResearchOutput" ;
+    rdfs:comment "A resolved research-pipeline result." .
+
+mishkan:CaseNode a owl:Class ;
+    rdfs:label "CaseNode" ;
+    rdfs:comment "A problem solved using a curated resource." .
+
+mishkan:CuratedResource a owl:Class ;
+    rdfs:label "CuratedResource" ;
+    rdfs:comment "A vetted professional reference." .
+
+mishkan:Incident a owl:Class ;
+    rdfs:label "Incident" ;
+    rdfs:comment "A documented failure and recovery." .
+
+mishkan:ADR a owl:Class ;
+    rdfs:label "ADR" ;
+    rdfs:comment "Architecture Decision Record." .
+
+mishkan:RunbookProcedure a owl:Class ;
+    rdfs:label "RunbookProcedure" ;
+    rdfs:comment "An operational procedure." .
+
+mishkan:SecurityFinding a owl:Class ;
+    rdfs:label "SecurityFinding" ;
+    rdfs:comment "A finding from Mishmar (security)." .
+
+mishkan:CuratedLibraryHit a owl:Class ;
+    rdfs:label "CuratedLibraryHit" ;
+    rdfs:comment "Telemetry: a curated resource was used." .
+
+####################################################################
+## Relationship types (edges) — mirror the edge table in ontology.md
+## Multi-class domains/ranges use owl:unionOf (RDF semantics: a bare
+## repeated rdfs:domain is intersection, which would be wrong here).
+####################################################################
+
+mishkan:member-of a owl:ObjectProperty ;
+    rdfs:label "member-of" ;
+    rdfs:comment "Agent belongs to team." ;
+    rdfs:domain mishkan:Agent ;
+    rdfs:range  mishkan:Team .
+
+mishkan:leads a owl:ObjectProperty ;
+    rdfs:label "leads" ;
+    rdfs:comment "Agent is the team lead." ;
+    rdfs:domain mishkan:Agent ;
+    rdfs:range  mishkan:Team .
+
+mishkan:assigned-to a owl:ObjectProperty ;
+    rdfs:label "assigned-to" ;
+    rdfs:comment "Who owns the task." ;
+    rdfs:domain mishkan:Task ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:Agent mishkan:Team ) ] .
+
+mishkan:part-of a owl:ObjectProperty ;
+    rdfs:label "part-of" ;
+    rdfs:comment "Hierarchy: Task in Sprint, Sprint in Project." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:Task mishkan:Sprint ) ] ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:Sprint mishkan:Project ) ] .
+
+mishkan:applies-to a owl:ObjectProperty ;
+    rdfs:label "applies-to" ;
+    rdfs:comment "Curated resource is relevant to a task / problem class." ;
+    rdfs:domain mishkan:CuratedResource ;
+    rdfs:range  mishkan:Task .
+
+mishkan:supersedes a owl:ObjectProperty ;
+    rdfs:label "supersedes" ;
+    rdfs:comment "Replaces a prior ADR / Decision / doc." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:ADR mishkan:Decision ) ] ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:ADR mishkan:Decision ) ] .
+
+mishkan:validated-by a owl:ObjectProperty ;
+    rdfs:label "validated-by" ;
+    rdfs:comment "Evidence backing a decision." ;
+    rdfs:domain mishkan:Decision ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:ResearchOutput mishkan:CaseNode ) ] .
+
+mishkan:blocks a owl:ObjectProperty ;
+    rdfs:label "blocks" ;
+    rdfs:comment "Dependency / gate." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:Task mishkan:SecurityFinding ) ] ;
+    rdfs:range  mishkan:Task .
+
+mishkan:derives-from a owl:ObjectProperty ;
+    rdfs:label "derives-from" ;
+    rdfs:comment "Provenance: Decision from ResearchOutput, ADR from Decision." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:Decision mishkan:ADR ) ] ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:ResearchOutput mishkan:Decision ) ] .
+
+mishkan:escalated-to a owl:ObjectProperty ;
+    rdfs:label "escalated-to" ;
+    rdfs:comment "Who a task / decision was escalated to." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:Task mishkan:Decision ) ] ;
+    rdfs:range  mishkan:Agent .
+
+mishkan:written-by a owl:ObjectProperty ;
+    rdfs:label "written-by" ;
+    rdfs:comment "Authorship." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:ResearchOutput mishkan:Decision mishkan:CaseNode ) ] ;
+    rdfs:range  mishkan:Agent .
+
+mishkan:references a owl:ObjectProperty ;
+    rdfs:label "references" ;
+    rdfs:comment "Loose citation link (any node to any node)." .
+
+mishkan:mitigates a owl:ObjectProperty ;
+    rdfs:label "mitigates" ;
+    rdfs:comment "What addresses a risk." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:Decision mishkan:Task ) ] ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:SecurityFinding mishkan:Incident ) ] .
+
+mishkan:resolved-by a owl:ObjectProperty ;
+    rdfs:label "resolved-by" ;
+    rdfs:comment "Closure link." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:Incident mishkan:SecurityFinding ) ] ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:Task mishkan:Decision ) ] .
+
+mishkan:uses a owl:ObjectProperty ;
+    rdfs:label "uses" ;
+    rdfs:comment "Which curated resource solved the case." ;
+    rdfs:domain mishkan:CaseNode ;
+    rdfs:range  mishkan:CuratedResource .
+
+mishkan:documents a owl:ObjectProperty ;
+    rdfs:label "documents" ;
+    rdfs:comment "Doc covers this decision / incident / task." ;
+    rdfs:domain [ a owl:Class ; owl:unionOf ( mishkan:ADR mishkan:RunbookProcedure ) ] ;
+    rdfs:range  [ a owl:Class ; owl:unionOf ( mishkan:Decision mishkan:Incident mishkan:Task ) ] .
+
+####################################################################
+## Universal property — blast-radius tagging (ontology.md §Blast-radius)
+####################################################################
+
+mishkan:blast_radius a owl:DatatypeProperty ;
+    rdfs:label "blast_radius" ;
+    rdfs:comment "Promotion scope of a node: team-level | cross-harness. (agent-private knowledge stays in MEMORY.md and never reaches the graph.)" ;
+    rdfs:range xsd:string .

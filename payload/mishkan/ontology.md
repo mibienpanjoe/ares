@@ -7,6 +7,12 @@ nothing is pre-seeded except the curated library (Phase 8).
 This ontology is versioned in `harness/` so changes are reviewable. Schema drift
 is expected; amend with a dated entry rather than rewriting silently.
 
+This file is the **canonical, human-readable source of truth**. Its machine form is
+`ontology.ttl` (Turtle/OWL), which `mishkan-ingest` attaches to `cognee.cognify` so
+ingested docs are validated against this schema (`ontology_valid=true` on matches) —
+see **ADR D-013**. The two must stay 1:1: every entity/edge added here must be
+mirrored in `ontology.ttl`.
+
 ---
 
 ## Entity types (nodes)

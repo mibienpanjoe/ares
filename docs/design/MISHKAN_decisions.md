@@ -1168,4 +1168,50 @@ vet + Y4NN ratification.
 
 ---
 
+## D-013 — Attach the MISHKAN ontology to ingested documentation (added 2026-06-11)
+
+**Status:** accepted · **Drivers:** Y4NN · **Authors:** drafted by the harness, ratify with Nathan + Bezalel.
+
+**Context.** `mishkan-ingest` ran `cognee.cognify(datasets=[…])` with **no ontology** — the live
+log says *"No ontology file provided. No owl ontology will be attached to the graph. [OntologyAdapter]"*,
+and ingested nodes carry `ontology_valid: false`. The harness already defines a schema in
+`payload/mishkan/ontology.md` (14 entity types, 16 edges, `blast_radius`), but it was a **markdown
+convention for agent-authored nodes** (`cognee-promote`, `context-compress`, Baruch) — never a
+machine ontology fed to cognify. So ingested documentation was graphed by unconstrained LLM
+extraction, with no link to the MISHKAN type system.
+
+**Decision.** Ship a machine ontology and attach it at every `mishkan-ingest` cognify.
+- `payload/mishkan/ontology.ttl` — **Turtle/OWL**, the 1:1 machine mirror of `ontology.md` (14
+  `owl:Class`, 16 `owl:ObjectProperty` with `rdfs:domain`/`range` via `owl:unionOf`, `blast_radius`
+  as `owl:DatatypeProperty`). Turtle over RDF/XML for reviewability; hand-authored because the schema
+  is "locked v1." `ontology.md` stays the canonical human source; `ontology.ttl` is its machine form.
+- `mishkan-ingest.sh` stages `ontology.ttl` into the container and passes its path to cognify
+  (`ontology_file_path`, the documented cognee v1.1.0 knob — RDFLibOntologyResolver). **Fail-open:**
+  absent ontology → ingest still runs ontology-free.
+- ONE shared ontology for all projects (the MISHKAN schema is global), even though work stores are
+  per-project (D-012).
+
+**Caveat (sets expectations).** cognee's resolver marks `ontology_valid=true` and adds parent/object-
+property edges **only where the LLM-extracted entity *type names* match ontology class names**. The
+default `KnowledgeGraph` extraction assigns free-form types; it will not emit `Decision` /
+`ResearchOutput` / `Incident` unless steered. So this pass gives **validation + enrichment of matches**,
+not full retyping of prose into MISHKAN classes. Forcing the taxonomy (custom prompt / graph_model)
+is a **Phase 2**, opened only if Phase-1 `ontology_valid` coverage proves too thin.
+
+**Alternatives considered.** (1) *markdown→ttl generator* — rejected for now: a locked v1 schema does
+not justify the build step (revisit if it starts churning). (2) *RDF/XML* — rejected: far less
+reviewable than Turtle for a hand-authored, versioned artifact.
+
+**Consequences.** *Positive:* ingested docs are linked to the type system where they match; the
+`CuratedResource`/`CaseNode`/etc. classes become real, queryable types; sets up the D-014 research→
+curated feed. *Negative:* a second artifact (`ontology.ttl`) to keep in sync with `ontology.md`
+(guarded by a label-coverage check); ontology benefit is partial until Phase-2 extraction steering.
+
+**Refs / open:** extends **D-008** (knowledge surfaces) and rides on **D-012** (per-project store).
+The exact cognify knob (`ontology_file_path` kwarg vs `config`/env in the installed image) is
+confirmed by one read-only grep of the cognee package before the verification re-ingest. Out of
+scope: agent-write paths (already convention-bound) and back-filling existing graphs.
+
+---
+
 *Decisions locked May 2026. Revisit only with a dated amendment below.*

@@ -18,6 +18,12 @@ PATHS=()
 _SLUG="$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//')"
 CONTAINER="${COGNEE_CONTAINER:-mishkan-work-${_SLUG}}"
 
+# Ontology (ADR D-013): the machine form of ontology.md, attached to cognify so
+# entities the extraction surfaces that match the MISHKAN schema are validated
+# (ontology_valid=true) and enriched with parent-class / object-property edges.
+# Installed location by default; override with MISHKAN_ONTOLOGY. Fail-open if absent.
+ONTOLOGY_TTL="${MISHKAN_ONTOLOGY:-${HOME}/.claude/mishkan/ontology.ttl}"
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --tagged-only) TAGGED_ONLY=true; shift ;;
@@ -75,11 +81,26 @@ for f in "${FILES[@]}"; do
   docker cp "$f" "${CONTAINER}:/home/cognee/ingest_buf/$(basename "$f")"
 done
 
+# Stage the ontology (D-013) into the container if present; fail-open to an
+# ontology-free ingest otherwise. chmod 0644 so the non-root container user can
+# read it (docker cp preserves host uid/mode — same trap as the runner script).
+ONTOLOGY_IN_CONTAINER=""
+if [ -f "$ONTOLOGY_TTL" ]; then
+  docker cp "$ONTOLOGY_TTL" "${CONTAINER}:/home/cognee/ontology.ttl"
+  docker exec "$CONTAINER" sh -c 'chmod 0644 /home/cognee/ontology.ttl' 2>/dev/null || true
+  ONTOLOGY_IN_CONTAINER="/home/cognee/ontology.ttl"
+  echo "attaching ontology: ${ONTOLOGY_TTL} -> /home/cognee/ontology.ttl" >&2
+else
+  echo "no ontology.ttl at ${ONTOLOGY_TTL} — ingesting ontology-free" >&2
+fi
+
 PY_SCRIPT="$(mktemp)"
 cat > "$PY_SCRIPT" <<'PY'
 import asyncio, glob, sys, cognee
 
 DATASET = sys.argv[1]
+# ontology_file_path (D-013): empty -> attach nothing (ontology-free ingest).
+ONTOLOGY = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else ""
 FILES = sorted(glob.glob("/home/cognee/ingest_buf/*"))
 
 # cognify()/memify() return {dataset_id: PipelineRunInfo} (cognee v1.1.0, the ref
@@ -115,7 +136,15 @@ async def m():
     print(f">> added {len(FILES)} file(s) -> {DATASET}", flush=True)
 
     bad = []
-    bad += failures(await cognee.cognify(datasets=[DATASET]), "cognify")
+    # Attach the MISHKAN ontology when provided (D-013). v1.1.0 honors
+    # ontology_file_path; if the installed image routes it via config/env instead,
+    # this kwarg lands in **kwargs harmlessly — confirm the knob (grep the cognee
+    # pkg for ontology_file_path) before relying on the ontology_valid flip.
+    cognify_kwargs = {"datasets": [DATASET]}
+    if ONTOLOGY:
+        cognify_kwargs["ontology_file_path"] = ONTOLOGY
+    print(f">> ontology_file_path={ONTOLOGY or '(none)'}", flush=True)
+    bad += failures(await cognee.cognify(**cognify_kwargs), "cognify")
     print(">> cognified", flush=True)
     bad += failures(await cognee.memify(dataset=DATASET), "memify")
     print(">> memified", flush=True)
@@ -135,4 +164,4 @@ PY
 chmod 0644 "$PY_SCRIPT"
 docker cp "$PY_SCRIPT" "${CONTAINER}:/home/cognee/_mishkan_ingest.py"
 rm -f "$PY_SCRIPT"
-docker exec -i -w /app/cognee-mcp "$CONTAINER" uv run python -u /home/cognee/_mishkan_ingest.py "$DATASET"
+docker exec -i -w /app/cognee-mcp "$CONTAINER" uv run python -u /home/cognee/_mishkan_ingest.py "$DATASET" "$ONTOLOGY_IN_CONTAINER"
