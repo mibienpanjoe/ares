@@ -779,11 +779,13 @@ async function install() {
   // questions (D-008/D-012) — name each one plainly here, then the two bring-up
   // steps. The wizard + ACCESS.txt carry the full URL/cred detail.
   console.log();
-  console.log("   " + c.bold(c.cyan("▸ Knowledge")) + c.dim("   three stores, three jobs — optional, opt-in"));
+  console.log("   " + c.bold(c.cyan("▸ Knowledge")) + c.dim("   three cognee stores + your code graph — optional, opt-in"));
   console.log("       " + "memory".padEnd(9)  + c.cyan(":7777") + c.dim("   what you learn across your sessions — kept and shared"));
   console.log("       " + "curated".padEnd(9) + c.cyan(":7730") + c.dim("   a reference library you mostly read from"));
   console.log("       " + "work".padEnd(9)    + "     "          + c.dim("this project's private notes — never shared with other"));
   console.log(c.dim("                     projects; created the first time you run /mishkan-init"));
+  console.log("       " + "graphify".padEnd(9) + "     "         + c.dim("this project's code structure — a separate CLI, no server"));
+  console.log(c.dim("                     (refresh with `mishkan code-graph scan`)"));
   console.log();
   console.log(c.dim("       Bring memory + curated up:"));
   console.log(c.dim("         1. ") + `${m} configure-knowledge` + c.dim("   → writes .env + ACCESS.txt"));
