@@ -210,6 +210,12 @@ Only what you want to look at. The MCP itself doesn't need a tunnel — the
 agent runs on the host where cognee is, and the cognee MCP listens on
 `127.0.0.1` already.
 
+**Per-project work stores have no web UI to tunnel.** They use an embedded
+Ladybug graph (a file, no server) — there is no Graph Explorer or Neo4j browser
+for them. The ports above are the shared **`cognee-memory`** (`:77xx`) and
+**`cognee-curated`** (`:773x`) UIs only. To inspect a project's own graph, use
+cognee's static-HTML `visualize_graph("./graph.html")` export on the host.
+
 ## What gets written when, and what to back up
 
 | Layer | Where | Persistence | Back up? |

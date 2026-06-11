@@ -137,6 +137,29 @@ docker run --rm -u 0 -v mishkan-cognee_cognee_data:/v busybox \
 docker compose ... up -d --force-recreate cognee-mcp
 ```
 
+## Per-project work store (Ladybug) — reset or stuck pipeline
+
+The cognify / lock / Postgres fixes above target the shared **`cognee-memory`**
+box (`mishkan-cognee-*`, Postgres-backed). **Per-project work stores (ADR D-012)
+are different:** each is a `mishkan-work-<slug>` container with an embedded
+Ladybug graph + SQLite + LanceDB — no Postgres, no shared graph. So:
+
+- The Postgres `DATASET_PROCESSING_STARTED` lock fix does **not** apply — a stuck
+  per-project pipeline lives in that store's own SQLite, inside its own volume.
+- To **reset** a project's work store cleanly (it is re-derivable from tagged
+  docs), tear it down, drop its volume, re-provision, and re-ingest:
+
+```bash
+cd ~/theY4NN/<project>
+docker compose -p mishkan-work-<slug> \
+  -f ~/.claude/mishkan/cognee/docker-compose.work.yml down -v    # -v drops the volume
+WORK_PORT=$(~/.claude/mishkan/scripts/ensure-work-store.sh)      # re-provision (fresh graph)
+bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only   # re-ingest
+```
+
+Never do this to `cognee-memory` (`:7777`) — `claude_code_memory` is **not**
+re-derivable (D-012).
+
 ## Curated library is showing inside the work UI
 
 **Symptom** — the Cognee UI at `:7724` (work backend) shows `CuratedResource`
