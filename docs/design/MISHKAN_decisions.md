@@ -1117,6 +1117,13 @@ the backend behind each differs):
   is one continuous thing across all work and is **not re-derivable** from docs, so
   it stays a shared pillar rather than fragmenting per project. (Session memory is
   cross-project by nature; it must be kept scrubbed of project secrets/PII.)
+  *Mechanism (verified, cognee v1.1.0):* two distinct layers — the **session
+  conversational cache** (env `CACHING`) and the **`claude_code_memory` graph
+  dataset** (env `COGNEE_MCP_AGENT_SCOPED`). Per-project stores set `CACHING=false`
+  so the session cache accumulates only in `cognee-memory`; `CACHING=false` disables
+  only that cache (not embedding/LLM/query caching, recall/cognify unaffected). The
+  permanent `claude_code_memory` dataset is independent of `CACHING` — it is kept
+  central by routing `remember()`/memory writes to the `cognee-memory` alias.
 - **`cognee-curated`** → the shared reference library (`:7730`, D-007).
 
 Isolation rides on the per-project `cognee` instance; the dataset name becomes

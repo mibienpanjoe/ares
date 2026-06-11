@@ -93,6 +93,17 @@ services:
       # topology: this container + its own volume, not the datasets= filter.
       ENABLE_BACKEND_ACCESS_CONTROL: "false"
 
+      # Session memory OFF on per-project stores so the conversational session
+      # cache accumulates ONLY in the shared `cognee-memory` instance (:7777),
+      # not fragmented per project. Verified (cognee v1.1.0): CACHING controls
+      # the single `caching` field (cache/config.py:26) and disables ONLY the
+      # session/conversational cache (+ auto_feedback, off by default) — it does
+      # NOT disable embedding/LLM/query caching, and recall/cognify/search keep
+      # working (get_cache_engine.py:46; retrievers' no-session completion path).
+      # NB: the permanent `claude_code_memory` graph dataset is governed by
+      # COGNEE_MCP_AGENT_SCOPED, NOT CACHING — it is unaffected here.
+      CACHING: "false"
+
     ports:
       # Bound to loopback only. WORK_PORT is assigned by ensure-work-store.sh
       # (deterministic: base 7800 + hash of slug, no conflict with 7777/7730).
