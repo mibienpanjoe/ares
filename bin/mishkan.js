@@ -556,11 +556,10 @@ regenerated; previous .env is backed up to .env.bak.
 
 function installObservabilityStack() {
   console.log();
-  console.log(c.bold(c.cyan("Observability stack")));
+  console.log("   " + c.bold(c.cyan("▸ Observability")) + c.dim("   live cross-session daemon + TUI"));
   console.log(c.dim(
-    "  Optional cross-session daemon + TUI client that aggregates the event\n" +
-    "  bus into a live snapshot. Read docs/design/MISHKAN_observability.md.\n" +
-    "  Requires `uv` (https://astral.sh/uv) and Python 3.11+."));
+    "       Aggregates the harness event bus into a live snapshot you can watch.\n" +
+    "       Needs `uv` (https://astral.sh/uv) + Python 3.11+ · docs/design/MISHKAN_observability.md."));
 
   if (!commandExists("uv")) {
     console.log(c.yellow("  uv not found — skipping observability install."));
@@ -590,13 +589,33 @@ function installObservabilityStack() {
                        { stdio: "inherit" });
   if (r2.status !== 0) { warn("mishkan-watch install failed"); return { installed: false, reason: "install-failed" }; }
 
-  console.log(c.green("  ✓ observability stack installed"));
+  console.log("   " + c.green("✓ observability installed") + c.dim("   ·   1 executable: mishkan-watch"));
   console.log(c.dim(
-    "  Open the TUI:        " + c.bold("mishkan-watch") + "  (auto-starts the daemon if needed)\n" +
-    "  Two-terminal mode:   --no-autostart on the TUI; run `mishkan-watchd start` first\n" +
-    "  Stop the daemon:     mishkan-watchd stop\n" +
-    "  Auto-start at login: mishkan-watchd install-service"));
+    "       Open the TUI       mishkan-watch   (auto-starts the daemon)\n" +
+    "       Two-terminal       mishkan-watchd start, then  mishkan-watch --no-autostart\n" +
+    "       Stop the daemon    mishkan-watchd stop\n" +
+    "       Start at login     mishkan-watchd install-service"));
   return { installed: true };
+}
+
+// ─── post-install sign-off ───────────────────────────────────────────────────
+// The wordmark + a short, builder-to-builder note. ASCII art (ANSI Shadow); the
+// block glyphs are plain Unicode and render uncolored under NO_COLOR.
+const WORDMARK = [
+  "███╗   ███╗██╗███████╗██╗  ██╗██╗  ██╗ █████╗ ███╗   ██╗",
+  "████╗ ████║██║██╔════╝██║  ██║██║ ██╔╝██╔══██╗████╗  ██║",
+  "██╔████╔██║██║███████╗███████║█████╔╝ ███████║██╔██╗ ██║",
+  "██║╚██╔╝██║██║╚════██║██╔══██║██╔═██╗ ██╔══██║██║╚██╗██║",
+  "██║ ╚═╝ ██║██║███████║██║  ██║██║  ██╗██║  ██║██║ ╚████║",
+  "╚═╝     ╚═╝╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝",
+];
+
+function printBanner(version) {
+  console.log();
+  for (const line of WORDMARK) console.log("   " + c.cyan(line));
+  console.log();
+  console.log("   " + c.bold("מִשְׁכָּן") + c.dim("  ·  a dwelling place for your engineering work"));
+  console.log("   " + c.dim(`v${version}  ·  45 agents · 6 teams · research pipeline · knowledge graph`));
 }
 
 async function install() {
@@ -722,53 +741,56 @@ async function install() {
   }
   const pathHasLocalBin = (process.env.PATH || "").split(":").includes(localBin);
 
-  console.log();
-  console.log(c.green(`✓ MISHKAN v${version} installed.`));
-  if (directAccess === "linked" && pathHasLocalBin) {
-    console.log(c.dim(
-      "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
-      "\n" +
-      "  Commands available directly on your PATH (no `npx` needed):\n" +
-      "    mishkan configure-knowledge   wizard: LLM provider + cognee secrets\n" +
-      "    mishkan code-graph status     inspect the project's Graphify graph\n" +
-      "    mishkan org                   print the 45-agent reference\n" +
-      "    mishkan status                show install state\n" +
-      "    mishkan-watch                 live observability TUI (auto-starts daemon)"));
-  } else if (directAccess === "linked") {
-    console.log(c.dim(
-      "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
-      "\n" +
-      `  Symlinked ${tilde(linkPath)} — add it to PATH for direct access:\n` +
-      `    echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc  # or ~/.zshrc\n` +
-      "  Until then, use `npx mishkan-harness <subcommand>`."));
-  } else {
-    console.log(c.dim(
-      "  Run a Claude session and talk to Nehemiah, or /mishkan-init in a project.\n" +
-      "\n" +
-      "  Day-to-day commands (via `npx mishkan-harness …`):\n" +
-      "    npx mishkan-harness configure-knowledge   wizard: LLM provider + cognee secrets\n" +
-      "    npx mishkan-harness code-graph status     inspect the project's Graphify graph\n" +
-      "    npx mishkan-harness org                   print the 45-agent reference\n" +
-      "    mishkan-watch                             live observability TUI (auto-starts daemon)\n" +
-      "\n" +
-      "  Want direct access? Either:\n" +
-      "    npm install -g mishkan-harness                                     # global npm bin\n" +
-      "    mkdir -p ~/.local/bin && ln -sf " + linkTarget + " ~/.local/bin/mishkan  # symlink"));
-  }
+  printBanner(version);
 
-  // Knowledge stack (Cognee) is opt-in — name the two bring-up steps + the key
-  // URLs right here, so they're visible at install time rather than only after
-  // the user discovers `configure-knowledge`. The wizard prints the full URL
-  // list + ACCESS.txt; this is the signpost to it.
-  const kCmd = (directAccess === "linked" && pathHasLocalBin) ? "mishkan" : "npx mishkan-harness";
+  // Whether the bare `mishkan` command works yet (symlinked AND on PATH) decides
+  // how we spell the commands below — bare, or via `npx mishkan-harness`.
+  const onPath = directAccess === "linked" && pathHasLocalBin;
+  const m = onPath ? "mishkan" : "npx mishkan-harness";
+
   console.log();
-  console.log(c.bold("  Knowledge stack (optional — Cognee memory + curated; per-project work at /mishkan-init):"));
-  console.log(c.dim(
-    `    1. ${kCmd} configure-knowledge   # LLM provider + secrets → writes .env + ACCESS.txt\n` +
-    `    2. cd ${tilde(join(MISHKAN, "cognee"))} && docker compose \\\n` +
-    "         -f docker-compose.yml -f docker-compose.hardening.yml up -d --build\n" +
-    "    URLs (full list in ACCESS.txt):  memory MCP http://127.0.0.1:7777/mcp (cognee-memory)   ·   curated MCP http://127.0.0.1:7730/mcp\n" +
-    "    Per-project work stores (embedded Ladybug, own port each) are provisioned at /mishkan-init — ADR D-012."));
+  console.log("   " + c.green("✓") + c.dim("  It's in place — every agent, rule, skill and command is"));
+  console.log(c.dim("      wired into ~/.claude and ready to work."));
+
+  console.log();
+  console.log("   " + c.bold(c.cyan("▸ Start here")));
+  console.log(c.dim("       Open a Claude session and talk to ") + "Nehemiah" + c.dim(" — your PM —"));
+  console.log(c.dim("       or run ") + "/mishkan-init" + c.dim(" inside a project to scaffold it."));
+
+  console.log();
+  console.log("   " + c.bold(c.cyan("▸ Commands")) + (onPath ? c.dim("   on your PATH now — no npx needed") : ""));
+  {
+    const rows = [
+      ["status", "install state"],
+      ["org", "the 45-agent reference"],
+      ["code-graph status", "the project's code graph (Graphify)"],
+      ["configure-knowledge", "LLM provider + cognee secrets"],
+    ];
+    const w = Math.max("mishkan-watch".length, ...rows.map(([s]) => `${m} ${s}`.length)) + 3;
+    for (const [s, d] of rows) console.log("       " + `${m} ${s}`.padEnd(w) + c.dim(d));
+    console.log("       " + "mishkan-watch".padEnd(w) + c.dim("live observability TUI"));
+  }
+  if (directAccess === "linked" && !pathHasLocalBin)
+    console.log(c.dim("       (add ~/.local/bin to PATH for the bare `mishkan` command)"));
+  else if (directAccess !== "linked")
+    console.log(c.dim(`       (for a bare \`mishkan\`: ln -sf ${linkTarget} ~/.local/bin/mishkan)`));
+
+  // Knowledge stack (Cognee) is opt-in. The three stores answer three different
+  // questions (D-008/D-012) — name each one plainly here, then the two bring-up
+  // steps. The wizard + ACCESS.txt carry the full URL/cred detail.
+  console.log();
+  console.log("   " + c.bold(c.cyan("▸ Knowledge")) + c.dim("   three stores, three jobs — optional, opt-in"));
+  console.log("       " + "memory".padEnd(9)  + c.cyan(":7777") + c.dim("   what you learn across every session — shared"));
+  console.log("       " + "curated".padEnd(9) + c.cyan(":7730") + c.dim("   your cross-project reference library — read-mostly"));
+  console.log("       " + "work".padEnd(9)    + "     "          + c.dim("each project's own private graph — physically isolated"));
+  console.log(c.dim("                     embedded Ladybug · one per project at ") + "/mishkan-init" + c.dim(" · D-012"));
+  console.log();
+  console.log(c.dim("       Bring memory + curated up:"));
+  console.log(c.dim("         1. ") + `${m} configure-knowledge` + c.dim("   → writes .env + ACCESS.txt"));
+  console.log(c.dim("         2. cd ") + tilde(join(MISHKAN, "cognee")) + c.dim(" && docker compose \\"));
+  console.log(c.dim("              -f docker-compose.yml -f docker-compose.hardening.yml up -d --build"));
+  console.log(c.dim("       Aliases cognee-memory / cognee-curated · full URLs + creds in ACCESS.txt."));
+  console.log();
 }
 
 function uninstallObservabilityHint() {
