@@ -1107,10 +1107,23 @@ for an embedded local store with no network exposure; **re-vet at 12 months** (w
 items: ~8-month-old fork, PyPI `ladybug` namespace recently reclaimed from an
 unrelated tools suite).
 
-**Provisioning:** lazy, per project at `/mishkan-init` — the project's `.mcp.json`
-`cognee` alias points at *its own* store (embedded stdio path, or a per-project
-port on fallback), not the shared `:7777`. Isolation rides on the per-project
-instance; the dataset name (still `basename $PWD`) becomes cosmetic.
+**Provisioning:** lazy, per project at `/mishkan-init` — `ensure-work-store.sh`
+brings up the project's own Ladybug container and prints its port, substituted into
+the rendered `.mcp.json`. **Three aliases per project** (the alias is the doorway;
+the backend behind each differs):
+- **`cognee`** → this project's own Ladybug store — isolated project knowledge.
+- **`cognee-memory`** → a single **shared** session-memory store: the **kept** Neo4j
+  box on `:7777`, holding **`claude_code_memory`** only. Per-client session memory
+  is one continuous thing across all work and is **not re-derivable** from docs, so
+  it stays a shared pillar rather than fragmenting per project. (Session memory is
+  cross-project by nature; it must be kept scrubbed of project secrets/PII.)
+- **`cognee-curated`** → the shared reference library (`:7730`, D-007).
+
+Isolation rides on the per-project `cognee` instance; the dataset name becomes
+cosmetic. The old shared Neo4j *work* graph (project data) is **discarded** — it is
+re-derivable from tagged docs — but the **box itself is kept and repurposed** as
+`cognee-memory`; `claude_code_memory` is never pruned (D-007). So the migration
+does not delete the Neo4j box, it narrows its job to session memory.
 
 **Security posture (Phinehas, gating):** the boundary must be physical and
 verifiable by topology; an application-layer filter whose enforcement just failed

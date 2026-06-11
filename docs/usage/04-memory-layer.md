@@ -49,10 +49,22 @@ live API key among it). Verified against cognee v1.1.0 / issue #1023.
 
 The fix: each project runs its own lightweight cognee-mcp container with an
 **embedded Ladybug** graph (no Neo4j) and its own volume — `mishkan-work-<slug>`
-on its own port, provisioned by `ensure-work-store.sh` at `/mishkan-init`. The
-project's `.mcp.json` `cognee` alias points at *that* store. Isolation is by
-topology (container + volume + on-disk graph file), never the `datasets=` filter.
-The shared `:7777` Neo4j work box is retired in favour of these per-project stores.
+on its own port, provisioned by `ensure-work-store.sh` at `/mishkan-init`.
+Isolation is by topology (container + volume + on-disk graph file), never the
+`datasets=` filter.
+
+Each project's `.mcp.json` then carries **three doorways** (the alias is the
+doorway; the backend behind each differs):
+
+- **`cognee`** → that per-project Ladybug store — isolated project knowledge.
+- **`cognee-memory`** → the **kept** Neo4j box on `:7777`, now holding only
+  `claude_code_memory` — shared per-client session memory, one continuous thing
+  across all your work, not re-derivable, so never fragmented per project or
+  pruned. (Cross-project by nature → keep it scrubbed of project secrets/PII.)
+- **`cognee-curated`** → the shared reference library (`:7730`).
+
+The shared box's old *project* graphs are discarded (re-derivable from tagged
+docs); the box itself is **repurposed** as the session-memory pillar, not retired.
 
 ## The data flow
 

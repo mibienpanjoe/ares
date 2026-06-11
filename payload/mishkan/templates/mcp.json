@@ -1,10 +1,14 @@
 {
-  "_comment": "MISHKAN MCP template. /mishkan-init renders this to the project root as .mcp.json, substituting __MISHKAN_WORK_PORT__ with this project's work-store port (printed by ensure-work-store.sh). TWO cognee stores: 'cognee' = this project's OWN per-project WORK store (embedded Ladybug; its own container mishkan-work-<slug> + volume + port; physically isolated from other projects per ADR D-012) and 'cognee-curated' = the shared CURATED reference library (read-mostly, isolated graph; mishkan-curated-* on :7730, decision D-007). Both run from ~/.claude/mishkan/cognee/. Refs: https://docs.cognee.ai/cognee-mcp/mcp-local-setup",
-  "_isolation_warning": "Per ADR D-012 each project gets its OWN physically-separate work store (own container + volume + embedded graph file) — isolation is by topology, NOT cognee's datasets= filter (which is advisory-only and does NOT isolate). The 'cognee' URL below is THIS project's own store, not the legacy shared :7777. Until ensure-work-store.sh has provisioned this project's store and __MISHKAN_WORK_PORT__ has been substituted, the cognee entry will not resolve.",
+  "_comment": "MISHKAN MCP template. /mishkan-init renders this to the project root as .mcp.json, substituting __MISHKAN_WORK_PORT__ with this project's work-store port (printed by ensure-work-store.sh). THREE cognee doorways (the alias is the doorway; the backend behind it differs): 'cognee' = this project's OWN per-project WORK store (embedded Ladybug; its own container mishkan-work-<slug> + volume + port; physically isolated per ADR D-012) for project knowledge; 'cognee-memory' = the SHARED per-client session-memory store (claude_code_memory; the kept Neo4j box on :7777) — one continuous memory across all your work; 'cognee-curated' = the shared CURATED reference library (mishkan-curated-* on :7730, decision D-007). All run from ~/.claude/mishkan/cognee/. Refs: https://docs.cognee.ai/cognee-mcp/mcp-local-setup",
+  "_isolation_warning": "Isolation is by topology, NOT cognee's datasets= filter (advisory-only; does NOT isolate). 'cognee' is THIS project's own store — physically separate from other projects (D-012). 'cognee-memory' is intentionally SHARED across projects (session memory is cross-project by nature) — so keep it scrubbed of project secrets/PII, same ingest discipline. Until ensure-work-store.sh has provisioned this project's store and __MISHKAN_WORK_PORT__ is substituted, the 'cognee' entry will not resolve.",
   "mcpServers": {
     "cognee": {
       "type": "http",
       "url": "http://127.0.0.1:__MISHKAN_WORK_PORT__/mcp"
+    },
+    "cognee-memory": {
+      "type": "http",
+      "url": "http://127.0.0.1:7777/mcp"
     },
     "cognee-curated": {
       "type": "http",
