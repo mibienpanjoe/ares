@@ -20,6 +20,12 @@ server, declared in `.mcp.json`. This skill gets both right.
 | **HTTP container (default)** | you want a long-running graph service on :7777 | `~/.claude/mishkan/cognee/` compose; `.mcp.json` HTTP entry → `http://localhost:7777/mcp` |
 | **stdio (zero infra)** | simplest, no container | `.mcp.json` `_stdio_alternative`: `uv --directory <cognee-mcp> run cognee-mcp` |
 
+> **Per-project work stores (ADR D-012):** under MISHKAN each project's `cognee`
+> alias points at its OWN container (embedded Ladybug, own port), provisioned by
+> `ensure-work-store.sh` at `/mishkan-init` — not a single shared `:7777`. The
+> shared `:7777` box is now `cognee-memory` (session memory); curated is `:7730`.
+> This skill covers the underlying cognee-mcp setup those stores build on.
+
 ## 2. Prerequisites
 
 - Python (confirm the version Cognee requires in its docs).

@@ -420,10 +420,11 @@ ${tail}`;
   console.log();
   console.log(c.bold("Quick reference (also written to ACCESS.txt):"));
   console.log(c.dim("  ──────────────────────────────────────────────────────────────"));
-  console.log(`  Work  · MCP        ${c.cyan("http://127.0.0.1:7777/mcp")}`);
-  console.log(`  Work  · Graph UI   ${c.cyan("http://127.0.0.1:7724")}   ${c.dim(`${adminEmail} / DEFAULT_USER_PASSWORD`)}`);
-  console.log(`  Work  · Neo4j      ${c.cyan("http://127.0.0.1:7716")}   ${c.dim("neo4j / GRAPH_DATABASE_PASSWORD")}`);
-  console.log(`  Work  · REST       ${c.cyan("http://127.0.0.1:7737")}`);
+  console.log(`  Memory · MCP       ${c.cyan("http://127.0.0.1:7777/mcp")}   ${c.dim("cognee-memory — shared session memory")}`);
+  console.log(`  Memory · Graph UI  ${c.cyan("http://127.0.0.1:7724")}   ${c.dim(`${adminEmail} / DEFAULT_USER_PASSWORD`)}`);
+  console.log(`  Memory · Neo4j     ${c.cyan("http://127.0.0.1:7716")}   ${c.dim("neo4j / GRAPH_DATABASE_PASSWORD")}`);
+  console.log(`  Memory · REST      ${c.cyan("http://127.0.0.1:7737")}`);
+  console.log(`  Per-project work   ${c.dim("provisioned per project at /mishkan-init (own port, embedded Ladybug) — ADR D-012")}`);
   console.log(`  Curated · MCP      ${c.cyan("http://127.0.0.1:7730/mcp")}`);
   console.log(`  Curated · Graph    ${c.cyan("http://127.0.0.1:7734")}`);
   console.log(`  Curated · Neo4j    ${c.cyan("http://127.0.0.1:7731")}`);
@@ -464,16 +465,20 @@ endpoint needs, and how to reach them from a remote machine. Keep it private:
 it carries plaintext passwords. Mode 0600. Gitignored.
 
 ${sep}
-Cognee WORK store (per-project knowledge graph)
+Cognee MEMORY store (shared session memory — alias cognee-memory, :7777)
 ${sep}
 
-MCP endpoint           : http://127.0.0.1:7777/mcp
-  - The HTTP transport agents call to query/add knowledge.
+This is the kept Neo4j box, repurposed to hold only claude_code_memory (per-client
+session memory). Per-project KNOWLEDGE lives in SEPARATE per-project work stores
+(embedded Ladybug, own port each), provisioned by ensure-work-store.sh at
+/mishkan-init — ADR D-012. This box is no longer the project work store.
+
+MCP endpoint           : http://127.0.0.1:7777/mcp   (alias: cognee-memory)
   - Health check: \`curl -sf http://127.0.0.1:7777/mcp\` returns 406 = healthy
     (the endpoint requires the MCP handshake; a vanilla GET is rejected).
 
 Cognee Graph Explorer  : http://127.0.0.1:7724
-  - Web UI to browse the work graph.
+  - Web UI to browse the session-memory graph.
   - Login email    : ${adminEmail}
   - Login password : ${secrets.DEFAULT_USER_PASSWORD}
 
@@ -481,7 +486,7 @@ Cognee Backend REST    : http://127.0.0.1:7737
   - Backend API the Graph Explorer calls. Same creds as above.
 
 Neo4j Browser          : http://127.0.0.1:7716
-  - Direct cypher access to the work graph (read-only recommended).
+  - Direct cypher access to the session-memory graph (read-only recommended).
   - Username : ${secrets.GRAPH_DATABASE_USERNAME}
   - Password : ${secrets.GRAPH_DATABASE_PASSWORD}
   - Bolt URI : bolt://127.0.0.1:7709  (for desktop neo4j clients)
@@ -757,12 +762,13 @@ async function install() {
   // list + ACCESS.txt; this is the signpost to it.
   const kCmd = (directAccess === "linked" && pathHasLocalBin) ? "mishkan" : "npx mishkan-harness";
   console.log();
-  console.log(c.bold("  Knowledge stack (optional — Cognee work + curated graphs):"));
+  console.log(c.bold("  Knowledge stack (optional — Cognee memory + curated; per-project work at /mishkan-init):"));
   console.log(c.dim(
     `    1. ${kCmd} configure-knowledge   # LLM provider + secrets → writes .env + ACCESS.txt\n` +
     `    2. cd ${tilde(join(MISHKAN, "cognee"))} && docker compose \\\n` +
     "         -f docker-compose.yml -f docker-compose.hardening.yml up -d --build\n" +
-    "    URLs (full list in ACCESS.txt):  work MCP http://127.0.0.1:7777/mcp   ·   curated MCP http://127.0.0.1:7730/mcp"));
+    "    URLs (full list in ACCESS.txt):  memory MCP http://127.0.0.1:7777/mcp (cognee-memory)   ·   curated MCP http://127.0.0.1:7730/mcp\n" +
+    "    Per-project work stores (embedded Ladybug, own port each) are provisioned at /mishkan-init — ADR D-012."));
 }
 
 function uninstallObservabilityHint() {

@@ -45,28 +45,37 @@ nc -z localhost 7730 && echo "cognee-mcp (curated) up on :7730"
 ~/.claude/mishkan/scripts/seed-curated-library.sh   # targets mishkan-curated-mcp
 ```
 
-## Two stores (decision D-007)
+## Three stores (decisions D-007 + D-012)
 
 | Store | Containers | Port | Holds | MCP alias |
 |---|---|---|---|---|
-| **work** | `mishkan-cognee-*` | 7777 | per-project knowledge + `<client>_memory` | `cognee` (read+write) |
+| **per-project work** | `mishkan-work-<slug>` | own port | this project's knowledge — embedded **Ladybug**, physically isolated per project (D-012) | `cognee` (read+write) |
+| **session memory** | `mishkan-cognee-*` | 7777 | `claude_code_memory` only — shared per-client session memory (the kept Neo4j box) | `cognee-memory` (read+write) |
 | **curated** | `mishkan-curated-*` | 7730 | the cross-project reference library only | `cognee-curated` (read) |
 
-The curated library is **physically isolated** in its own Neo4j so project data
-(which can contain PII) never mixes with it. The curated box reuses the shared
-Ollama and the shared Postgres *server* (own database `curated_db`). The
-per-client memory dataset (e.g. `claude_code_memory`) is part of the **work**
-store and must not be pruned.
+**Per-project work (D-012):** each project gets its own isolated work store —
+a cognee-mcp container with an embedded Ladybug graph + its own volume, on its
+own port, provisioned by `ensure-work-store.sh` at `/mishkan-init`. Isolation is
+by topology (container + volume), **not** the `datasets=` filter (which is
+advisory-only on Neo4j with access control off — cognee v1.1.0 / issue #1023).
+
+**Session memory:** `claude_code_memory` is per-client session memory — one
+continuous thing across all your work, not re-derivable — so it stays in the one
+shared box (`:7777`, the `cognee-memory` alias) and is never pruned. `CACHING=false`
++ `COGNEE_MCP_AGENT_SCOPED=false` on the per-project stores keep both memory layers
+out of them, so memory cannot fragment.
+
+**Curated** is physically isolated in its own Neo4j so project data (which can
+contain PII) never mixes with the cross-project reference. It reuses the shared
+Ollama and Postgres *server* (own database `curated_db`).
 
 ## How agents reach it
 
-Claude Code connects via the project's `.mcp.json` (seeded by `/mishkan-init`
-from `~/.claude/mishkan/templates/mcp.json`), which declares **both** stores:
-`cognee` → work (`http://localhost:7777/mcp`) and `cognee-curated` → curated
-(`http://localhost:7730/mcp`). A **zero-container stdio alternative** is included
-in that template (`_stdio_alternative`): it launches `cognee-mcp` directly via
-`uv --directory <path-to-cognee-mcp> run cognee-mcp` with `LLM_API_KEY` — no
-container, no port. Use whichever fits.
+Claude Code connects via the project's `.mcp.json` (rendered by `/mishkan-init`
+from `~/.claude/mishkan/templates/mcp.json`), which declares **three** doorways:
+`cognee` → this project's own work store (its own port), `cognee-memory` →
+`http://localhost:7777/mcp` (shared session memory), `cognee-curated` →
+`http://localhost:7730/mcp` (shared reference).
 
 ## Transports (per cognee docs)
 

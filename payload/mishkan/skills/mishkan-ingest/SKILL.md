@@ -59,13 +59,12 @@ stays as-is.
 - One doc per `--dataset` per run is fine; rerun for additional datasets.
 - Does NOT delete existing data — additive. Use `cognee.prune` if you need a reset.
 
-## Security — the work store is a shared single trust domain
+## Security — scrub secrets; the store is per-project isolated (D-012)
 
-Until per-project physical stores land (**ADR D-012**), the work store at `:7777`
-holds **every project in one Neo4j graph**, and cognee's `datasets=` filter does
-**not** isolate them — it's advisory-only with access control off (verified,
-cognee v1.1.0 / issue #1023). Anything ingested here is readable by **every**
-project's agents. Treat it as a single trust domain:
+Each project now has its **own** physically-isolated work store (ADR D-012 —
+embedded Ladybug container + volume, alias `cognee`), so one project can no
+longer read another's knowledge via the shared graph. The ingest discipline
+still holds regardless — never put raw secrets/PII into *any* graph:
 
 - **No secrets, no credentials, no PII** into the work store — a prior aiobi-mail
   ingestion leaked a real Gemini API key into the graph exactly this way.
