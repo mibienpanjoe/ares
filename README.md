@@ -63,7 +63,7 @@ A shared research pipeline (Jakin → Ezra → Caleb → Shaphan → Shemaiah �
 
 Wired by `/mishkan-init` into each project's `.mcp.json`:
 
-**Cognee** — semantic knowledge graph. Per-project work store (`:7777`) + cross-project curated reference library (`:7730`). Docker-based, pinned, SOPS-managed secrets.
+**Cognee** — semantic knowledge graph. Per-project isolated work store (own port, Ladybug) + shared session memory (`cognee-memory`, `:7777`) + cross-project curated reference library (`cognee-curated`, `:7730`). Docker-based, pinned, SOPS-managed secrets. Three pillars wired per project by `/mishkan-init` (D-007 + D-012).
 
 ```bash
 mishkan configure-knowledge        # wizard: LLM provider + credentials + .env
