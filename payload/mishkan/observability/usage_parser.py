@@ -43,6 +43,7 @@ except Exception:
 # Cache read priced at 1/10 of input; cache creation at 1.25x input.
 _MODEL_PRICES = {
     # Claude 4.x family
+    "claude-fable-5": (10.0, 50.0),   # D-002 amend: Migdal+Mishmar specialists tier
     "claude-opus-4": (15.0, 75.0),
     "claude-sonnet-4": (3.0, 15.0),
     "claude-haiku-4": (0.80, 4.0),

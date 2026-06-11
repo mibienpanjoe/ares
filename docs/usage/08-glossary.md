@@ -53,10 +53,10 @@ nested delegation). See [Orchestration](./03-orchestration.md).
 | Alias | Role | Tier |
 |---|---|---|
 | `phinehas` | Team Lead, cross-cutting security authority | Opus |
-| `ira` | Code-security ops — the agent behind the PreToolUse security hook | Sonnet |
-| `benaiah` | DevSecOps + infra security — writes THREAT_MODEL | Sonnet |
-| `joab` | Web / mobile / desktop security | Sonnet |
-| `hushai` | Strategic security advisor (no codebase write) | Sonnet |
+| `ira` | Code-security ops — the agent behind the PreToolUse security hook | Fable |
+| `benaiah` | DevSecOps + infra security — writes THREAT_MODEL | Fable |
+| `joab` | Web / mobile / desktop security | Fable |
+| `hushai` | Strategic security advisor (no codebase write) | Fable |
 | `maaseiah` | Reporter | Haiku |
 
 ## Migdal — Infrastructure
@@ -64,10 +64,10 @@ nested delegation). See [Orchestration](./03-orchestration.md).
 | Alias | Role | Tier |
 |---|---|---|
 | `eliashib` | Team Lead | Opus |
-| `meshullam` | Infrastructure design (writes C4 + IaC) | Sonnet |
-| `palal` | Systems / OS / networks | Sonnet |
-| `meremoth` | DevOps — CI/CD pipelines | Sonnet |
-| `hanun` | DevSecOps + observability | Sonnet |
+| `meshullam` | Infrastructure design (writes C4 + IaC) | Fable |
+| `palal` | Systems / OS / networks | Fable |
+| `meremoth` | DevOps — CI/CD pipelines | Fable |
+| `hanun` | DevSecOps + observability | Fable |
 | `rehum` | Health / SRE advisor (no codebase write) | Haiku |
 | `zaccur` | Reporter | Haiku |
 
@@ -103,8 +103,9 @@ Each stage is a single-purpose agent. The pipeline is also a skill
 
 | Tier | Count | Where |
 |---|---|---|
+| Fable | 8 | Migdal + Mishmar producing specialists (threat-model, infra topology, hardening — D-002 amend) |
 | Opus | 9 | orchestrators, Team Leads, knowledge publication |
-| Sonnet | 22 | senior specialists, anything that writes code |
+| Sonnet | 14 | senior specialists, anything else that writes code |
 | Haiku | 14 | QA, Reporters, pure advisors, research summarise/evaluate/report |
 | **Total** | **45** | |
 

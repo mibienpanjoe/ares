@@ -17,7 +17,7 @@
     "tokens_cached": { "type": "integer", "minimum": 0, "default": 0 },
     "tokens_output": { "type": "integer", "minimum": 0, "default": 0 },
     "cost": { "type": "number", "minimum": 0, "default": 0 },
-    "model_tier": { "type": "string", "enum": ["opus", "sonnet", "haiku"] },
+    "model_tier": { "type": "string", "enum": ["opus", "sonnet", "haiku", "fable"] },
     "outcome": { "type": "string", "enum": ["completed", "blocked", "escalated"] },
     "cognee_writes": { "type": "integer", "minimum": 0, "default": 0 },
     "timestamp": { "type": "string", "format": "date-time" }

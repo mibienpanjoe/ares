@@ -19,7 +19,7 @@ import json
 import os
 import sys
 
-VALID = {"opus", "sonnet", "haiku"}
+VALID = {"opus", "sonnet", "haiku", "fable"}
 SUBAGENT_TOOLS = {"Task", "Agent"}
 YAML = os.path.join(os.path.dirname(__file__), "..", "config", "model-routing.yaml")
 

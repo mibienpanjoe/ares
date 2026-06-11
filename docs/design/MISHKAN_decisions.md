@@ -35,13 +35,15 @@ runtime selection — for no benefit given the target. Removing it simplifies th
 build materially.
 
 **Implications:**
-- Three tiers only: Opus, Sonnet, Haiku.
+- Four tiers: Fable, Opus, Sonnet, Haiku.
+  - **Fable (8):** the producing **specialists** of the two hardest-reasoning
+    teams — Mishmar (Ira, Benaiah, Joab, Hushai) + Migdal (Meshullam, Palal,
+    Meremoth, Hanun). See the 2026-06-11 amendment below.
   - **Opus (9):** Nehemiah, Bezalel, all Team Leads, Jehonathan.
-  - **Sonnet (22):** every agent that **writes code/config into the codebase**
-    (precision matters on Y4NN's code) + senior specialists + research
-    clarify/formulate/research. Includes all implementation specialists —
-    Hizkiah, Salma, Hiram, Obed, Asaph, Palal, Meremoth, Hanun — plus Nathan,
-    Zadok, Shallum, Ira, Benaiah, Joab, Hushai, Oholiab, Meshullam, Seraiah,
+  - **Sonnet (14):** every other agent that **writes code/config into the
+    codebase** (precision matters on Y4NN's code) + senior specialists + research
+    clarify/formulate/research. Includes implementation specialists Hizkiah,
+    Salma, Hiram, Obed, Asaph — plus Nathan, Zadok, Shallum, Oholiab, Seraiah,
     Joah, Jakin, Ezra, Caleb.
   - **Haiku (14):** agents that do **not** write code — QA (Uriah, Jahaziel),
     all Team Reporters, pure advisors (Deborah, Rehum), Sefer team-layer docs
@@ -50,6 +52,28 @@ build materially.
 **Amendment 2026-05-27:** original split put implementation specialists on
 Haiku for cost. Revised on Y4NN's preference — Sonnet writes his code more
 precisely. Haiku retained only where no code is written (evaluate/collect/advise).
+
+**Amendment 2026-06-11 (four-tier — Fable 5 for Migdal + Mishmar specialists):**
+the eight producing specialists of the infrastructure (Migdal) and security
+(Mishmar) teams move from Sonnet to **Fable 5** (`claude-fable-5`). Fable 5 is
+positioned for complex, long-horizon work — threat modelling, infra topology,
+hardening — which is exactly these agents' load. Note the selector here is
+**reasoning load, not code-writing**: that is why Hushai (a security *advisor* that
+writes no code) qualifies for Fable on the strength of its analysis depth, whereas
+the Sonnet tier's selector is *code-writing precision on Y4NN's code* and the Haiku
+tier's is *no reasoning or code at all* (collect/evaluate/advise-lite). The two
+"advisor" agents split on exactly this axis — Hushai (reasoning-heavy security
+counsel) → Fable; Rehum (health/SRE advice-lite) → Haiku. Scope is deliberate: team
+**leads** (Phinehas, Eliashib) stay Opus (orchestration/judgement), and the
+**reporters** (Maaseiah, Zaccur) stay Haiku (collect only). This amends "three tiers
+only" to four; the "Claude Code models only" decision is unchanged (Fable 5 is a
+Claude model). Cost: Fable 5 is **$10 / $50 per MTok** — above Opus-tier — and is
+covered by plan limits until **2026-06-22**, then usage credits (an accepted cost).
+Verified before rollout: `fable` is a valid bare subagent alias resolving to
+`claude-fable-5` (confirmed against the API-recorded model field in a subagent
+transcript). The `model-route.py` hook's `VALID` set, the `observability-log` schema
+`model_tier` enum, and the `usage_parser.py` price table were extended for the new
+tier in the same change.
 - Tier declared per-agent in frontmatter `model:` field.
 - Overridable centrally via `~/.claude/mishkan/config/model-routing.yaml`.
 - Cost discipline lives entirely in tier assignment + prompt caching +

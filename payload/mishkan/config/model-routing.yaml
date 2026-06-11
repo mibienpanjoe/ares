@@ -3,11 +3,17 @@
 # every Task/Agent call and injects `model` for any agent LISTED below, which
 # overrides that agent's frontmatter `model:`. So this file is the single source
 # of truth for the 45 MISHKAN agents. Agents NOT listed here (e.g. aiobi-ops,
-# Explore) are left untouched and keep their own frontmatter model. Three tiers:
-# opus, sonnet, haiku. (Edit here, not frontmatter — frontmatter is the fallback
-# used only if the hook is removed.)
+# Explore) are left untouched and keep their own frontmatter model. Four tiers:
+# fable, opus, sonnet, haiku. (Edit here, not frontmatter — frontmatter is the
+# fallback used only if the hook is removed.)
 #
 # Rationale per tier:
+#   fable  — Migdal (infra) + Mishmar (security) producing SPECIALISTS only. Fable 5
+#            (claude-fable-5) is positioned for complex, long-horizon work — threat
+#            modelling, infra topology, hardening — which is exactly these eight
+#            agents' load. D-002 amend (the team leads stay opus, reporters/advisors
+#            stay haiku). Cost: $10/$50 per MTok — above opus-tier; plan limits until
+#            2026-06-22, then usage credits (an accepted cost).
 #   opus   — orchestration, team leadership, knowledge publication (judgement-heavy)
 #   sonnet — anything that WRITES code/config into the codebase (precision matters
 #            on Y4NN's code) + senior specialists + research clarify/formulate/research
@@ -35,10 +41,10 @@ agents:
 
   # Mishmar (Security)
   phinehas: opus      # lead
-  ira: sonnet
-  benaiah: sonnet
-  joab: sonnet
-  hushai: sonnet
+  ira: fable          # D-002 amend: security specialist → Fable 5
+  benaiah: fable      # D-002 amend: threat-model / supply-chain → Fable 5
+  joab: fable         # D-002 amend: app-security specialist → Fable 5
+  hushai: fable       # D-002 amend: security advisor (reasoning-heavy) → Fable 5
   maaseiah: haiku     # reporter
 
   # Yasad (Backend)
@@ -67,10 +73,10 @@ agents:
 
   # Migdal (Infrastructure)
   eliashib: opus      # lead
-  meshullam: sonnet   # infra design
-  palal: sonnet       # writes system configs/scripts
-  meremoth: sonnet    # writes CI/pipeline code
-  hanun: sonnet       # writes hardening/observability config
+  meshullam: fable    # D-002 amend: infra topology / IaC design → Fable 5
+  palal: fable        # D-002 amend: OS/network/virtualisation → Fable 5
+  meremoth: fable     # D-002 amend: CI/CD / release automation → Fable 5
+  hanun: fable        # D-002 amend: hardening / observability → Fable 5
   rehum: haiku        # advisor — no code
   zaccur: haiku       # reporter
 
@@ -82,6 +88,7 @@ agents:
   jehonathan: opus    # knowledge publication
   huldah: haiku       # reporter
 
-# Tier totals: opus=9, sonnet=22, haiku=14  (45 agents)
-# Principle: any agent that writes code/config into the codebase runs on Sonnet
-# (precision on Y4NN's code). Haiku only for evaluate/collect/advise roles.
+# Tier totals: fable=8, opus=9, sonnet=14, haiku=14  (45 agents)
+# Principle: Migdal+Mishmar producing specialists run on Fable 5 (hardest reasoning);
+# every other agent that writes code/config runs on Sonnet (precision on Y4NN's code);
+# Haiku only for evaluate/collect/advise roles. See D-002 (amended).
