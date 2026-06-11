@@ -88,7 +88,7 @@ Phases:
 6. **Stamp** — record version + timestamp for `status` / `uninstall` to read.
 7. **Observability (opt-in)** — prompts to install `mishkan-watchd` and
    `mishkan-watch` via `uv tool`. Skipped cleanly if `uv` isn't on PATH; you
-   can re-run it later with `npx mishkan-harness observability`.
+   can re-run it later with `npx mishkan-harness observability install`.
 
 ## Verify the install
 
@@ -188,7 +188,7 @@ The installer's phase 7 asks whether to install the cross-session observability
 stack. You can also run it standalone any time:
 
 ```bash
-npx mishkan-harness observability
+npx mishkan-harness observability install
 ```
 
 Requirements: `uv` (https://astral.sh/uv) and Python 3.11+. If `uv` is not on

@@ -1219,4 +1219,53 @@ a file path (resolver/strategy already default to those values). Out of scope: a
 
 ---
 
+## D-015 — Unified semantic `mishkan` control surface for the knowledge stack (added 2026-06-11)
+
+**Status:** accepted · **Drivers:** Y4NN · **Authors:** drafted by the harness, ratify with Bezalel.
+
+**Context.** The engineer drove every stateful cognee op by hand across scattered compose files and
+scripts (a 3-file `docker compose` incantation, `ensure-work-store.sh`, manual `docker rm -f`/`volume
+rm`, `ensure-curated-box.sh`, ad-hoc `docker ps`). High friction, high recall load. Two robustness gaps
+also surfaced this session: a docker rename/orphan race (fixed, `a9cf950`) and a TUI daemon-probe that
+mis-read a *wedged* `watchd` as healthy.
+
+**Decision.** Extend the `mishkan` CLI into one control surface, governed by a strict naming rule and
+the asymmetric-delegation boundary (D-005).
+
+- **Naming rule (semantic, object-first):** a command must name *what it operates on*.
+  - **Bare verb IFF the object is the tool itself** — `mishkan install | uninstall | status`. (Not
+    `harness install`: the npm pkg is `mishkan-harness`, so `npx mishkan-harness harness install`
+    doubles "harness".)
+  - **`mishkan <object> <verb>` for every subsystem** — `knowledge configure|ingest`,
+    `knowledge-stack up|down|restart|status`, `project-work-store [<slug>] up|down|reset`,
+    `code-graph status|open|scan`, `observability install|open`, `org show`. Descriptive compound
+    objects (`knowledge-stack`, `project-work-store`) are preferred over brevity — a bare `start`
+    ("start *what*?") or a topology noun the user must decode (`stack`/`memory`/`foundation`) are both
+    rejected. `knowledge-stack` = infra lifecycle (`up`); `project-work-store` = data lifecycle (`reset`).
+- **Rule-5 boundary (the crux):** the CLI **executes** because the *human* invokes it — D-005 forbids
+  *agents* running stateful ops, and they still can't (the bin is never in an agent tool set); the TUI
+  still can't either (it only *surfaces* the command, never runs it). Destructive ops (`stop`, `reset`)
+  gate on a confirm.
+- **Guided bring-up, not a thin wrapper:** `knowledge-stack up` preflights config (docker present,
+  `.env`, `COGNEE_MCP_REF`) and, on a gap, prints the exact fix and stops — never a cryptic docker
+  error. `project-work-store up` warns if the stack is down. `/mishkan-init` composes the two:
+  `knowledge-stack up` (ensure infra, confirm-if-down) + `project-work-store up` (this project).
+- **TUI hardening:** `_probe_socket` now reads the daemon's on-connect `{"type":"snapshot"}` frame and
+  validates it, so a *wedged* watchd is replaced rather than adopted (client-side only).
+
+**Alternatives considered.** (1) bare `start`/`stop` — rejected (object-less). (2) `stack`/`memory`
+nouns — rejected (require decoding internal topology). (3) start/stop *buttons* in the TUI — rejected,
+moves stateful control into a tool (breaks D-005). (4) the CLI re-implementing the scripts — rejected;
+it *wraps* them so the scripts stay the single source of truth.
+
+**Consequences.** *Positive:* one low-recall surface; preflight/guide kills cryptic failures; the TUI
+points at the fix without executing it; daemon self-heals on wedge. *Negative:* renames published
+commands (`configure-knowledge`→`knowledge configure`, `observability`→`observability install`,
+`org`→`org show`) — old flat names kept as hidden working aliases so nothing breaks mid-migration; help,
+install sign-off, docs/usage, README, and the org-reference command updated in the same pass.
+
+**Refs:** rides on D-005 (asymmetric delegation), D-008 (knowledge surfaces), D-012 (per-project store).
+
+---
+
 *Decisions locked May 2026. Revisit only with a dated amendment below.*

@@ -24,7 +24,7 @@ Auto-installed during `npx mishkan-harness install` (phase 7) — the installer
 prompts once. Or run standalone any time:
 
 ```bash
-npx mishkan-harness observability
+npx mishkan-harness observability install
 ```
 
 Requirements: `uv` (https://astral.sh/uv) and Python 3.11+. If `uv` is

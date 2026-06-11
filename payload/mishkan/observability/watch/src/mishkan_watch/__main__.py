@@ -16,6 +16,7 @@ client refuses to manage the daemon.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import socket as _socket
@@ -31,20 +32,37 @@ WATCHD_BOOT_POLL_MS = 100
 
 
 def _probe_socket(socket_path: Path) -> bool:
-    """Return True if a daemon is actively listening on *socket_path*.
+    """Return True if a daemon is actively *serving* on *socket_path*.
 
-    Attempts a real UNIX-socket connect with a 0.5 s timeout. A
-    successful connect means the daemon is live. Any error (file not
-    found, connection refused, timeout) means it is not.
+    Not a bare connect. A wedged daemon (process alive, socket still bound,
+    but its accept/broadcast loop hung) still completes the kernel-level
+    connect, so a connect-only probe would mis-read it as healthy — the TUI
+    would then adopt it (not fork its own) and show stale data, leaving the
+    wedged daemon running on quit. So we go one step further: a healthy watchd
+    sends a ``{"type":"snapshot",...}`` NDJSON frame immediately on connect
+    (server.py), so we read that first line and require valid JSON with a
+    ``type`` field, all within the timeout. A wedged daemon emits nothing ->
+    the read times out -> we report it dead, and the caller unlinks the stale
+    socket and forks a fresh daemon. Client-side only; no daemon change.
     """
     s = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
     try:
         s.settimeout(0.5)
         s.connect(str(socket_path))
-        s.close()
-        return True
-    except OSError:
+        buf = b""
+        while b"\n" not in buf:
+            chunk = s.recv(65536)
+            if not chunk:
+                return False  # daemon closed without speaking — dead/wedged
+            buf += chunk
+        frame = json.loads(buf.split(b"\n", 1)[0].decode("utf-8"))
+        return isinstance(frame, dict) and "type" in frame
+    except (OSError, ValueError):
+        # OSError: connect/recv failed or timed out (dead / wedged).
+        # ValueError (incl. JSONDecodeError): not a real watchd on this socket.
         return False
+    finally:
+        s.close()
 
 
 def _ensure_daemon(
@@ -84,7 +102,7 @@ def _ensure_daemon(
         print(
             "mishkan-watch: daemon socket not found and `mishkan-watchd` is "
             "not on PATH.\n  Install the observability stack:\n"
-            "    npx mishkan-harness observability",
+            "    npx mishkan-harness observability install",
             file=sys.stderr,
         )
         return 1, None

@@ -66,7 +66,7 @@ Wired by `/mishkan-init` into each project's `.mcp.json`:
 **Cognee** — semantic knowledge graph. Per-project isolated work store (own port, Ladybug) + shared session memory (`cognee-memory`, `:7777`) + cross-project curated reference library (`cognee-curated`, `:7730`). Docker-based, pinned, SOPS-managed secrets. Three pillars wired per project by `/mishkan-init` (D-007 + D-012).
 
 ```bash
-mishkan configure-knowledge        # wizard: LLM provider + credentials + .env
+mishkan knowledge configure        # wizard: LLM provider + credentials + .env
 cd ~/.claude/mishkan/cognee
 docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
 ~/.claude/mishkan/scripts/seed-curated-library.sh
@@ -129,10 +129,10 @@ mishkan help                                        # full reference
 mishkan install                                     # install/refresh into ~/.claude
 mishkan uninstall                                   # remove harness (keeps CLAUDE.md + rules)
 mishkan uninstall --purge                           # also remove y4nn-standards.md
-mishkan configure-knowledge                         # wizard: LLM provider + Cognee .env
+mishkan knowledge configure                         # wizard: LLM provider + Cognee .env
 mishkan observability                               # install daemon + TUI only (needs uv)
 mishkan status                                      # install state, profile, version
-mishkan org [--json]                                # print the 45-agent org
+mishkan org show [--json]                                # print the 45-agent org
 mishkan code-graph [status|open|scan]               # inspect the project's Graphify graph
 mishkan-watch                                       # open observability TUI (auto-starts daemon)
 mishkan-watch --no-autostart                        # TUI only, no daemon fork

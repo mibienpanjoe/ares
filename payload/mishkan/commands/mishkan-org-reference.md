@@ -25,13 +25,13 @@ The data source is `~/.claude/mishkan/org/org.json`, generated from
 Invoke the harness CLI:
 
 ```bash
-npx mishkan-harness org
+npx mishkan-harness org show
 ```
 
 For a structured JSON dump (e.g. to feed another tool):
 
 ```bash
-npx mishkan-harness org --json
+npx mishkan-harness org show --json
 ```
 
 Always present the printed reference back to the user verbatim — do not
