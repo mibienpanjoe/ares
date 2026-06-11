@@ -39,9 +39,13 @@ services:
       # Cognee's local data (graph/vector/sqlite) when using default backends.
       - cognee_data:/app/cognee-mcp/.cognee_system
     healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',7777),2); s.close()"]
+      # Conditional probe WITH internal retries: connect up to 3 times (1s apart, no
+      # trailing sleep), exit 0 on the first success — absorbs a transient blip
+      # without flagging a failure. CMD-SHELL wraps the python connect in the retry
+      # loop; `$$i` is escaped so compose passes a literal $i through to the shell.
+      test: ["CMD-SHELL", "for i in 1 2 3; do python -c \"import socket; socket.create_connection(('127.0.0.1',7777),2).close()\" 2>/dev/null && exit 0; [ \"$$i\" = 3 ] || sleep 1; done; exit 1"]
       interval: 15s
-      timeout: 5s
+      timeout: 10s
       retries: 5
       # 300s: cognee-mcp cold-start is genuinely slow — observed ~3.5min just to
       # reach DB migrations (cognee lib import + graph-adapter handshake + ollama
@@ -50,8 +54,11 @@ services:
       # cascaded to anything with depends_on: service_healthy. It self-recovers the
       # moment the port listens, but the false-unhealthy window is the bug. start_period
       # must cover the real cold-start; a too-long value only delays the first probe,
-      # it never slows a healthy container. Sibling Neo4j is 180s for the same reason.
+      # it never slows a healthy container. Sibling Neo4j is 240s for the same reason.
       start_period: 300s
+      # start_interval (Docker 25+): probe every 5s during start_period so the health
+      # flip is caught within ~5s of :7777 binding, not up to 15s later.
+      start_interval: 5s
     networks:
       - cognee_net
     deploy:

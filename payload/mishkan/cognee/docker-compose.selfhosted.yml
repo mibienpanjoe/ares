@@ -67,19 +67,28 @@ services:
     volumes:
       - neo4j_data:/data
     healthcheck:
-      # Instant TCP connect via bash /dev/tcp — NOT a wget HTTP GET. The GET takes
-      # 5-10s against a loaded, cold-starting Neo4j and blew the old 5s timeout,
-      # so a perfectly healthy Neo4j was marked unhealthy and cascaded to
-      # cognee-mcp (depends_on healthy). wget IS in the image; the slow GET + tight
-      # timeout was the bug. A TCP connect succeeds the moment :7474 listens.
-      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/7474"]
+      # Conditional TCP probe WITH internal retries. Each invocation tries to open
+      # :7474 up to 3 times with a 2s gap and exits 0 on the first connect — so a
+      # momentary blip during the slow Neo4j+APOC cold-start does not register as a
+      # failure. bash /dev/tcp, NOT a wget HTTP GET (the GET takes 5-10s on a loaded
+      # Neo4j and blew the old timeout, false-flagging a healthy box and cascading to
+      # cognee-mcp via depends_on). The for-loop IS the retry; `&& exit 0` is the
+      # conditional success; `exit 1` fires only if all 3 attempts in the window fail.
+      test: ["CMD", "bash", "-c", "for i in 1 2 3; do (exec 3<>/dev/tcp/127.0.0.1/7474) 2>/dev/null && exit 0; [ \"$$i\" = 3 ] || sleep 2; done; exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
-      # 180s: Neo4j + APOC cold-start is slow, and slower still when the whole
-      # stack (ollama + pg + both neo4j) warms in parallel on shared I/O. A 30s
-      # grace marked it unhealthy and cascaded (cognee-mcp depends_on healthy).
-      start_period: 180s
+      # 240s: observed cold-start was 174s under full-stack I/O contention (ollama +
+      # pg + both neo4j warming in parallel) — right against the old 180s grace, so
+      # `compose up` gave up ~4s before the health flip and declared the dependency
+      # failed. 240s clears the observed worst case with margin; a too-long
+      # start_period only delays the first probe, it never slows a healthy container.
+      start_period: 240s
+      # start_interval (Docker 25+): during start_period, probe every 5s instead of
+      # the 15s steady-state interval, so a healthy flip is detected within ~5s of
+      # the port binding. THIS removes the race (compose up giving up just before a
+      # 15s-cadence probe would fire) — the larger grace alone only narrowed it.
+      start_interval: 5s
     networks:
       - cognee_net
     security_opt:
