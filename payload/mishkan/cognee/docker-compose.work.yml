@@ -104,6 +104,17 @@ services:
       # COGNEE_MCP_AGENT_SCOPED, NOT CACHING — it is unaffected here.
       CACHING: "false"
 
+      # Agent-scoping OFF so a per-project store NEVER creates a per-client
+      # `claude_code_memory` graph dataset (which would fragment session learnings
+      # across projects). Verified (cognee v1.1.0, cognee-mcp server.py:1686/1711):
+      # default "true" auto-names the default dataset `<client>_memory`; "false"
+      # collapses it to `main_dataset`, so this store holds ONLY project knowledge.
+      # `claude_code_memory` lives solely in the shared `cognee-memory` instance
+      # (which keeps the default). mishkan-ingest writes explicit dataset names so
+      # it is unaffected; datasets= is advisory (one store = one project) so
+      # whole-graph recall still returns this project's data. Topology, not trust.
+      COGNEE_MCP_AGENT_SCOPED: "false"
+
     ports:
       # Bound to loopback only. WORK_PORT is assigned by ensure-work-store.sh
       # (deterministic: base 7800 + hash of slug, no conflict with 7777/7730).
