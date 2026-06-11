@@ -6,8 +6,9 @@
 
 A single Claude Code session, turned into a 45-agent software-engineering
 organisation with deterministic constraints (hooks, rules, schemas), an
-asymmetric AI-vs-human delegation boundary, and a three-pillar knowledge graph
-that accumulates as you work.
+asymmetric AI-vs-human delegation boundary, and four knowledge surfaces
+that accumulate as you work: one code-structure surface (Graphify) plus three
+cognee stores (per-project work · session memory · curated reference).
 
 ## In five minutes
 
@@ -29,11 +30,22 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
   `~/.claude/CLAUDE.md` and routes work one level deep.
 - **45 agents** across **6 teams** + **2 orchestrators** + a **6-stage research
   pipeline**.
-- **Cognee** is the memory layer: three physically-isolated pillars — per-project
-  work store (isolated Ladybug, own port), `cognee-memory` (`:7777`, shared
-  session memory), `cognee-curated` (`:7730`, reference library) — with
-  `cognify → memify` (extraction → enrichment) and `search` exposed via MCP.
-  See D-007 + D-012.
+- **Four knowledge surfaces** total — 1 code-structure + 3 cognee stores:
+  - **Graphify** (per-project, `graphify-out/`) — code structure: call graphs,
+    dependents, blast-radius. AST-derived, deterministic, re-derivable. D-008.
+    Not installed by `mishkan install`; run `uv tool install "graphifyy>=0.8.33"`.
+  - **Cognee work** (per-project Ladybug, own port) — project semantic memory:
+    decisions, runbooks, ADRs. D-012.
+  - **cognee-memory** (`:7777`, shared) — session memory shared across all
+    projects; `claude_code_memory` dataset only.
+  - **cognee-curated** (`:7730`, shared) — cross-project reference library;
+    read-mostly, promoted at `/sprint-close`. D-007.
+
+  The D-008 framing ("three stores") predates D-012 and counts Graphify + the two
+  cognee stores as they existed then. D-012 added the `cognee-memory` pillar,
+  making the total four. The `cognify → memify` (extraction → enrichment) and
+  `search` operations are exposed via MCP for the three cognee stores. See
+  D-007 + D-008 + D-012.
 - **Selective ingest**: docs enter the work graph only when tagged
   (`mishkan: ingest`) or explicitly invoked. No bulk-ingest, no PII bleed.
 

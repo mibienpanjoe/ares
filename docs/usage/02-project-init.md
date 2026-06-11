@@ -81,8 +81,10 @@ A lean, dynamic file that loads **after** the user-level identity. It carries:
   main session needs every turn.
 - Sprint slot — *current sprint*, *what's in flight*, *blockers*. Updated by
   `/mishkan-resume`, `/sprint-close`, and you.
-- Note that there are two cognee stores (`cognee` = work, `cognee-curated` =
-  reference) and that `cognee-curated` is read-only.
+- Note that init provisions two project-level MCP aliases (`cognee` = this
+  project's work store, `cognee-curated` = shared reference library; the latter
+  is read-only). The third cognee store — `cognee-memory` (`:7777`, shared
+  session memory) — is a pre-existing singleton, not provisioned here.
 - A pointer to the existing `docs/` if there is one (does not duplicate).
 
 ## Brownfield handling — what does *not* happen
@@ -110,7 +112,8 @@ find .claude/rules -type f | sort
 # settings.local.json gitignored
 grep -E '\.claude/settings\.local\.json' .gitignore
 
-# the two cognee servers declared
+# the two project-level cognee aliases written to .mcp.json
+# (cognee-memory is a shared singleton; it does not appear in per-project .mcp.json)
 python3 -c "import json; print(list(json.load(open('.mcp.json'))['mcpServers'].keys()))"
 # expected: ['cognee', 'cognee-curated']
 ```
@@ -148,5 +151,5 @@ claude        # fresh session
   selective).
 - [Orchestration](./03-orchestration.md) — how the main session routes work
   once init has run.
-- [Memory layer](./04-memory-layer.md) — the two cognee stores and what they
-  hold.
+- [Memory layer](./04-memory-layer.md) — the three cognee stores (work,
+  memory, curated) and what they hold.

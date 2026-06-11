@@ -1,27 +1,36 @@
 # 11 — Graphify (code-structure graph)
 
-> Goal: use Graphify as the **structural** layer of the MISHKAN
-> three-store knowledge stack (Graphify · Cognee work · Cognee curated)
-> so that "who calls X" / "what depends on Y" questions cost ~1.8k
-> tokens instead of lifting the whole repo into context.
+> Goal: use Graphify as the **code-structure** surface of the MISHKAN
+> four-surface knowledge model — 1 code-structure (Graphify) + 3 cognee
+> stores (work · memory · curated) — so that "who calls X" / "what
+> depends on Y" questions cost ~1.8k tokens instead of lifting the whole
+> repo into context.
 
 ## What it is
 
 [Graphify](https://github.com/safishamsi/graphify) is a tree-sitter
 based code-graph extractor with a query path that traverses the graph
 to answer structural questions. MIT, Python, `uv tool install`-able.
-Per D-008 of the MISHKAN decision log, Graphify is the third store of
-the knowledge stack:
 
-| Store | Question it answers | Source |
-|---|---|---|
-| **Graphify** | *How is the code structured?* | tree-sitter AST + optional LLM enrichment, deterministic, re-derivable |
-| **Cognee work** | *Why does this code exist and what did we decide?* | agent-ingested ADRs, runbooks, resolved research |
-| **Cognee curated** | *What did we learn on other projects?* | seeded, read-only from projects |
+MISHKAN has **four knowledge surfaces** — one code-structure surface
+(Graphify) and three cognee stores — each owning one epistemic question
+with no overlap of write authority:
 
-These are non-overlapping by design: one writer per store, one
-question type per store, no semantic mixing. The crisp test:
-**structure → Graphify, semantics → Cognee work.**
+| Surface | Question it answers | Source | D-ref |
+|---|---|---|---|
+| **Graphify** (per-project, `graphify-out/`) | *How is the code structured?* | tree-sitter AST + optional LLM enrichment, deterministic, re-derivable | D-008 |
+| **Cognee work** (per-project Ladybug, own port) | *Why does this code exist and what did we decide?* | agent-ingested ADRs, runbooks, resolved research | D-008, D-012 |
+| **cognee-memory** (`:7777`, shared) | *What does the session remember across all projects?* | `claude_code_memory` dataset; shared, not re-derivable from docs | D-012 |
+| **cognee-curated** (`:7730`, shared) | *What did we learn on other projects?* | promoted cross-project reference library, read-only from projects | D-007 |
+
+The **D-008 framing** ("three stores: Graphify · Cognee work · Cognee
+curated") reflects the stack as it stood before D-012. D-012 added the
+`cognee-memory` pillar (repurposing the old shared `:7777` Neo4j box
+for session memory only), bringing the total to four. The two framings
+are not contradictory — they count different cuts: D-008 defines the
+write-discipline split; D-012 adds a fourth surface within the cognee
+tier. The crisp routing test remains:
+**structure → Graphify, project semantics → Cognee work.**
 
 ## Install
 
@@ -252,13 +261,13 @@ opted out of the structural layer.
 
 ## See also
 
-- [D-008](../design/MISHKAN_decisions.md#d-008) — three-store knowledge
-  epistemology.
+- [D-008](../design/MISHKAN_decisions.md#d-008) — three-layer knowledge
+  epistemology (Graphify + Cognee work + Cognee curated; pre-D-012 framing).
 - [D-009](../design/MISHKAN_decisions.md#d-009) — graph-first PreToolUse
   advisory hook (Phase 1 telemetry-only, Phase 2 advisory injection —
   both shipped v0.2.3).
 - [POC report](../research/graphify-token-saving-poc.md) — verified
   88.1× reduction on the MISHKAN harness, 2026-06-07.
-- [Memory layer](./04-memory-layer.md) — the Cognee work and curated
-  stores that complete the three-store stack.
+- [Memory layer](./04-memory-layer.md) — the three cognee stores (work,
+  memory, curated) that complete the four-surface knowledge model.
 - Upstream — https://github.com/safishamsi/graphify.
