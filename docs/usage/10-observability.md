@@ -90,7 +90,7 @@ mishkan-watchd stop                # SIGTERM via the PID file
 | `1` | **Live** | "What is happening *right now*?" Active agents (with `alias · role` annotation), workflows in-flight, current worktrees, Cognee + Graphify + MCP rollup, rolling feed of every event. Default tab on launch. |
 | `2` | **Agents** | "What did each agent do?" Sessions tree (left, project paths decoded) × agent history `DataTable` (centre) × errors panel (right). Phantom sessions filtered out at the daemon `_confirmed_alive` gate. |
 | `3` | **Workflows** | "What did each dynamic workflow run, and what's *available* to run?" Recent runs (top) + static catalogue parsed from each script's `meta` block (description, when-to-use, phases). Click an entry for detail. |
-| `4` | **Knowledge** | "Are my stores up and growing?" Three cards (work + curated + graphify, real-time counts) × recent ops `DataTable` × MCP server status table. |
+| `4` | **Knowledge** | "Are my stores up and growing?" Three cards (`cognee-memory` + `cognee-curated` + graphify, real-time counts) × recent ops `DataTable` × MCP server status table. |
 | `5` | **Activity** | Unified, filterable event stream. Regex filter + type/agent selects. Errors and blocked permissions break the visual rhythm with a separator line. |
 | `6` | **Org-Ref** | Read-only browser of the 45-agent org from `org.json`. Tree by team, click a group → mission / charter / Hebrew name; click an agent → role, source, description. |
 | `7` | **Usage** | Harness-wide tokens in/out/cached, cost, context window estimate, request counts. Per-session table sorted by token volume. Detail panel with per-agent attribution + top tools. |
@@ -126,7 +126,7 @@ Six daemon sources, each independent and fail-open:
 | `session_discover` | 10 s | active Claude Code sessions (mtime < 60 s) |
 | `worktree_poll` | 5 s | `git worktree list --porcelain` per known project |
 | `mcp_probe` | 60 s | discover MCPs from `~/.claude.json` + `.mcp.json` + `mcp-needs-auth-cache.json`; probe each by HTTP/TCP |
-| `cognee_poll` | 30 s | HTTP probe of cognee work + curated + cypher node count |
+| `cognee_poll` | 30 s | HTTP probe of `cognee-memory` (`:7777`) + `cognee-curated` (`:7730`) + cypher node counts |
 | `session_tail` + `subagent_tail` | 3 s | inter-agent + compaction events from main session JSONL; subagent tool calls from nested `subagents/agent-*.jsonl` |
 
 ## Keybindings

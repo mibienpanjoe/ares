@@ -130,13 +130,14 @@ claude        # fresh session
 ## Common edge cases
 
 - **No remote / private repo:** `.mcp.json` is tracked; do not put secrets in
-  it. The cognee MCP URLs point at `http://localhost:7777` and `:7730` — your
-  own host, no third-party endpoints.
-- **Multiple projects on one host:** safe. The curated box is shared
-  (singleton); the work store holds each project as its own dataset, keyed by
-  the project directory basename by default (see
-  [Selective ingest](./05-selective-ingest.md) for the dataset naming
-  rules).
+  it. The cognee MCP URLs point at local ports on your own host — no
+  third-party endpoints. The per-project work store runs on a dynamically
+  assigned port; `cognee-memory` is `:7777`; `cognee-curated` is `:7730`.
+- **Multiple projects on one host:** safe. Each project has its own physically
+  isolated work store container (`mishkan-work-<slug>`) provisioned by
+  `ensure-work-store.sh`. The curated box and the `cognee-memory` (`:7777`)
+  session-memory box are shared singletons. See [Memory layer](./04-memory-layer.md)
+  for the three-pillar layout (D-012).
 - **Running init twice:** safe. The four artifacts are not overwritten; the
   curated ensure step is idempotent; rules are re-copied verbatim.
 

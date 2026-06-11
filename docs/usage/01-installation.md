@@ -114,10 +114,11 @@ cat ~/.claude/mishkan/.install-stamp.json 2>/dev/null
 
 ## Bring the cognee memory stack up
 
-The harness ships the memory layer as a Docker Compose stack. Two boxes:
-**work** (per-project knowledge, port `:7777`) and **curated** (shared reference
-library, port `:7730`). See [memory layer](./04-memory-layer.md) for the
-full design.
+The harness ships the memory layer as a Docker Compose stack. Three pillars:
+**per-project work stores** (one isolated Ladybug container per project,
+provisioned at `/mishkan-init`), **cognee-memory** (`:7777`, shared per-client
+session memory), and **cognee-curated** (`:7730`, shared reference library).
+See [memory layer](./04-memory-layer.md) for the full design (D-007 + D-012).
 
 ```bash
 cd ~/.claude/mishkan/cognee

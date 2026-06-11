@@ -583,14 +583,14 @@ empty state dim-centered.
 ║ ○1 Live  ○2 Agents  ○3 Workflows  ●4 Knowledge  ○5 Activity       2 sessions  12:03 ║
 ╠══ COGNEE STORES ═══════════════════════════════════════════════════════════════════════╣
 ║                                                                                        ║
-║   ╭─ work :7777 ────────────────╮   ╭─ curated :7730 ──────────────╮                  ║
-║   │ ● UP  · 02h14m              │   │ ● UP  · 43h12m               │                  ║
-║   │                             │   │                              │                  ║
-║   │ 1,247 nodes                 │   │   96 nodes                   │                  ║
-║   │ ▁▁▂▃▃▅▆█  +12 last 5min     │   │ ▁▁▁▁▂▂▃▃  +0  last 30min     │                  ║
-║   │ last ingest  12:02:14       │   │ last seed   2026-05-29       │                  ║
-║   │ embeddings: gemini  3072d   │   │ embeddings: ollama  768d     │                  ║
-║   ╰─────────────────────────────╯   ╰──────────────────────────────╯                  ║
+║   ╭─ cognee-memory :7777 ──────────╮   ╭─ curated :7730 ──────────────╮                ║
+║   │ ● UP  · 02h14m                │   │ ● UP  · 43h12m               │                ║
+║   │ session memory only           │   │                              │                ║
+║   │ 1,247 nodes                   │   │   96 nodes                   │                ║
+║   │ ▁▁▂▃▃▅▆█  +12 last 5min       │   │ ▁▁▁▁▂▂▃▃  +0  last 30min     │                ║
+║   │ last ingest  12:02:14         │   │ last seed   2026-05-29       │                ║
+║   │ embeddings: gemini  3072d     │   │ embeddings: ollama  768d     │                ║
+║   ╰───────────────────────────────╯   ╰──────────────────────────────╯                ║
 ║                                                                                        ║
 ╠══ RECENT OPS ═════════════════════════════════════════════════════════════════════════╣
 ║ time      store    op      query / path                       ms      Δnodes          ║

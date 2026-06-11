@@ -167,6 +167,8 @@ small extra Neo4j. The curated library is small and regenerable
 bulk seeding bursts embedding calls and cloud free-tier embeddings 429
 (RESOURCE_EXHAUSTED).
 
+*(Superseded on the work-store axis by D-012: per-project physical isolation. The `cognee` MCP alias now points to a per-project Ladybug store, not port `:7777`. Port `:7777` is repurposed as `cognee-memory`, holding only `claude_code_memory`.)*
+
 ## D-008 — Three-layer memory epistemology: structure / project semantics / curated cross-project (added 2026-06-05)
 
 **Decision:** MISHKAN's knowledge surface is split into **three physically
@@ -355,6 +357,8 @@ introduced to protect.
 **Supersedes / amends:** none. Extends D-001 (Cognee local Docker) and D-007
 (curated vs work split) by adding a third epistemic layer on the same
 discipline.
+
+*(The "Cognee work (`:7777`)" row in the table above describes the model as of D-008. Superseded on the work-store axis by D-012: the `cognee` MCP alias now points to a per-project Ladybug store on its own port; `:7777` is repurposed as `cognee-memory`, session memory only.)*
 
 ## D-009 — Graph-first PreToolUse gate for the five code-writing specialists (added 2026-06-05)
 

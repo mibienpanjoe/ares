@@ -25,7 +25,8 @@ provider choices.
 
 | Store | Contains | Provider recommendation | Why |
 |---|---|---|---|
-| **Work** (`:7777`) | project knowledge, may contain PII | **Local Ollama LLM** (private, no quota), or paid/no-train cloud, or a free cloud you accept training on | every free cloud tier trains on prompts; PII shouldn't leak |
+| **Per-project work store** (per-project port, Ladybug) | project knowledge, may contain PII | **Local Ollama LLM** (private, no quota), or paid/no-train cloud, or a free cloud you accept training on | every free cloud tier trains on prompts; PII shouldn't leak |
+| **cognee-memory** (`:7777`, session memory) | per-client session memory (`claude_code_memory`) | Local Ollama recommended; treat the same as project work — may reference PII indirectly | cross-session memory accumulates project context |
 | **Curated** (`:7730`) | public reference resources, no PII | Any free cloud (Gemini, NVIDIA catalog, OpenRouter named-free) is fine | nothing sensitive |
 
 **Embeddings should be local** in both stores. Bulk ingest fires many embedding

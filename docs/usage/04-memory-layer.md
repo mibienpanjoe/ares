@@ -4,38 +4,43 @@
 > agents query it. This is the layer that makes MISHKAN *accumulate* rather
 > than just function.
 
-## Two physically-isolated stores (decision D-007)
+## Three physically-isolated pillars (decisions D-007 + D-012)
 
-Cognee runs locally on the host as a Docker stack. The core architectural
-choice (introduced in commit `418d10a`, documented in
-[`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md) §D-007):
+Cognee runs locally on the host as a Docker stack. The current architecture
+has three pillars (D-007 separated work from curated; D-012 further split
+per-project work stores from the shared session-memory box; both documented in
+[`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md)):
 
 ```
-        shared Ollama (embeddings, local) ─┐ stateless, serves both
-        shared Postgres server ────────────┤ separate databases
-                                            │
-  WORK box  :7777  (cognee)                 CURATED box  :7730  (cognee-curated)
-  own Neo4j + cognee_db                     own Neo4j + curated_db
-  ── per-project knowledge ──               ── cross-project reference ──
-  • aiobi-mail        (project dataset)     • curated_library (96 nodes seed)
-  • claude_code_memory (per-client memory)  • read-mostly
-  UI :7724 · Neo4j :7716/:7709              UI :7734 · Neo4j :7731/:7732
+  shared Ollama (embeddings, local) ─┐ stateless, serves all pillars
+  shared Postgres server ────────────┤ separate databases
+                                      │
+  Per-project WORK store              MEMORY box  :7777  (cognee-memory)    CURATED box  :7730  (cognee-curated)
+  mishkan-work-<slug>                 Neo4j + cognee_db                      own Neo4j + curated_db
+  embedded Ladybug graph              ── shared per-client session memory ── ── cross-project reference ──
+  own port + volume                   • claude_code_memory (never prune)     • curated_library (96 nodes seed)
+  ── isolated project knowledge ──    • cross-project by design              • read-mostly
+  provisioned by ensure-work-store.sh UI :7724 · Neo4j :7716/:7709           UI :7734 · Neo4j :7731/:7732
 ```
 
-Why two stores and not one?
+Why physical separation and not logical datasets?
 
 - **PII isolation.** Project ingestion pulls in code and docs that can contain
   PII (real email addresses in incident reports were the trigger during the
-  build). The cross-project curated library must stay clean.
-- **Logical tags aren't enough on Neo4j Community.** Community Edition allows
-  only one database per Neo4j instance, and with cognee's access control
-  disabled (the only mode that works against Neo4j today) all datasets share
-  one graph. So logical dataset tags commingle in one store. Physical
-  separation = a separate Neo4j container.
+  build). The cross-project curated library and session-memory box must stay clean.
+- **`datasets=` filter is advisory-only on Neo4j.** With `ENABLE_BACKEND_ACCESS_CONTROL=false`
+  (the only mode that works against Neo4j Community), cognee ignores the
+  `datasets=` filter and searches the whole graph — verified against cognee
+  v1.1.0 / issue #1023. Logical tags alone do not isolate.
+- **Physical separation = topology.** Each project work store is a separate
+  container + volume + on-disk graph file. Cross-project reads are impossible
+  by construction.
 
-The `claude_code_memory` dataset is the **per-client session memory**, created
-on demand by cognee-mcp when Claude Code connects. **It belongs in the work
-store and must never be pruned** (D-007 calls this out explicitly).
+The `claude_code_memory` dataset is the **per-client session memory**, held in
+the `cognee-memory` (`:7777`) box. It is shared across all your work — one
+continuous thing, not re-derivable — and **must never be pruned** (D-012).
+Keep it scrubbed of project-specific secrets and PII because it is
+cross-project by nature.
 
 ### Per-project work stores (decision D-012)
 
@@ -106,20 +111,29 @@ by enrichment, never manually.
 
 ## The MCP — how agents reach memory
 
-Every MISHKAN-initialised project declares **both** servers in `.mcp.json`:
+Every MISHKAN-initialised project declares **three** servers in `.mcp.json`
+(written by `ensure-work-store.sh` at `/mishkan-init`):
 
 ```json
 {
   "mcpServers": {
-    "cognee":          { "type": "http", "url": "http://localhost:7777/mcp" },
-    "cognee-curated":  { "type": "http", "url": "http://localhost:7730/mcp" }
+    "cognee":         { "type": "http", "url": "http://localhost:<per-project-port>/mcp" },
+    "cognee-memory":  { "type": "http", "url": "http://localhost:7777/mcp" },
+    "cognee-curated": { "type": "http", "url": "http://localhost:7730/mcp" }
   }
 }
 ```
 
-So when an agent searches, it can target either store explicitly:
+The `<per-project-port>` is assigned by `ensure-work-store.sh` at init time
+and recorded in the project's `.mcp.json`. It is NOT `:7777`.
 
-- `cognee` — read+write the project's own graph (typical).
+So when an agent searches, it targets the right pillar explicitly:
+
+- `cognee` — read+write the project's own isolated Ladybug graph (typical for
+  project knowledge retrieval and ingest).
+- `cognee-memory` — read+write per-client session memory (`claude_code_memory`)
+  shared across all work. Use when the agent needs to recall or record
+  cross-session context.
 - `cognee-curated` — read the cross-project reference library (typical for
   Shemaiah cross-referencing curated resources).
 
@@ -150,19 +164,23 @@ impossible by construction. The curated store holds one dataset
 
 Two ways for each store:
 
+Per-project work stores use an embedded Ladybug graph (no Neo4j, no UI).
+The Neo4j-backed pillars (`cognee-memory` and `cognee-curated`) have UIs:
+
 ### Cognee Graph Explorer UI
 
-- **Work**: `http://localhost:7724`, backend `:7737`.
+- **cognee-memory** (`:7777`, session memory): `http://localhost:7724`, backend `:7737`.
   Login = `DEFAULT_USER_EMAIL` / `DEFAULT_USER_PASSWORD` from `.env`.
-- **Curated**: `http://localhost:7734`, backend `:7733` (added in commit `751f95e`).
+- **cognee-curated** (`:7730`, reference library): `http://localhost:7734`, backend `:7733`
+  (added in commit `751f95e`).
   Login = `DEFAULT_USER_EMAIL` / `DEFAULT_USER_PASSWORD` from `.env.curated`.
 
 ### Neo4j Browser (raw graph)
 
-| Store | HTTP | Bolt | Credentials |
+| Pillar | HTTP | Bolt | Credentials |
 |---|---|---|---|
-| Work | `http://localhost:7716` | `bolt://localhost:7709` | `neo4j` + work `GRAPH_DATABASE_PASSWORD` |
-| Curated | `http://localhost:7731` | `bolt://localhost:7732` | `neo4j` + curated `GRAPH_DATABASE_PASSWORD` |
+| cognee-memory (`:7777`) | `http://localhost:7716` | `bolt://localhost:7709` | `neo4j` + work `GRAPH_DATABASE_PASSWORD` |
+| cognee-curated (`:7730`) | `http://localhost:7731` | `bolt://localhost:7732` | `neo4j` + curated `GRAPH_DATABASE_PASSWORD` |
 
 Important: use the `bolt://` scheme in the browser's connect URL, **not**
 `neo4j://`. The `neo4j://` scheme triggers routing discovery that fails over an
@@ -206,8 +224,9 @@ volume lives. Standard restic / rsync covers it.
 
 ## Configuration anchors
 
-- Work box env: `~/.claude/mishkan/cognee/.env` (gitignored, mode 600).
+- `cognee-memory` box (`:7777`) env: `~/.claude/mishkan/cognee/.env` (gitignored, mode 600).
 - Curated box env: `~/.claude/mishkan/cognee/.env.curated` (gitignored, mode 600).
+- Per-project work store provisioner: `scripts/ensure-work-store.sh` (run at `/mishkan-init`; idempotent).
 - Compose entrypoint: `docker-compose.yml` + overlays (`hardening`, `selfhosted`,
   `ui`, `curated`, `curated-ui`).
 - Curated singleton helper: `scripts/ensure-curated-box.sh` (idempotent).
@@ -216,8 +235,8 @@ volume lives. Standard restic / rsync covers it.
 
 ## See also
 
-- The two-store rationale: [D-007](../design/MISHKAN_decisions.md) and
-  commit `418d10a`.
+- The three-pillar rationale: [D-007](../design/MISHKAN_decisions.md) (work vs curated split),
+  [D-012](../design/MISHKAN_decisions.md) (per-project work stores), commit `418d10a`.
 - Curated UI overlay: commit `751f95e`.
 - Storage persistence fix: commit `e24fabf`.
 - Curated structured ingestion (low-level): commit `086e80e`,

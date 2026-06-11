@@ -6,7 +6,7 @@
 
 A single Claude Code session, turned into a 45-agent software-engineering
 organisation with deterministic constraints (hooks, rules, schemas), an
-asymmetric AI-vs-human delegation boundary, and a two-store knowledge graph
+asymmetric AI-vs-human delegation boundary, and a three-pillar knowledge graph
 that accumulates as you work.
 
 ## In five minutes
@@ -18,19 +18,22 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
                    ├─Task→ aiobi-ops or other project agents │ one level deep
                    └─Task→ research pipeline                 ┘
                                                                 ↓
-                    ┌──────────────────────────┐    ┌──────────────────────┐
-                    │ cognee WORK   :7777      │    │ cognee CURATED :7730 │
-                    │ project knowledge        │    │ reference library    │
-                    │ + per-client memory      │    │ (read-mostly, shared)│
-                    └──────────────────────────┘    └──────────────────────┘
+                    ┌──────────────────────────┐    ┌──────────────────────┐    ┌─────────────────────────────┐
+                    │ cognee per-project store │    │ cognee CURATED :7730 │    │ cognee-memory  :7777        │
+                    │ mishkan-work-<slug>      │    │ reference library    │    │ per-client session memory   │
+                    │ Ladybug, own port+volume │    │ (read-mostly, shared)│    │ claude_code_memory (shared) │
+                    └──────────────────────────┘    └──────────────────────┘    └─────────────────────────────┘
 ```
 
 - **Main session is leadership.** It loads MISHKAN identity from
   `~/.claude/CLAUDE.md` and routes work one level deep.
 - **45 agents** across **6 teams** + **2 orchestrators** + a **6-stage research
   pipeline**.
-- **Cognee** is the memory layer: two physically-isolated stores, with
+- **Cognee** is the memory layer: three physically-isolated pillars — per-project
+  work store (isolated Ladybug, own port), `cognee-memory` (`:7777`, shared
+  session memory), `cognee-curated` (`:7730`, reference library) — with
   `cognify → memify` (extraction → enrichment) and `search` exposed via MCP.
+  See D-007 + D-012.
 - **Selective ingest**: docs enter the work graph only when tagged
   (`mishkan: ingest`) or explicitly invoked. No bulk-ingest, no PII bleed.
 
@@ -41,12 +44,12 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 | 01 | [Installation](./01-installation.md) | Prerequisites, `npx mishkan-harness install`, layout, uninstall |
 | 02 | [Project initialisation](./02-project-init.md) | `/mishkan-init` flow, scope choices, brownfield handling |
 | 03 | [Orchestration](./03-orchestration.md) | Main-session-as-orchestrator, model routing, skills on-demand |
-| 04 | [Memory layer (cognee)](./04-memory-layer.md) | Work + curated stores, `cognify`/`memify`/`search`, UIs |
+| 04 | [Memory layer (cognee)](./04-memory-layer.md) | Per-project work stores + `cognee-memory` (`:7777`) + `cognee-curated` (`:7730`), `cognify`/`memify`/`search`, UIs |
 | 05 | [Selective ingest](./05-selective-ingest.md) | `mishkan-ingest`, frontmatter tagging, memory-is-opt-in |
 | 06 | [LLM provider profiles](./06-llm-providers.md) | Gemini/NVIDIA/Ollama/OpenAI/Anthropic, rate vs daily caps |
 | 07 | [Troubleshooting](./07-troubleshooting.md) | Real gotchas + fixes from the build |
 | 08 | [Glossary](./08-glossary.md) | 45-agent roster (alias → role → team), key terms |
-| 09 | [Dynamic Workflows](./09-workflows.md) | 10 org-level + 8 team-level workflows, ADR D-010 portfolio discipline |
+| 09 | [Dynamic Workflows](./09-workflows.md) | 10 org-level + 10 team-level workflows, ADR D-010 portfolio discipline |
 | 10 | [Observability](./10-observability.md) | Cross-session daemon + Textual TUI; 8 tabs (Live · Agents · Workflows · Knowledge · Activity · Org-Ref · Usage · Skills), project filter (`p`) |
 | 11 | [Graphify](./11-graphify.md) | Code-structure graph; queries at ~1.8k tokens (88.1× reduction, POC-verified); D-008 + D-009 |
 | 12 | [Skill discovery](./12-skill-discovery.md) | Universal indexer + 3-bucket router across MISHKAN, user, plugin, and project skills; D-011 |
@@ -62,7 +65,7 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 ## Authoritative references this documentation builds on
 
 - [`docs/design/MISHKAN_harness_design.md`](../design/MISHKAN_harness_design.md) — the 5-layer architecture and rationale.
-- [`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md) — D-001…D-011 with rationale.
+- [`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md) — D-001…D-012 with rationale.
 - [`docs/design/MISHKAN_agent_aliases.md`](../design/MISHKAN_agent_aliases.md) — the biblical roster.
 - [`docs/design/MISHKAN_ontology.md`](../design/MISHKAN_ontology.md) — cognee entity + relationship types.
 - [`docs/design/MISHKAN_token_optimisation.md`](../design/MISHKAN_token_optimisation.md) — context economy.

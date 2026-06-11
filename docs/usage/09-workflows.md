@@ -1,7 +1,7 @@
 # 09 — Dynamic Workflows
 
 > Goal: explain when MISHKAN reaches for a dynamic workflow vs ordinary
-> Task delegation, the **18 workflows shipped** (10 org-level + 8 team-
+> Task delegation, the **20 workflows shipped** (10 org-level + 10 team-
 > level), the cost gate, and how dynamic workflows relate to the 30+
 > craft skills that drive each team's day-to-day work.
 
