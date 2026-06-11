@@ -68,7 +68,12 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-      start_period: 90s
+      # 300s: cognee-mcp cold-start is slow (~4-5min — cognee lib import + graph
+      # init + ollama embedding warmup + DB migrations before it binds :7777). The
+      # old 90s grace flagged a still-booting container unhealthy on every cold
+      # start. A generous start_period only delays the first probe; it never slows
+      # a healthy container. Matches the shared :7777 box (base compose) at 300s.
+      start_period: 300s
     networks:
       - shared
     security_opt:
