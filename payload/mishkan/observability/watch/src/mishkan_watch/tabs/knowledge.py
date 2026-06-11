@@ -1,7 +1,11 @@
 """Tab 4 — Knowledge.
 
 3-row stacked layout per §7.3:
-  - COGNEE STORES (top, 2 Static cards side-by-side)
+  - COGNEE STORES (top, 3 Static cards side-by-side — D-012 three-pillar model)
+      work    — per-project store (dynamic port, discovered from .mcp.json)
+      memory  — session memory store (:7777, cognee-memory alias)
+      curated — shared curated store (:7730, cognee-curated alias)
+      graphify — code-graph card (unchanged)
   - RECENT OPS (middle, DataTable — cognee_op + graphify_query mixed)
   - MCP SERVERS (bottom, DataTable — all MCPs)
 """
@@ -27,6 +31,7 @@ class KnowledgeTab(Container):
     def compose(self) -> ComposeResult:
         with Horizontal(id="knowledge-stores"):
             yield Static("", id="knowledge-work", classes="cognee-card")
+            yield Static("", id="knowledge-memory", classes="cognee-card")
             yield Static("", id="knowledge-curated", classes="cognee-card")
             yield Static("", id="knowledge-graphify", classes="cognee-card")
         with Container(id="knowledge-ops"):
@@ -155,18 +160,84 @@ class KnowledgeTab(Container):
     def _render_cards(self) -> None:
         try:
             work_panel = self.query_one("#knowledge-work", Static)
+            memory_panel = self.query_one("#knowledge-memory", Static)
             cur_panel = self.query_one("#knowledge-curated", Static)
             graphify_panel = self.query_one("#knowledge-graphify", Static)
         except Exception:
             return
         mcps = self._state.get("mcp_servers") or {}
         cognee_state = self._state.get("cognee") or {}
-        # Try cognee_state first (set by cognee_op events), else fall back to MCP status
-        work_entry = cognee_state.get("work") or self._mcp_match(mcps, "cognee", ("work", "7777"))
-        cur_entry = cognee_state.get("curated") or self._mcp_match(mcps, "cognee", ("curated", "7730"))
-        work_panel.update(self._card_for("work :7777", work_entry))
+
+        # work — per-project store (D-012). Discovered from .mcp.json; port varies.
+        work_entry = cognee_state.get("work") or self._mcp_match(mcps, "cognee", ("cognee",))
+        work_panel.update(self._work_card(work_entry))
+
+        # memory — session memory store (:7777).
+        mem_entry = (
+            cognee_state.get("memory")
+            or self._mcp_match(mcps, "cognee", ("memory", "7777"))
+        )
+        memory_panel.update(self._card_for("memory :7777", mem_entry))
+
+        # curated — shared curated store (:7730, unchanged).
+        cur_entry = (
+            cognee_state.get("curated")
+            or self._mcp_match(mcps, "cognee", ("curated", "7730"))
+        )
         cur_panel.update(self._card_for("curated :7730", cur_entry))
+
         graphify_panel.update(self._graphify_card(self._state.get("graphify") or {}))
+
+    def _work_card(self, entry: dict[str, Any] | None) -> Text:
+        """Per-project cognee store card (D-012 'work' pillar).
+
+        When no project store is discovered, renders a graceful
+        "no per-project store" placeholder rather than showing raw None.
+        When discovered, shows the project slug + port extracted from the URL.
+        """
+        text = Text()
+        if entry is None:
+            text.append("○ ", style="#F6AD55")
+            text.append("work", style="bold")
+            text.append("  (per-project)\n", style="dim")
+            text.append("\n")
+            text.append("no per-project store discovered\n", style="dim italic")
+            text.append("run /mishkan-init in a project\n", style="dim italic")
+            return text
+
+        status = entry.get("status") or ("up" if entry.get("up") else "down")
+        url = entry.get("url") or ""
+        # Extract port from URL for the subtitle label.
+        port_label = ""
+        try:
+            from urllib.parse import urlparse as _up
+            parsed = _up(url)
+            if parsed.port:
+                port_label = f":{parsed.port}"
+        except Exception:
+            pass
+        # Project slug: last path component of the project path or the URL host.
+        project_raw = entry.get("project") or ""
+        slug = project_raw.rstrip("/").rsplit("/", 1)[-1] if project_raw else ""
+        subtitle = slug if slug else url
+
+        nodes = entry.get("nodes")
+        last = entry.get("last_ingest") or entry.get("last_event") or "-"
+        if isinstance(last, str) and len(last) > 19:
+            last = last[11:19]
+        dot = "●" if status == "up" else ("✗" if status == "down" else "⟳")
+        color = {"up": "#00D4AA", "down": "#FC8181"}.get(status, "#F6AD55")
+        text.append(f"{dot} ", style=color)
+        text.append("work", style="bold")
+        text.append(f"{port_label}  ({status})\n", style="dim")
+        text.append("\n")
+        if subtitle:
+            text.append(f"{subtitle[:30]}\n", style="dim")
+        if nodes is not None:
+            text.append(f"{nodes:>6}", style="bold")
+            text.append(" nodes\n", style="dim")
+        text.append(f"last activity: {last}\n", style="dim")
+        return text
 
     def _graphify_card(self, g: dict[str, Any]) -> Text:
         text = Text()
