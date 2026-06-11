@@ -120,6 +120,17 @@ provisioned at `/mishkan-init`), **cognee-memory** (`:7777`, shared per-client
 session memory), and **cognee-curated** (`:7730`, shared reference library).
 See [memory layer](./04-memory-layer.md) for the full design (D-007 + D-012).
 
+The guided path is one command — it preflights the config, names any gap, then
+brings up the shared stack (base + hardening + selfhosted overlays) and seeds the
+curated box:
+
+```bash
+mishkan knowledge configure        # wizard: LLM_API_KEY + provider profile → .env (see chapter 06)
+mishkan knowledge-stack up         # memory :7777 + curated :7730, idempotent (~5 min cold start)
+```
+
+<details><summary>What <code>knowledge-stack up</code> wraps, if you prefer the manual steps</summary>
+
 ```bash
 cd ~/.claude/mishkan/cognee
 
@@ -127,8 +138,8 @@ cd ~/.claude/mishkan/cognee
 cp .env.example .env
 # … fill LLM_API_KEY and pick a provider profile (see chapter 06)
 
-# 2. bring up the work stack (always with the hardening overlay)
-docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
+# 2. bring up the stack (base + hardening + selfhosted overlays)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml -f docker-compose.selfhosted.yml up -d --build
 
 # 3. bring up the curated box (one-time per host, idempotent helper)
 bash ~/.claude/mishkan/scripts/ensure-curated-box.sh
@@ -136,6 +147,8 @@ bash ~/.claude/mishkan/scripts/ensure-curated-box.sh
 # 4. seed the curated reference library (96 nodes; runs cognify→memify)
 bash ~/.claude/mishkan/scripts/seed-curated-library.sh
 ```
+
+</details>
 
 Health checks:
 

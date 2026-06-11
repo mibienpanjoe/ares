@@ -25,7 +25,7 @@ Requires Claude Code + Node ≥ 18.
 ```bash
 npx mishkan-harness install
 mishkan status
-mishkan observability              # optional: daemon + TUI (needs uv)
+mishkan observability install      # optional: daemon + TUI (needs uv)
 ```
 
 Full guide: [`docs/usage/01-installation.md`](docs/usage/01-installation.md).
@@ -67,9 +67,7 @@ Wired by `/mishkan-init` into each project's `.mcp.json`:
 
 ```bash
 mishkan knowledge configure        # wizard: LLM provider + credentials + .env
-cd ~/.claude/mishkan/cognee
-docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
-~/.claude/mishkan/scripts/seed-curated-library.sh
+mishkan knowledge-stack up         # memory :7777 + curated :7730 (guided; preflights config, seeds curated)
 ```
 
 Guide: [`payload/mishkan/cognee/README.md`](payload/mishkan/cognee/README.md) · [`docs/usage/04-memory-layer.md`](docs/usage/04-memory-layer.md).
@@ -86,7 +84,7 @@ mishkan code-graph status          # node/edge count, last scan time
 Two Python packages (`uv tool`-installable): a daemon (`mishkan-watchd`) that tails every session's event bus and a Textual TUI (`mishkan-watch`) with 8 tabs — Live, Agents, Workflows, Knowledge, Activity, Org-Ref, Usage, Skills. Cross-session, cross-project, near-zero overhead.
 
 ```bash
-mishkan observability              # install both packages
+mishkan observability install      # install both packages
 mishkan-watch                      # opens TUI, auto-starts daemon if absent
 mishkan-watchd start|stop|status   # manual daemon control
 ```
@@ -130,7 +128,7 @@ mishkan install                                     # install/refresh into ~/.cl
 mishkan uninstall                                   # remove harness (keeps CLAUDE.md + rules)
 mishkan uninstall --purge                           # also remove y4nn-standards.md
 mishkan knowledge configure                         # wizard: LLM provider + Cognee .env
-mishkan observability                               # install daemon + TUI only (needs uv)
+mishkan observability install                       # install daemon + TUI only (needs uv)
 mishkan status                                      # install state, profile, version
 mishkan org show [--json]                                # print the 45-agent org
 mishkan code-graph [status|open|scan]               # inspect the project's Graphify graph

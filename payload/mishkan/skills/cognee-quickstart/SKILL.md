@@ -53,7 +53,7 @@ cd cognee-mcp && uv sync --dev --all-extras --reinstall
 
 ## 5. Bring it up + verify
 
-- Container HTTP mode: `docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build`, then `nc -z localhost 7777`.
+- Container HTTP mode: `docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build`, then `nc -z localhost 7777`. (Under MISHKAN the human path that wraps this — config preflight + curated seed + selfhosted overlay — is `mishkan knowledge-stack up`; the raw compose here is the under-the-hood reference.)
 - stdio mode: nothing to start — Claude Code spawns it from `.mcp.json`.
 
 ## 6. Seed + confirm in the harness

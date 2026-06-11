@@ -433,9 +433,8 @@ ${tail}`;
     console.log(`  Ollama             ${c.cyan("http://127.0.0.1:11434")}   ${c.dim("local LLM / embeddings")}`);
   }
   console.log();
-  console.log(c.bold("Bring up the Cognee stack:"));
-  console.log(c.dim(`  cd ${tilde(targetDir)}`));
-  console.log(c.dim("  docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build"));
+  console.log(c.bold("Bring up the knowledge stack:"));
+  console.log(c.dim("  mishkan knowledge-stack up") + c.dim("   (guided: preflights config, then memory :7777 + curated :7730)"));
   console.log(c.dim(`\n  Full guide (incl. SSH-tunnel for remote hosts): ${tilde(accessPath)}`));
 }
 
@@ -566,7 +565,7 @@ function installObservabilityStack() {
     console.log(c.dim(
       "  Install uv with:\n" +
       "    curl -LsSf https://astral.sh/uv/install.sh | sh\n" +
-      "  Then re-run:  npx mishkan-harness observability"));
+      "  Then re-run:  npx mishkan-harness observability install"));
     return { installed: false, reason: "uv-missing" };
   }
 
@@ -701,7 +700,7 @@ async function install() {
   if (await promptYN("        Install observability stack now?", true)) {
     installObservabilityStack();
   } else {
-    console.log(c.dim("        Skipped. Re-run later:  npx mishkan-harness observability"));
+    console.log(c.dim("        Skipped. Re-run later:  npx mishkan-harness observability install"));
   }
 
   // Auto-symlink ~/.local/bin/mishkan -> this package's bin/mishkan.js so
@@ -1144,6 +1143,9 @@ async function projectWorkStoreCmd(argv) {
     console.log(c.green(`✓ ${slug} reset.`) + c.dim("  re-provision: ") + c.bold(`mishkan project-work-store ${slug} up`));
     return;
   }
+  // unreachable given the VERBS guard above — explicit so a future verb can't fall through silently
+  console.error("internal error: unexpected project-work-store verb: " + sub);
+  process.exit(1);
 }
 
 function openWatchTui(argv) {

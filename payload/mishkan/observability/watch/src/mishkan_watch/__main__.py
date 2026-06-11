@@ -57,9 +57,10 @@ def _probe_socket(socket_path: Path) -> bool:
             buf += chunk
         frame = json.loads(buf.split(b"\n", 1)[0].decode("utf-8"))
         return isinstance(frame, dict) and "type" in frame
-    except (OSError, ValueError):
+    except (OSError, ValueError, UnicodeDecodeError):
         # OSError: connect/recv failed or timed out (dead / wedged).
         # ValueError (incl. JSONDecodeError): not a real watchd on this socket.
+        # UnicodeDecodeError: first frame isn't valid UTF-8 — not our daemon.
         return False
     finally:
         s.close()
