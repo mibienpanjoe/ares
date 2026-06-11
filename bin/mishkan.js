@@ -780,10 +780,10 @@ async function install() {
   // steps. The wizard + ACCESS.txt carry the full URL/cred detail.
   console.log();
   console.log("   " + c.bold(c.cyan("▸ Knowledge")) + c.dim("   three stores, three jobs — optional, opt-in"));
-  console.log("       " + "memory".padEnd(9)  + c.cyan(":7777") + c.dim("   what you learn across every session — shared"));
-  console.log("       " + "curated".padEnd(9) + c.cyan(":7730") + c.dim("   your cross-project reference library — read-mostly"));
-  console.log("       " + "work".padEnd(9)    + "     "          + c.dim("each project's own private graph — physically isolated"));
-  console.log(c.dim("                     embedded Ladybug · one per project at ") + "/mishkan-init" + c.dim(" · D-012"));
+  console.log("       " + "memory".padEnd(9)  + c.cyan(":7777") + c.dim("   what you learn across your sessions — kept and shared"));
+  console.log("       " + "curated".padEnd(9) + c.cyan(":7730") + c.dim("   a reference library you mostly read from"));
+  console.log("       " + "work".padEnd(9)    + "     "          + c.dim("this project's private notes — never shared with other"));
+  console.log(c.dim("                     projects; created the first time you run /mishkan-init"));
   console.log();
   console.log(c.dim("       Bring memory + curated up:"));
   console.log(c.dim("         1. ") + `${m} configure-knowledge` + c.dim("   → writes .env + ACCESS.txt"));
