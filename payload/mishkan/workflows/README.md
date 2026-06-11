@@ -77,7 +77,7 @@ bar. New workflows land through joint review — not ad hoc.
 The June 2026 portfolio review produced the org-level additions
 (`blast-radius`, `knowledge-gap-discovery`, `standards-rollout`), the
 org-level removal (`multi-perspective-review` was theatre vs the existing
-`architecture-panel`), the eight team-level workflows above, and the
+`architecture-panel`), the ten team-level workflows above, and the
 anti-patterns below.
 
 ### Anti-patterns to avoid (D-010)
