@@ -170,9 +170,15 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Wait for container health (bounded: 40 × 5 s = 200 s max)
+# 6. Wait for container health (bounded: 80 × 5 s = 400 s max)
 # ---------------------------------------------------------------------------
-echo "waiting for ${CONTAINER_NAME} to become healthy..." >&2
+# 400s, NOT 200s: the cognee-mcp cold start is genuinely ~4-5 min (cognee lib
+# import + graph init + ollama embedding warmup + DB migrations before it binds
+# its port), so the healthcheck start_period is 300s. A 200s wait would time out
+# on a perfectly healthy-but-still-booting store and falsely report failure.
+# The wait must exceed the start_period with margin; a too-long bound only costs
+# time on a genuinely stuck store (which then logs + exits below).
+echo "waiting for ${CONTAINER_NAME} to become healthy (cold start is ~4-5 min)..." >&2
 _attempts=0
 while true; do
   _status="$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null || true)"
@@ -180,7 +186,7 @@ while true; do
     break
   fi
   _attempts=$(( _attempts + 1 ))
-  if [ "$_attempts" -ge 40 ]; then
+  if [ "$_attempts" -ge 80 ]; then
     echo "timed out waiting for ${CONTAINER_NAME} (last status: ${_status:-unknown})" >&2
     echo "check logs with: docker logs ${CONTAINER_NAME}" >&2
     exit 1
