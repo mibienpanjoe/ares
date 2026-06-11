@@ -173,14 +173,22 @@ export WORK_PROJECT WORK_PORT
 echo "provisioning work store: project='${WORK_PROJECT}' container='${CONTAINER_NAME}' port='${WORK_PORT}'" >&2
 
 # ---------------------------------------------------------------------------
-# 5. Bring up (only if container is not already running)
+# 5. Bring up (only if the canonical-named container is not already running)
 # ---------------------------------------------------------------------------
+# --force-recreate: when we reach here the canonical container is absent — but a
+# RENAMED leftover (e.g. `<hash>_mishkan-work-<slug>`, docker's rename when a prior
+# `rm -f` was still in flight) may still hold this service's compose labels, so a
+# plain `up` would just restart that stale container (wrong env, wrong name) and the
+# health-wait would hang on a name that never appears. Forcing recreate replaces it
+# with a fresh canonical container that picks up the current compose env (e.g. the
+# D-013 ONTOLOGY_* vars). --remove-orphans clears containers for services no longer
+# in the compose. Together they make recreate self-healing instead of racing.
 if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
   docker compose \
     -f "$COMPOSE_WORK" \
     -f "$COMPOSE_HARDENING" \
     -p "$COMPOSE_PROJECT" \
-    up -d || {
+    up -d --force-recreate --remove-orphans || {
       echo "docker compose up failed for project '${WORK_PROJECT}'" >&2
       exit 1
     }
