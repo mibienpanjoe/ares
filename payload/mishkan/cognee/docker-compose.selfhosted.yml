@@ -71,7 +71,10 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      # 180s: Neo4j + APOC cold-start is slow, and slower still when the whole
+      # stack (ollama + pg + both neo4j) warms in parallel on shared I/O. A 30s
+      # grace marked it unhealthy and cascaded (cognee-mcp depends_on healthy).
+      start_period: 180s
     networks:
       - cognee_net
     security_opt:
