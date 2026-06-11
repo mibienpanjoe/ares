@@ -25,27 +25,28 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
    `/plan` first.
 7. **Jehoshaphat** (Sefer) — scaffold `docs/README.md`, `docs/adr/`,
    `docs/runbooks/` (stub runbooks per team). `/plan` first.
-8. **Automated** — Cognee setup (separate stores, decisions D-007 + D-012):
-   - **Curated box (global singleton):** run
-     `bash ~/.claude/mishkan/scripts/ensure-curated-box.sh`. Idempotent —
-     creates `curated_db`, brings up the curated box (`mishkan-curated-*` on :7730),
-     seeds the reference library only if empty. Never reseeds a populated box.
-   - **Work store (per-project, ADR D-012):** each project gets its OWN
-     physically-isolated work store (embedded Ladybug; own container + volume +
-     port — never the shared `:7777`). Provision it and capture the port:
+8. **Automated** — knowledge setup (decisions D-007 + D-012 + D-015). Init composes
+   the two control verbs (the human-facing equivalents of the scripts):
+   - **Knowledge stack (shared, idempotent):** ensure the shared infra is up —
+     `mishkan knowledge-stack up` (memory :7777 + curated :7730 + ollama/pg;
+     wraps the compose + `ensure-curated-box.sh`; no-op if already running; ~5min
+     cold start on first run; preflights `.env` and guides to `mishkan knowledge
+     configure` if unset). Confirm-if-down.
+   - **Project work store (per-project, ADR D-012):** each project gets its OWN
+     physically-isolated store (embedded Ladybug; own container + volume + port —
+     never the shared `:7777`). Human path: `mishkan project-work-store up` (slug
+     defaults to the project dir name). To capture the assigned port for `.mcp.json`
+     (step 9), the automation reads it from the underlying provisioner:
      ```bash
      WORK_PORT=$(bash ~/.claude/mishkan/scripts/ensure-work-store.sh)
      ```
-     (slug defaults to the project dir name). The printed port is substituted into
-     `.mcp.json` in step 9. Isolation rides on this container/volume, not `datasets=`.
-   - **Ingest (opt-in, never bulk):** then
-     `bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only` adds anything
-     already tagged `mishkan: ingest` into THIS project's store; the rest is added
-     per-doc as you go. The skill runs `add → cognify → memify`, throttled, on the
-     per-project volume. Never bulk-ingest the tree, and scrub secrets/PII before
-     ingest (see the `mishkan-ingest` skill's security section).
-   If the cognee stack is not running (`~/.claude/mishkan/cognee/`), skip
-   gracefully and note it — agents still work; persistence resumes when it's up.
+     Isolation rides on this container/volume, not `datasets=`.
+   - **Ingest (opt-in, never bulk):** `mishkan knowledge ingest --tagged-only` adds
+     anything tagged `mishkan: ingest` into THIS project's store (add → cognify →
+     memify, throttled); the rest is added per-doc as you go. Never bulk-ingest the
+     tree, and scrub secrets/PII first (see the `mishkan-ingest` skill's security section).
+   If the knowledge stack isn't up, init brings it up first; agents still work
+   without it — persistence resumes when it's up.
 9. **Automated** — write `./CLAUDE.md` from
    `~/.claude/mishkan/templates/project-CLAUDE.md`, fill placeholders, set Sprint
    S0. Copy `~/.claude/mishkan/templates/settings.json` → `.claude/settings.json`,

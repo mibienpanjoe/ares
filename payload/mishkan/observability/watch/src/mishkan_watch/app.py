@@ -49,6 +49,7 @@ class MishkanWatch(App):
         Binding("7", "switch_tab('usage')", "Usage"),
         Binding("8", "switch_tab('skills')", "Skills"),
         Binding("p", "toggle_project_filter", "Project/All"),
+        Binding("c", "copy_fix", "copy fix"),
         Binding("question_mark", "show_help", "help", show=False),
     ]
 
@@ -152,6 +153,28 @@ class MishkanWatch(App):
             self._socket_path.unlink(missing_ok=True)
             self._owned_daemon_pid = None
         self.exit()
+
+    def action_copy_fix(self) -> None:
+        """Copy the command that fixes a down store to the clipboard (D-015).
+
+        The TUI never RUNS anything — it can't touch docker by design (rule 5,
+        read-only surface). It only hands you the command to paste and run.
+        Two remediations cover the whole control surface: the shared stack and
+        a per-project store. copy_to_clipboard is OSC-52 (no xclip dep); on a
+        Textual too old to support it we fall back to just showing the command.
+        """
+        cmd = "mishkan knowledge-stack up"
+        copied = False
+        try:
+            self.copy_to_clipboard(cmd)
+            copied = True
+        except Exception:
+            copied = False
+        self.notify(
+            f"{cmd}\nwork store down?  mishkan project-work-store up",
+            title=("Copied — fix a down store" if copied else "Run to fix a down store"),
+            timeout=6,
+        )
 
     # ----- daemon frame handling --------------------------------------------
 
