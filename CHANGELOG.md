@@ -121,6 +121,27 @@ All notable changes to MISHKAN are documented here. Format:
   top — robust to both shapes. The remaining 15 portfolio workflows were swept
   the same way, so all 20 accept `args` uniformly.
 
+- **Per-project cognee work-store isolation + a single shared memory home (ADR
+  D-012).** Verified (cognee v1.1.0 / issue #1023) that with Neo4j + access-control-
+  off the `datasets=` filter is advisory-only — it does not isolate, so projects
+  sharing one work store are mutually visible (a wisemoney query returned an
+  aiobi-mail audit containing a live API key). Fix: each project gets its OWN
+  physically-separate work store — one cognee-mcp container with an embedded
+  **Ladybug** graph (no Neo4j), its own volume + port, provisioned by
+  `ensure-work-store.sh` at `/mishkan-init` (`docker-compose.work.yml`). Per-client
+  session memory (`claude_code_memory`), which is not re-derivable, stays in ONE
+  shared store — the kept Neo4j box, now the `cognee-memory` alias. Each project's
+  `.mcp.json` carries three doorways: `cognee` (own Ladybug store, isolated
+  knowledge), `cognee-memory` (shared session memory), `cognee-curated` (shared
+  reference, D-007). Neither memory layer can fragment into per-project stores by
+  construction: `CACHING=false` (session cache) + `COGNEE_MCP_AGENT_SCOPED=false`
+  (the `claude_code_memory` graph dataset) — both research-verified against cognee
+  v1.1.0 source. Interim controls (shared store = single trust domain, scrubbed
+  opt-in ingest) + `THREAT_MODEL.md` T-001 cover the transition. The provisioning
+  migration and the leaked-key revoke/purge are engineer-run. **Validation status:
+  static- and source-verified; the per-project bring-up + recall test is the
+  remaining runtime validation.**
+
 ## [0.2.6] — 2026-06-09
 
 Observability hardening release. Live testing against a real multi-session,
