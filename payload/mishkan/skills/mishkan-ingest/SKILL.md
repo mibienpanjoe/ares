@@ -47,14 +47,15 @@ stays as-is.
 ## What the skill runs
 
 1. Selects files — tagged-only filter, or the explicit list you passed.
-2. Stages them into the work cognee-mcp container, plus the MISHKAN ontology
-   (`ontology.ttl`) when present.
+2. Stages them into the work cognee-mcp container.
 3. Runs `cognee.add(files, dataset_name=<project>)` → `cognify` → `memify` —
    extraction *then* enrichment, always paired (decision per the harness flow).
-   `cognify` is given the ontology (`ontology_file_path`, ADR D-013), so entities
-   matching the MISHKAN schema are validated and enriched. **Success signal:**
-   resulting nodes carry `ontology_valid: true` (vs `false` when no ontology is
-   attached). Fail-open: a missing `ontology.ttl` ingests ontology-free, no error.
+   The work store attaches the MISHKAN ontology to every `cognify` — set via the
+   container's env config (`ONTOLOGY_FILE_PATH`+`rdflib`/`fuzzy`) and staged by
+   `ensure-work-store.sh`, ADR D-013 — so entities matching the schema are
+   validated and enriched. **Success signal:** resulting nodes carry
+   `ontology_valid: true` (vs `false` with no ontology). Fail-open: a missing
+   `ontology.ttl` ingests ontology-free, no error.
 4. Respects the work box's LLM rate-limit throttle and persistent storage.
 
 ## Constraints

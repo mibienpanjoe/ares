@@ -115,6 +115,18 @@ services:
       # whole-graph recall still returns this project's data. Topology, not trust.
       COGNEE_MCP_AGENT_SCOPED: "false"
 
+      # Ontology (ADR D-013): attach the MISHKAN schema to every cognify so ingested
+      # entities matching a class are validated (ontology_valid=true) and enriched
+      # with parent / object-property edges. cognee v1.1.0 reads the ontology from
+      # the ENVIRONMENT (Pydantic OntologyEnvConfig) — NOT a cognify kwarg, which it
+      # silently ignores. The resolver/strategy already default to these values; we
+      # set all three explicitly. ONTOLOGY_FILE_PATH points at the ttl that
+      # ensure-work-store.sh stages into the container; fail-open — if the file is
+      # missing cognee logs a warning and ingests ontology-free.
+      ONTOLOGY_RESOLVER: "rdflib"
+      MATCHING_STRATEGY: "fuzzy"
+      ONTOLOGY_FILE_PATH: "/home/cognee/ontology.ttl"
+
     ports:
       # Bound to loopback only. WORK_PORT is assigned by ensure-work-store.sh
       # (deterministic: base 7800 + hash of slug, no conflict with 7777/7730).

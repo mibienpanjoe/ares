@@ -1185,9 +1185,12 @@ extraction, with no link to the MISHKAN type system.
   `owl:Class`, 16 `owl:ObjectProperty` with `rdfs:domain`/`range` via `owl:unionOf`, `blast_radius`
   as `owl:DatatypeProperty`). Turtle over RDF/XML for reviewability; hand-authored because the schema
   is "locked v1." `ontology.md` stays the canonical human source; `ontology.ttl` is its machine form.
-- `mishkan-ingest.sh` stages `ontology.ttl` into the container and passes its path to cognify
-  (`ontology_file_path`, the documented cognee v1.1.0 knob — RDFLibOntologyResolver). **Fail-open:**
-  absent ontology → ingest still runs ontology-free.
+- cognee v1.1.0 reads the ontology from the **environment** (Pydantic `OntologyEnvConfig`), **not** a
+  cognify kwarg (verified live — the kwarg lands in `**kwargs` and is silently ignored).
+  `docker-compose.work.yml` sets `ONTOLOGY_RESOLVER=rdflib` · `MATCHING_STRATEGY=fuzzy` (already the
+  defaults) · `ONTOLOGY_FILE_PATH=/home/cognee/ontology.ttl`; `ensure-work-store.sh` stages the ttl to
+  that path at provision (idempotent). **Fail-open:** missing file → cognee warns, ingests
+  ontology-free. So the ontology applies to *every* cognify in the work store, not just `mishkan-ingest`.
 - ONE shared ontology for all projects (the MISHKAN schema is global), even though work stores are
   per-project (D-012).
 
@@ -1207,10 +1210,12 @@ reviewable than Turtle for a hand-authored, versioned artifact.
 curated feed. *Negative:* a second artifact (`ontology.ttl`) to keep in sync with `ontology.md`
 (guarded by a label-coverage check); ontology benefit is partial until Phase-2 extraction steering.
 
-**Refs / open:** extends **D-008** (knowledge surfaces) and rides on **D-012** (per-project store).
-The exact cognify knob (`ontology_file_path` kwarg vs `config`/env in the installed image) is
-confirmed by one read-only grep of the cognee package before the verification re-ingest. Out of
-scope: agent-write paths (already convention-bound) and back-filling existing graphs.
+**Refs:** extends **D-008** (knowledge surfaces) and rides on **D-012** (per-project store). Mechanism
+confirmed against the installed cognee v1.1.0 source (`modules/ontology/ontology_env_config.py` +
+`get_ontology_resolver_from_env`): env-config only, requires resolver `rdflib` + strategy `fuzzy` +
+a file path (resolver/strategy already default to those values). Out of scope: agent-write paths
+(already convention-bound); the **curated** store (its nodes are pre-typed by the structured seed —
+`add_data_points`, no cognify extraction — so no ontology needed there); back-filling existing graphs.
 
 ---
 

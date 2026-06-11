@@ -79,6 +79,22 @@ WORK_PROJECT="$(printf '%s' "$WORK_PROJECT" | tr '[:upper:]' '[:lower:]' | tr -c
 CONTAINER_NAME="mishkan-work-${WORK_PROJECT}"
 COMPOSE_PROJECT="mishkan-work-${WORK_PROJECT}"
 
+# Ontology staging (ADR D-013). The container's ONTOLOGY_FILE_PATH (set in
+# docker-compose.work.yml) points at /home/cognee/ontology.ttl; place the file
+# there so every cognify attaches the MISHKAN schema. Idempotent + fail-open: if
+# the ontology is absent, cognee logs a warning and ingests ontology-free.
+# chmod 0644 because docker cp preserves host uid/mode (container user is non-root).
+ONTOLOGY_TTL="${MISHKAN_ONTOLOGY:-${HOME}/.claude/mishkan/ontology.ttl}"
+stage_ontology() {
+  if [ -f "$ONTOLOGY_TTL" ]; then
+    docker cp "$ONTOLOGY_TTL" "${CONTAINER_NAME}:/home/cognee/ontology.ttl" 2>/dev/null || return 0
+    docker exec "$CONTAINER_NAME" sh -c 'chmod 0644 /home/cognee/ontology.ttl' 2>/dev/null || true
+    echo "ontology staged -> /home/cognee/ontology.ttl (D-013)" >&2
+  else
+    echo "no ontology at ${ONTOLOGY_TTL} — store runs ontology-free (D-013 fail-open)" >&2
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # 2. Idempotency check — if already healthy, just print port and exit
 # ---------------------------------------------------------------------------
@@ -88,6 +104,7 @@ if docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
     # Extract the bound host port from the running container.
     RUNNING_PORT="$(docker inspect -f '{{range $p,$b := .NetworkSettings.Ports}}{{range $b}}{{if $b}}{{$b.HostPort}}{{end}}{{end}}{{end}}' "$CONTAINER_NAME" 2>/dev/null | head -1)"
     echo "work store for '${WORK_PROJECT}' already healthy on :${RUNNING_PORT}" >&2
+    stage_ontology   # idempotent — keep the schema present even on a warm re-run
     printf '%s\n' "$RUNNING_PORT"
     exit 0
   fi
@@ -195,6 +212,9 @@ while true; do
 done
 
 echo "work store '${WORK_PROJECT}' ready on :${WORK_PORT}" >&2
+
+# 7. Stage the MISHKAN ontology (ADR D-013) — see stage_ontology() above.
+stage_ontology
 
 # Print the port on stdout so callers can capture it (e.g. /mishkan-init
 # substituting the port into .mcp.json):
