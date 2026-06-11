@@ -32,9 +32,12 @@ services:
     volumes:
       - curated_neo4j_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1"]
+      # Instant TCP connect via bash /dev/tcp — NOT a wget HTTP GET (which takes
+      # 5-10s on a loaded Neo4j and blew the 5s timeout, marking a healthy Neo4j
+      # unhealthy and cascading to curated-mcp). TCP succeeds the moment :7474 listens.
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/7474"]
       interval: 15s
-      timeout: 5s
+      timeout: 10s
       retries: 5
       # 180s: Neo4j + APOC cold-start is slow under parallel stack warm-up; a 30s
       # grace marked it unhealthy and cascaded to curated-mcp (depends_on healthy).

@@ -67,9 +67,14 @@ services:
     volumes:
       - neo4j_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7474 >/dev/null 2>&1 || exit 1"]
+      # Instant TCP connect via bash /dev/tcp — NOT a wget HTTP GET. The GET takes
+      # 5-10s against a loaded, cold-starting Neo4j and blew the old 5s timeout,
+      # so a perfectly healthy Neo4j was marked unhealthy and cascaded to
+      # cognee-mcp (depends_on healthy). wget IS in the image; the slow GET + tight
+      # timeout was the bug. A TCP connect succeeds the moment :7474 listens.
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/7474"]
       interval: 15s
-      timeout: 5s
+      timeout: 10s
       retries: 5
       # 180s: Neo4j + APOC cold-start is slow, and slower still when the whole
       # stack (ollama + pg + both neo4j) warms in parallel on shared I/O. A 30s
