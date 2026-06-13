@@ -128,6 +128,9 @@ mishkan install                                     # install/refresh into ~/.cl
 mishkan uninstall                                   # remove harness (keeps CLAUDE.md + rules)
 mishkan uninstall --purge                           # also remove y4nn-standards.md
 mishkan knowledge configure                         # wizard: LLM provider + Cognee .env
+mishkan knowledge curate                            # approve research-found resources into curated (D-016)
+mishkan knowledge reset                             # wipe stores → re-seed curated baseline (destructive)
+mishkan model show|set|reset                        # re-tier agents per-agent/team/all — survives updates (D-017)
 mishkan observability install                       # install daemon + TUI only (needs uv)
 mishkan status                                      # install state, profile, version
 mishkan org show [--json]                                # print the 45-agent org

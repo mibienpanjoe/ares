@@ -6,13 +6,42 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+### Added
+
+- **Semantic `mishkan <object> <verb>` control surface (D-015).** One CLI for the
+  harness + knowledge stack: `knowledge configure|ingest|curate|reset`,
+  `knowledge-stack up|down|restart|status`, `project-work-store [<slug>] up|down|reset`,
+  `model show|set|reset`, `code-graph`, `observability install|open`, `org show`.
+  Guided bring-up (preflight + gap-guidance) + a daemon-probe; pre-D-015 flat names
+  kept as hidden deprecated aliases. See `docs/usage/12-cli.md`.
+- **MISHKAN ontology attached to cognee ingestion (D-013).** cognify loads the
+  RDFLib resolver from a staged `ontology.ttl` via container env
+  (`ONTOLOGY_FILE_PATH` + `ONTOLOGY_RESOLVER=rdflib` + `MATCHING_STRATEGY=fuzzy`),
+  matching typed entities (Decision/Team/CuratedResource/…) at ingest. Verified live.
+- **`mishkan knowledge curate` — engineer-gated research→curated feed (D-016).**
+  Shemaiah nominates a reusable resource, Baruch queues it (no curated-write tool),
+  the engineer approves; an **additive** (no-prune, dedup-by-url) write into the
+  shared curated library. New `cognee/promote-curated.py` + `scripts/promote-curated.sh`.
+- **`mishkan model show|set|reset` — user-editable model-tier routing (D-017).**
+  Re-tier any agent / team / all without touching source; overrides live in a
+  preserved `model-routing.local.yaml` overlay the installer never clobbers and the
+  model-route hook applies live (survives updates).
+- **`mishkan knowledge reset` — full reset of the knowledge layer to the stable
+  baseline.** Confirm-gated: wipes all per-project work stores, prunes
+  `cognee-memory`, re-seeds `cognee-curated` from the canonical YAML.
+
 ### Changed
 
+- **Model tiering stays three tiers — Opus / Sonnet / Haiku.** A four-tier amendment
+  briefly routed the 8 Migdal + Mishmar specialists to **Claude Fable 5** (2026-06-11);
+  reverted the next day when Fable 5 was suspended for all customers by a US
+  export-control directive (2026-06-12). The routing layer still accepts `fable` as a
+  **dormant** value, so it is a one-command re-enable if access is restored.
 - **Installer signposts the knowledge stack at install time.** The post-install
-  output now names the two Cognee bring-up steps (`configure-knowledge` →
-  `docker compose … up`) and the work/curated MCP URLs (`:7777` / `:7730`),
+  output now names the two Cognee bring-up steps (`mishkan knowledge configure` →
+  `mishkan knowledge-stack up`) and the work/curated MCP URLs (`:7777` / `:7730`),
   instead of leaving them to be discovered only after the user happens to run
-  `configure-knowledge`. The wizard still prints the full URL list + writes
+  `mishkan knowledge configure`. The wizard still prints the full URL list + writes
   `ACCESS.txt`; this is just the signpost to it.
 
 ### Fixed

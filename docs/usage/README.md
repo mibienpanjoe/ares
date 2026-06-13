@@ -64,7 +64,7 @@ You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE
 | 09 | [Dynamic Workflows](./09-workflows.md) | 10 org-level + 10 team-level workflows, ADR D-010 portfolio discipline |
 | 10 | [Observability](./10-observability.md) | Cross-session daemon + Textual TUI; 8 tabs (Live · Agents · Workflows · Knowledge · Activity · Org-Ref · Usage · Skills), project filter (`p`) |
 | 11 | [Graphify](./11-graphify.md) | Code-structure graph; queries at ~1.8k tokens (88.1× reduction, POC-verified); D-008 + D-009 |
-| 12 | [The `mishkan` CLI](./12-cli.md) | One control surface — semantic `<object> <verb>`: `knowledge-stack` / `project-work-store` / `knowledge` / `observability` / `org`; D-015 |
+| 12 | [The `mishkan` CLI](./12-cli.md) | One control surface — semantic `<object> <verb>`: `knowledge-stack` / `project-work-store` / `knowledge` (configure · ingest · curate · reset) / `model` (re-tier agents) / `observability` / `org`; D-015 · D-016 · D-017 |
 | 12 | [Skill discovery](./12-skill-discovery.md) | Universal indexer + 3-bucket router across MISHKAN, user, plugin, and project skills; D-011 |
 
 ## Where to start
