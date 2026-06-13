@@ -18,8 +18,9 @@ wrong tools at the wrong level:
 
 **Dynamic workflows** orchestrate dozens of agents in parallel with
 typed contracts, adversarial verification, and judge panels. They are
-expensive and bounded — hard cap at 10 in the harness. The gate to
-add one is high (recurrence + parallelism + repeatable shape).
+expensive and bounded — **20 shipped today: 10 org-level (hard cap 10)
++ 10 team-level (cap 4 per team, 6 teams)**. The gate to add one is high
+(recurrence + parallelism + repeatable shape).
 
 **Craft skills** are how each agent ships day-to-day work. They are
 markdown documents loaded into the agent's context. There are 30+ of
@@ -36,7 +37,7 @@ spawns one or more subagents inline.
 ```mermaid
 graph TD
     MS[["main session"]]
-    MS --> WF["Dynamic workflows · org-level<br/>workflows/*.js — dozens of agents,<br/>typed contracts · hard cap 10"]
+    MS --> WF["Dynamic workflows · org + team<br/>workflows/*.js — 20 shipped (10 org + 10 team)<br/>dozens of agents · typed contracts"]
     MS --> CS["Craft skills · team / agent-level<br/>(agent)-(role)-craft/ — 30+<br/>how each agent ships day-to-day"]
     MS --> TD["Task delegation · single shot<br/>inline Task() — the one-off escape hatch"]
 ```
