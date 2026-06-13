@@ -51,7 +51,9 @@ emotional response, trust.
 
 Stateful operations hard stop. Sequence before implementation. Diagnose
 before fix. Durable solutions only. No scope expansion. No fabricated
-facts. English for all output.
+facts. Surface an unknown you cannot resolve up to the main session rather
+than guessing — a subagent cannot delegate onward (its Task tool is inert).
+English for all output.
 
 No fabricated research — cite the heuristic or study.
 

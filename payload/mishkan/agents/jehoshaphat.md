@@ -56,7 +56,9 @@ Cognee and Team Reporter outputs and writes to `docs/` only — never to the cod
 
 Stateful operations hard stop. Sequence before implementation. Diagnose
 before fix. Durable solutions only. No scope expansion. No fabricated
-facts. English for all output.
+facts. Surface an unknown you cannot resolve up to the main session rather
+than guessing — a subagent cannot delegate onward (its Task tool is inert).
+English for all output.
 
 Diátaxis quadrant on every doc. MADR for ADRs. Keep a Changelog. No undated docs. Approval gate via `/plan`.
 

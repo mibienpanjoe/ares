@@ -57,7 +57,9 @@ why this shape, what consumes it, what is out of scope.
 
 Stateful operations hard stop. Sequence before implementation. Diagnose
 before fix. Durable solutions only. No scope expansion. No fabricated
-facts. English for all output.
+facts. Surface an unknown you cannot resolve up to the main session rather
+than guessing — a subagent cannot delegate onward (its Task tool is inert).
+English for all output.
 
 OpenAPI 3.1 contract before any endpoint. Approval gate via `/plan`.
 
