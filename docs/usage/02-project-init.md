@@ -52,7 +52,20 @@ The full sequence (when chosen):
 8. **Automated** cognee setup (see below).
 9. **Automated** project `CLAUDE.md` write + sprint S0.
 
-Each step that touches a contract requires `/plan` to run first.
+```mermaid
+flowchart TD
+    PRD["1 · Nehemiah<br/>docs/PRD.md"] --> SRS["2 · Nathan<br/>docs/SRS.md"]
+    SRS --> CON["3 · Zadok<br/>docs/CONTRACT.md"]
+    CON --> ARC["4 · Bezalel + Nathan<br/>docs/ARCHITECTURE.md"]
+    ARC --> TM["5 · Benaiah<br/>docs/THREAT_MODEL.md · STRIDE"]
+    TM --> C4["6 · Meshullam<br/>docs/diagrams/C4/"]
+    C4 --> DOCS["7 · Jehoshaphat<br/>README · adr · runbooks"]
+    DOCS --> KN["8 · automated<br/>cognee setup"]
+    KN --> CL["9 · automated<br/>CLAUDE.md + Sprint S0"]
+```
+
+Each step that touches a contract requires `/plan` to run first — nothing is generated
+without its upstream artifact.
 
 ## Step 8 in detail: cognee setup at init
 

@@ -94,6 +94,17 @@ Output shape (abbreviated):
 over padding `must_load` when scores are close — the cost of loading a
 wrong skill is higher than the cost of skipping a marginal one.
 
+```mermaid
+flowchart LR
+    IDX[("skill index<br/>all installed skills")] --> R{"router<br/>score vs thresholds"}
+    R -->|"≥ 4.0 + strong trigger"| ML["must_load ≤ 3<br/>load into context"]
+    R -->|"mid-band"| SC["should_consider ≤ 5<br/>skim · load if it intersects"]
+    R -->|"low · same category"| AD["adjacent ≤ 5<br/>awareness only"]
+```
+
+*Indexer → router → three buckets (hard cap 13); bias toward enriching `should_consider`
+over padding `must_load`.*
+
 ## Trust asymmetry
 
 Every entry carries an `origin` field. Non-`mishkan` entries (origin =

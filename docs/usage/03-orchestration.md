@@ -9,14 +9,19 @@
 subagent — confirmed in the official subagent docs. The `Task` tool in a
 subagent's frontmatter is **inert** when the subagent runs.
 
+```mermaid
+flowchart TD
+    You(["You — talk"]) --> MS[["MAIN SESSION — leadership / orchestrator<br/>acts as Nehemiah (PM) + Bezalel (CTO)"]]
+    MS -->|Task| A["Team Lead / Specialist"]
+    MS -->|Task| B["project-specific agent (e.g. aiobi-ops)"]
+    MS -->|Task| C["research pipeline"]
+    A --> SYN[["main session SYNTHESISES the outputs"]]
+    B --> SYN
+    C --> SYN
 ```
-You ──talk──▶  MAIN SESSION  = leadership                ← orchestrator
-                    │
-                    ├─Task→ Team Lead / Specialist       ┐
-                    ├─Task→ project-specific agent       │  one level deep
-                    └─Task→ research pipeline            ┘  siblings, no nesting
-              then main session SYNTHESISES their outputs
-```
+
+*One level deep, siblings, no nesting* — the main session delegates via `Task`, then
+synthesises. A subagent cannot spawn another: its own `Task` tool is inert.
 
 Three things follow:
 
@@ -57,9 +62,43 @@ its own work.
 | **Migdal** | Infrastructure | `eliashib` (lead), `meshullam` (design), `palal` (systems), `meremoth` (devops), `hanun` (devsecops), `rehum` (SRE) |
 | **Sefer** | Documentation (pull-based) | `jehoshaphat` (lead), `seraiah` / `joah` / `shevna` (org/project/team), `jehonathan` (publication) |
 
+```mermaid
+graph TD
+    N[["Nehemiah — PM"]] --- Bz[["Bezalel — CTO"]]
+    Bz --> CH["Chosheb<br/>Design / UX"]
+    Bz --> PA["Panim<br/>Frontend"]
+    Bz --> YA["Yasad<br/>Backend"]
+    Bz --> MI["Migdal<br/>Infrastructure"]
+    Bz --> SE["Sefer<br/>Docs · pull-based"]
+    Bz --> RP["Research pipeline<br/>6 stages · shared"]
+    MM["Mishmar — Security<br/>cross-cutting"]
+    MM -. gates .-> CH
+    MM -. gates .-> PA
+    MM -. gates .-> YA
+    MM -. gates .-> MI
+    MM -. gates .-> SE
+```
+
+*Two orchestrators (the main session embodies both) route to six teams; Mishmar gates
+every team's output; the research pipeline is shared. Within each team: Lead → Specialists
+→ QA → Reporter, with QA and Reporter structurally separate from the producing agents.*
+
 **Research pipeline** (6 stages): `jakin` → `ezra` → `caleb` → `shaphan` →
 `shemaiah` → `baruch`. Each stage is a single-purpose agent. The pipeline is
 also a skill (`research-pipeline`) the main session can invoke whole.
+
+```mermaid
+flowchart LR
+    J["jakin<br/>clarify"] --> E["ezra<br/>formulate"]
+    E --> Ca["caleb<br/>web research"]
+    Ca --> Sh["shaphan<br/>summarise"]
+    Sh --> Se["shemaiah<br/>evaluate"]
+    Se --> B["baruch<br/>report + Cognee node"]
+    E -. curated library already answers .-> B
+```
+
+*Six single-purpose stages. Ezra short-circuits straight to Baruch when the curated
+library already holds the answer — no web research spent.*
 
 Full glossary including each agent's role: [Glossary](./08-glossary.md).
 Naming rationale: [`docs/design/MISHKAN_agent_aliases.md`](../design/MISHKAN_agent_aliases.md).

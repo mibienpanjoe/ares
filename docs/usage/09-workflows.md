@@ -33,6 +33,17 @@ review, escalation, sprint contribution).
 workflow nor a craft skill captures the shape, the main session
 spawns one or more subagents inline.
 
+```mermaid
+graph TD
+    MS[["main session"]]
+    MS --> WF["Dynamic workflows · org-level<br/>workflows/*.js — dozens of agents,<br/>typed contracts · hard cap 10"]
+    MS --> CS["Craft skills · team / agent-level<br/>(agent)-(role)-craft/ — 30+<br/>how each agent ships day-to-day"]
+    MS --> TD["Task delegation · single shot<br/>inline Task() — the one-off escape hatch"]
+```
+
+*Three orchestration layers — reach for a dynamic workflow only when recurrence +
+parallelism + a repeatable shape all hold; otherwise a craft skill or a one-off Task.*
+
 If you find yourself asking "is THIS a workflow?", apply the gate
 below. If it doesn't pass all three, it's probably a craft skill
 addition or a one-shot Task.

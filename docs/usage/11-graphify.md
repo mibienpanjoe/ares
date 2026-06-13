@@ -32,6 +32,17 @@ write-discipline split; D-012 adds a fourth surface within the cognee
 tier. The crisp routing test remains:
 **structure → Graphify, project semantics → Cognee work.**
 
+```mermaid
+flowchart TD
+    Q{"What kind of question?"}
+    Q -->|"structure: who calls X, what depends on Y"| GFY[("Graphify<br/>code-structure graph · per-project")]
+    Q -->|"why we decided X (this project)"| WORK[("cognee work<br/>per-project · isolated")]
+    Q -->|"what the session remembers (all projects)"| MEM[("cognee-memory :7777<br/>shared session memory")]
+    Q -->|"what we learned on other projects"| CUR[("cognee-curated :7730<br/>shared reference · read-only")]
+```
+
+*Four surfaces, one epistemic question each — no overlap of write authority.*
+
 ## Install
 
 ```bash

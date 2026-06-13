@@ -12,19 +12,19 @@ cognee stores (per-project work · session memory · curated reference).
 
 ## In five minutes
 
+```mermaid
+flowchart TD
+    You(["You — talk"]) --> MS[["MAIN SESSION — leadership<br/>Nehemiah + Bezalel (via CLAUDE.md)<br/>the ONE orchestrator — no nested delegation"]]
+    MS -->|Task| TL["Team Lead / Specialist"]
+    MS -->|Task| OPS["aiobi-ops / other project agents"]
+    MS -->|Task| RP["research pipeline"]
+    MS -. reads / writes .-> WORK[("cognee work · per-project<br/>mishkan-work-{slug} · Ladybug, own port+volume")]
+    MS -. reads / writes .-> MEM[("cognee-memory :7777<br/>per-client session memory · shared")]
+    MS -. reads / writes .-> CUR[("cognee-curated :7730<br/>reference library · shared, read-mostly")]
 ```
-You ──talk──▶  MAIN SESSION  = leadership (Nehemiah/Bezalel via CLAUDE.md)
-                   │            ← the ONE orchestrator (no nested delegation)
-                   ├─Task→ Team Lead / Specialist            ┐ siblings,
-                   ├─Task→ aiobi-ops or other project agents │ one level deep
-                   └─Task→ research pipeline                 ┘
-                                                                ↓
-                    ┌──────────────────────────┐    ┌──────────────────────┐    ┌─────────────────────────────┐
-                    │ cognee per-project store │    │ cognee CURATED :7730 │    │ cognee-memory  :7777        │
-                    │ mishkan-work-<slug>      │    │ reference library    │    │ per-client session memory   │
-                    │ Ladybug, own port+volume │    │ (read-mostly, shared)│    │ claude_code_memory (shared) │
-                    └──────────────────────────┘    └──────────────────────┘    └─────────────────────────────┘
-```
+
+*The main session is the one orchestrator — it delegates one level deep (siblings) and
+reads/writes three Cognee stores. (Diagrams render on GitHub.)*
 
 - **Main session is leadership.** It loads MISHKAN identity from
   `~/.claude/CLAUDE.md` and routes work one level deep.

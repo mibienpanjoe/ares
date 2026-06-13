@@ -11,17 +11,23 @@ has three pillars (D-007 separated work from curated; D-012 further split
 per-project work stores from the shared session-memory box; both documented in
 [`docs/design/MISHKAN_decisions.md`](../design/MISHKAN_decisions.md)):
 
+```mermaid
+flowchart LR
+    OLL[("Ollama<br/>embeddings · local · serves all")]
+    PG[("Postgres server<br/>cognee_db + curated_db")]
+    WORK[("cognee WORK — per-project<br/>mishkan-work-{slug}<br/>embedded Ladybug + LanceDB<br/>own port + volume · isolated")]
+    MEM[("cognee-memory :7777<br/>Neo4j + cognee_db<br/>claude_code_memory · shared · never prune")]
+    CUR[("cognee-curated :7730<br/>own Neo4j + curated_db<br/>curated_library · shared · read-mostly")]
+    OLL -. embeddings .-> WORK
+    OLL -. embeddings .-> MEM
+    OLL -. embeddings .-> CUR
+    PG --- MEM
+    PG --- CUR
 ```
-  shared Ollama (embeddings, local) ─┐ stateless, serves all pillars
-  shared Postgres server ────────────┤ separate databases
-                                      │
-  Per-project WORK store              MEMORY box  :7777  (cognee-memory)    CURATED box  :7730  (cognee-curated)
-  mishkan-work-<slug>                 Neo4j + cognee_db                      own Neo4j + curated_db
-  embedded Ladybug graph              ── shared per-client session memory ── ── cross-project reference ──
-  own port + volume                   • claude_code_memory (never prune)     • curated_library (96 nodes seed)
-  ── isolated project knowledge ──    • cross-project by design              • read-mostly
-  provisioned by ensure-work-store.sh UI :7724 · Neo4j :7716/:7709           UI :7734 · Neo4j :7731/:7732
-```
+
+*Three physically-isolated pillars (D-007 + D-012). Shared Ollama embeds for all; the
+shared Postgres backs memory + curated; each per-project work store is self-contained
+(embedded Ladybug + LanceDB, own volume) so cross-project reads are impossible by construction.*
 
 Why physical separation and not logical datasets?
 
@@ -73,20 +79,20 @@ docs); the box itself is **repurposed** as the session-memory pillar, not retire
 
 ## The data flow
 
+```mermaid
+flowchart LR
+    subgraph D["docs / project content"]
+      ADD["cognee.add()<br/>stage raw files"] --> CFY["cognify()<br/>LLM extracts entities + relationships"]
+      CFY --> MFY["memify()<br/>embed triplet layer into vector store"]
+      MFY --> SR["search()<br/>retrieval · vector + graph"]
+    end
+    subgraph C["curated resources (small, static)"]
+      ADP["add_data_points()<br/>structured · no LLM"] --> MFY2["memify() (optional)<br/>embeddings only"]
+    end
 ```
-docs / project content                          curated resources (small, static)
-       │                                                  │
-       ▼                                                  ▼
-   cognee.add()    ← raw files staged              add_data_points()  ← structured
-       │                                                  │
-   cognify()       ← LLM extracts entities          (no LLM — embeddings only)
-       │             + relationships                     │
-       ▼                                                  ▼
-   memify()        ← embeds the triplet layer       memify() optional
-       │             into the vector store
-       ▼
-   search()        ← retrieval (vector + graph)
-```
+
+*Two write paths into a store: project docs go `add → cognify` (LLM extraction) `→ memify
+→ search`; curated resources are written structurally (`add_data_points`, no LLM — embeddings only).*
 
 Each phase, in words:
 

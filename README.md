@@ -46,6 +46,23 @@ claude                    # starts in exploration mode — Nehemiah + Bezalel
 
 **Nehemiah** (PM — scope, delivery, sprint) and **Bezalel** (CTO — architecture, standards, quality bar) route everything. Six teams, each `Lead → Specialists → QA → Reporter`:
 
+```mermaid
+flowchart TD
+    You(["You"]) --> MS[["MAIN SESSION — leadership<br/>Nehemiah (PM) + Bezalel (CTO)<br/>one orchestrator · delegates one level deep"]]
+    MS -->|Task| TEAMS["6 teams<br/>Lead → Specialists → QA → Reporter"]
+    MS -->|Task| RP["research pipeline · 6 stages"]
+    MS -. queries .-> KN
+    subgraph KN["4 knowledge surfaces"]
+      direction LR
+      GFY[("Graphify<br/>code structure")]
+      WORK[("cognee work<br/>per-project")]
+      MEM[("cognee-memory :7777<br/>session · shared")]
+      CUR[("cognee-curated :7730<br/>reference · shared")]
+    end
+```
+
+*MISHKAN at a glance — one orchestrating session over six teams + a research pipeline (one level deep), across four knowledge surfaces. (Diagrams render on GitHub.)*
+
 | Team | Hebrew | Domain |
 |------|--------|--------|
 | **Chosheb** | *cunning work* | Design & UX |
