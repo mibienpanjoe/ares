@@ -1172,10 +1172,7 @@ async function knowledgeCurate() {
 function knowledgeReset(argv) {
   const script = join(SCRIPTS_DIR, "reset-knowledge-data.sh");
   if (!existsSync(script)) { console.error(c.red("reset-knowledge-data.sh not found — run `mishkan install` first.")); process.exit(1); }
-  const hard = argv.includes("--hard");
-  warn("FULL knowledge-data reset — wipes all work stores, " +
-       (hard ? "DROPS+recreates memory volumes (--hard)" : "prunes memory") +
-       ", re-seeds curated to baseline.");
+  warn("FULL knowledge-data reset — wipes all work stores, prunes memory, re-seeds curated to baseline.");
   const r = spawnSync("bash", [script, ...argv], { stdio: "inherit" });
   process.exit(r.status || 0);
 }
@@ -1190,7 +1187,7 @@ async function knowledgeCmd(argv) {
   console.log("  configure          wizard: LLM provider + cognee secrets");
   console.log("  ingest [paths…]    add docs to THIS project's store");
   console.log("  curate             review + approve research-found resources into the shared curated library (D-016)");
-  console.log("  reset [--hard]     wipe all stores → re-seed curated baseline (destructive; confirms). --hard drops memory volumes");
+  console.log("  reset              wipe all stores → re-seed curated to the stable baseline (destructive; confirms)");
   process.exit(1);
 }
 
@@ -1459,7 +1456,7 @@ function printHelp() {
   console.log("  " + c.bold(`${prefix} knowledge configure`)       + "        Wizard: LLM provider + cognee secrets");
   console.log("  " + c.bold(`${prefix} knowledge ingest [paths…]`) + "  Add docs to THIS project's store");
   console.log("  " + c.bold(`${prefix} knowledge-stack up|down|restart|status`) + "  The shared running infra (up = guided)");
-  console.log("  " + c.bold(`${prefix} knowledge reset [--hard]`)    + "  Wipe all stores → re-seed curated baseline (destructive)");
+  console.log("  " + c.bold(`${prefix} knowledge reset`)             + "  Wipe all stores → re-seed curated baseline (destructive)");
   console.log("  " + c.bold(`${prefix} project-work-store [<slug>] up|down|reset`) + "  A project's own store");
   console.log("");
   console.log(c.bold("Inspect / observe"));

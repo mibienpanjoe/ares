@@ -26,7 +26,7 @@ object is the tool itself (so `npx mishkan-harness install`, not the doubled
 | `mishkan knowledge configure` | Wizard: LLM provider + cognee secrets → writes `.env` + `ACCESS.txt` |
 | `mishkan knowledge ingest [--tagged-only] [--dataset=X] [paths…]` | Add docs to **this project's** store (`add → cognify → memify`) |
 | `mishkan knowledge curate` | Review + approve research-found resources into the **shared curated library** (D-016). Walks the candidate queue Baruch fills; on approval, an *additive* (no-prune, dedup) write. Stateful — you run it. |
-| `mishkan knowledge reset [--hard]` | **Destructive** — full reset of the knowledge layer to the stable baseline: wipes every work store (container + volume), clears `cognee-memory`, re-seeds `cognee-curated` from the canonical YAML. Type-to-confirm. Stateful — you run it. Work stores recreate on the next `/mishkan-init`. **`--hard`** drops + recreates the memory data volumes (a bit-clean baseline, no reliance on prune) instead of pruning in place; keeps the ollama model cache. |
+| `mishkan knowledge reset` | **Destructive** — full reset of the knowledge layer to the stable baseline: wipes every work store (container + volume), prunes `cognee-memory`, re-seeds `cognee-curated` from the canonical YAML. Type-to-confirm. Stateful — you run it. Work stores recreate on the next `/mishkan-init`. |
 | `mishkan knowledge-stack up [--build]` | Bring the shared infra up (memory `:7777` + curated `:7730` + ollama/pg). **Guided:** preflights config, names any gap, stops — never a cryptic docker error. `--build` only for the first image build. |
 | `mishkan knowledge-stack down` | Stop it — containers down, volumes/data survive (confirms) |
 | `mishkan knowledge-stack restart` | down + up |
