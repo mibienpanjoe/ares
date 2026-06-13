@@ -36,6 +36,15 @@ Three corollaries:
   holds the answer, `curated_library_match: true` and the brief
   carries the curated content directly. Caleb does not run; the web
   budget is spared.
+- **Record which curated resource matched (D-016 telemetry).** When the
+  short-circuit fires, name the matched `CuratedResource` (its `name` + `url`)
+  in the brief. This is the **usefulness signal** for the curated library —
+  every match is a `CuratedLibraryHit`. Ezra only *records* the hit (it is
+  read-only: it has `mcp__cognee-curated__search` but **no** curated-write
+  tool); the hit is tallied at the telemetry layer (the observability daemon
+  captures the curated search, and `curated_library_match: true` flows into
+  Baruch's research-log). A promoted resource that keeps matching is a proven
+  promotion; one that never matches is dead weight a future audit can prune.
 - **No silent re-research.** If the curated library has a *partial*
   answer, the brief calls out the curated portion and targets web
   research only at the gap.

@@ -46,6 +46,9 @@ verdict: resolved|partial|blocked
 confidence: high|medium|low
 gaps: [...]            # unanswered sub-questions
 curated_library_agreement: agrees|conflicts|not_covered
+curated_promotion_candidate: null | {name,url,problem_class,team,source_tier,why}
+                       # D-016: non-null ONLY when resolved + confidence≥medium +
+                       # not_covered + cross-project reuse. Nominates, never writes.
 ```
 
 ## Skills (invoke on demand)

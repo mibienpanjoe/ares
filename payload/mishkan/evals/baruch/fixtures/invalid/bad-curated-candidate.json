@@ -1,0 +1,22 @@
+{
+  "agent": "benaiah",
+  "team": "mishmar",
+  "sprint": "S3",
+  "trigger": "faced_problem",
+  "query_intent": "Authoritative guidance for verifying container provenance with cosign.",
+  "tools_invoked": ["jakin", "ezra", "caleb", "shaphan", "shemaiah", "baruch"],
+  "research_output_summary": "Cosign verify-attestation covers the verify step. Confidence: high.",
+  "applied_to_task": "T-9",
+  "outcome": "resolved",
+  "knowledge_graph_write": true,
+  "curated_library_match": false,
+  "cognee_node_id": "casenode-7f3a92",
+  "curated_promotion_candidate": {
+    "name": "Sigstore cosign",
+    "url": "",
+    "problem_class": "supply-chain-provenance",
+    "team": "mishmar",
+    "source_tier": "primary",
+    "why": "Reusable across projects that build containers."
+  }
+}

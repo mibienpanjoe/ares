@@ -28,7 +28,7 @@ mirrored in `ontology.ttl`.
 | **Decision** | An architectural or scope decision | `id`, `made_by`, `sprint`, `summary`, `drivers`, `consequences`, `adr_ref` |
 | **ResearchOutput** | A resolved research pipeline result | `id`, `agent`, `team`, `query_intent`, `summary`, `outcome`, `applied_to_task` |
 | **CaseNode** | A problem solved using a curated resource | `team`, `agent`, `problem_class`, `resource_applied`, `resolution`, `outcome`, `sprint`, `task` |
-| **CuratedResource** | A vetted professional reference | `name`, `url`, `team`, `problem_class`, `source_tier` |
+| **CuratedResource** | A vetted professional reference | `name`, `url`, `team`, `problem_class`, `source_tier` (seeded by `seed-curated-library.sh`; grows additively via engineer-gated promotion — D-016) |
 | **Incident** | A documented failure + recovery | `id`, `date`, `service`, `root_causes[]`, `resolution`, `postmortem_ref` |
 | **ADR** | Architecture Decision Record | `id`, `title`, `date`, `status`, `drivers`, `decision`, `consequences` |
 | **RunbookProcedure** | An operational procedure | `id`, `title`, `service`, `trigger`, `steps_ref`, `status` |

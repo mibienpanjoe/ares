@@ -133,6 +133,7 @@ gaps:
   - "<sub-question id>: <gap description>"
   - ...
 curated_library_agreement: agrees | conflicts | not_covered
+curated_promotion_candidate: null | { name, url, problem_class, team, source_tier, why }
 notes: |
   <one paragraph; reasoning behind the verdict in plain terms;
   Baruch will reference this when writing the research log>
@@ -147,6 +148,27 @@ Three rules:
 - **`curated_library_agreement: conflicts` always triggers a
   `partial` or `blocked` verdict.** Conflicts are not silently
   absorbed.
+
+### The `curated_promotion_candidate` signal (D-016)
+
+The candidacy Shemaiah used to bury in `notes` is now a **structured field**, so
+Baruch can queue it for engineer review without parsing prose. Emit a
+non-null `curated_promotion_candidate` **only when all four hold**:
+
+1. `verdict: resolved` — a partial/blocked answer is not library-grade.
+2. `confidence: high` or `medium` — never promote a low-confidence finding.
+3. `curated_library_agreement: not_covered` — the library has no entry yet
+   (an `agrees` match is already there; a `conflicts` match is a staleness
+   problem, not a promotion).
+4. **Cross-project reuse is real** — the resource helps any project in this
+   problem class, not just the task at hand (a vendor doc, a spec, a primary
+   reference — not a one-off Stack Overflow answer to a project-specific bug).
+
+When any one fails, `curated_promotion_candidate: null`. The fields mirror the
+ontology's `CuratedResource`: `name`, `url` (the dedup key), `problem_class`,
+`team`, `source_tier` (the resource's provenance quality), and `why` (one line
+on the cross-project reuse). Shemaiah still **promotes nothing** — it nominates;
+the engineer approves at `mishkan knowledge curate`. This is signal, not a write.
 
 ---
 
@@ -176,21 +198,27 @@ verdict: resolved
 confidence: high
 gaps: []
 curated_library_agreement: not_covered
+curated_promotion_candidate:
+  name: "asyncpg — transaction recovery & connection state"
+  url: "https://magicstack.github.io/asyncpg/current/faq.html"
+  problem_class: "async-db-transaction-recovery"
+  team: "yasad"
+  source_tier: "primary"
+  why: "Vendor-primary guidance any project using asyncpg needs — not specific to this codebase."
 notes: |
   All five sub-questions from the brief answered. Every finding
   cites at least one primary source (asyncpg docs / source / FAQ /
   issue tracker). The corroboration of the no-auto-retry claim from
   both the FAQ and issue #847 strengthens the confidence on Q3.
-  No curated entry; this resolution is a candidate for promotion
-  to the curated library (cross-harness applicability: any project
-  using asyncpg cares).
+  No curated entry; nominated for promotion (see the structured field).
 ```
 
 What Shemaiah did:
 
 - Verdict tied to coverage + source quality, not vibes.
-- Surfaced the cross-harness promotion opportunity in `notes`
-  (for Bezalel + Nehemiah later via cognee-promote).
+- All four promotion criteria held (resolved · high · not_covered · cross-project),
+  so it filled the **structured** `curated_promotion_candidate` — Baruch queues it;
+  the engineer approves at `mishkan knowledge curate`.
 - Marked `not_covered` honestly.
 
 What Shemaiah did NOT:

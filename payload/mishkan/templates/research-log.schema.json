@@ -35,6 +35,20 @@
     "knowledge_graph_write": { "type": "boolean", "description": "Was a Cognee node written" },
     "curated_library_match": { "type": "boolean", "description": "True if solved via curated library, not web pipeline" },
     "cognee_node_id": { "type": ["string", "null"], "description": "ID of the written Cognee node, if any" },
-    "timestamp": { "type": "string", "format": "date-time" }
+    "timestamp": { "type": "string", "format": "date-time" },
+    "curated_promotion_candidate": {
+      "type": ["object", "null"],
+      "description": "D-016: set by Baruch when the run resolved a reusable, cross-project resource that the curated library does not yet cover, nominating it for engineer-gated promotion (`mishkan knowledge curate`). null/absent on every other run. Setting this writes NOTHING to curated — it only queues a candidate for human review.",
+      "additionalProperties": false,
+      "required": ["name", "url", "problem_class", "team", "source_tier", "why"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "description": "Human name of the resource" },
+        "url": { "type": "string", "minLength": 1, "description": "Canonical URL — also the dedup key" },
+        "problem_class": { "type": "string", "description": "The class of problem it solves (matches CuratedResource.problem_class)" },
+        "team": { "type": "string", "description": "The team whose problem space it serves" },
+        "source_tier": { "type": "string", "description": "Provenance quality of the resource (e.g. primary, official-docs, vendor)" },
+        "why": { "type": "string", "minLength": 1, "description": "One line: why this is reusable beyond the current project" }
+      }
+    }
   }
 }

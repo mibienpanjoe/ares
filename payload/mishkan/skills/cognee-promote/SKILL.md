@@ -18,6 +18,19 @@ Ask: **does this learning affect only me, my team, or everyone?**
 | team-level | team rules + shared topic file | Team Lead | on trigger or at milestone |
 | cross-harness | Cognee project graph node | Nehemiah + Bezalel | at sprint close (or immediately if high blast radius) |
 
+These three tiers all write to **work-store knowledge** — the project's own graph
+(per-project Ladybug, D-012) or its cross-harness equivalent. They are about *what we
+learned and decided*.
+
+**Distinct tier — the curated library (D-016).** A vetted, reusable *external
+resource* (a vendor doc, a spec, a primary reference) found during research belongs
+in the shared **curated library** (`cognee-curated`, :7730), not the work store. That
+path is separate and **engineer-gated**: Shemaiah nominates a `curated_promotion_candidate`,
+Baruch queues it, and the engineer approves at `mishkan knowledge curate` (additive
+write, no prune, dedup by url). Do not route a `CuratedResource` through the work-store
+tiers above, and never write to curated from an agent — it is read-only at the agent
+layer by design.
+
 ## Two triggers
 
 - **Immediate** — the learning affects another agent's *current* work. The agent

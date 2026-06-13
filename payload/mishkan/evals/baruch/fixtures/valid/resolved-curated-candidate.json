@@ -1,0 +1,23 @@
+{
+  "agent": "benaiah",
+  "team": "mishmar",
+  "sprint": "S3",
+  "trigger": "faced_problem",
+  "query_intent": "Authoritative guidance for pinning container base images by digest and verifying provenance with cosign in a GitLab CI pipeline.",
+  "tools_invoked": ["jakin", "ezra", "caleb", "shaphan", "shemaiah", "baruch"],
+  "research_output_summary": "Sigstore cosign verify-attestation + the SLSA provenance v1 predicate cover the verify step; pinning by digest (not tag) closes the mutable-tag gap. Primary sources: sigstore docs + SLSA spec. Confidence: high. Reusable across any project that builds containers.",
+  "applied_to_task": "T-9",
+  "outcome": "resolved",
+  "knowledge_graph_write": true,
+  "curated_library_match": false,
+  "cognee_node_id": "casenode-7f3a91",
+  "timestamp": "2026-06-11T10:04:00Z",
+  "curated_promotion_candidate": {
+    "name": "Sigstore cosign — verify-attestation + SLSA provenance",
+    "url": "https://docs.sigstore.dev/cosign/verifying/verify/",
+    "problem_class": "supply-chain-provenance",
+    "team": "mishmar",
+    "source_tier": "primary",
+    "why": "Vendor-neutral, applies to every project that builds and signs containers — not specific to this codebase."
+  }
+}

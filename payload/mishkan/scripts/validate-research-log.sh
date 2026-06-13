@@ -84,6 +84,33 @@ if [[ ! "$sprint" =~ ^S[0-9]+$ ]]; then
   exit 1
 fi
 
+# Optional curated_promotion_candidate (D-016) — when present and non-null it must
+# be an object carrying the six CuratedResource fields with non-empty name/url/why.
+# Enforced at this layer so a malformed candidate fails without ajv/check-jsonschema.
+cpc_type=$(jq -r 'if has("curated_promotion_candidate") then (.curated_promotion_candidate | type) else "absent" end' "$LOG_PATH")
+case "$cpc_type" in
+  absent|null) ;;  # optional — fine
+  object)
+    cpc_bad=$(jq -r '
+      .curated_promotion_candidate as $c
+      | [ "name","url","problem_class","team","source_tier","why" ]
+      | map(select(($c[.] | type) != "string")) as $missing
+      | (if ($c.name|type)=="string" and ($c.name|length)>0 then [] else ["name(empty)"] end) as $n
+      | (if ($c.url|type)=="string"  and ($c.url|length)>0  then [] else ["url(empty)"]  end) as $u
+      | (if ($c.why|type)=="string"  and ($c.why|length)>0  then [] else ["why(empty)"]  end) as $w
+      | ($missing + $n + $u + $w) | unique | join(",")
+    ' "$LOG_PATH")
+    if [[ -n "$cpc_bad" ]]; then
+      echo "invalid: curated_promotion_candidate malformed: ${cpc_bad}" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "invalid: curated_promotion_candidate must be an object or null (got '$cpc_type')" >&2
+    exit 1
+    ;;
+esac
+
 # Layer 3 — Full JSON Schema validation when ajv is available.
 # This catches additionalProperties, type mismatches, and format violations
 # that the layer-2 fast checks do not.

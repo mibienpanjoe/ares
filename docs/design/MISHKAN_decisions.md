@@ -1292,4 +1292,53 @@ install sign-off, docs/usage, README, and the org-reference command updated in t
 
 ---
 
+## D-016 — Engineer-gated promotion of research findings into the curated library (added 2026-06-11)
+
+**Context.** The curated library (`cognee-curated`, :7730) is the org-wide reference surface (D-007),
+but it was **seed-only**: `ingest-curated.py` *prunes then writes*, so it cannot grow additively without
+wiping curated. The research pipeline writes `ResearchOutput`/`CaseNode` to the per-project **work** store
+(D-012), never curated; and **no agent has a curated-write tool** — curated is read-only at the agent layer
+by design. So a reusable resource Caleb finds (a vendor doc, a spec, a primary reference) dies in one
+project. The ontology already ships `CuratedResource` + `CuratedLibraryHit` for exactly this growth — only
+the wire was missing.
+
+**Decision.** Add an **engineer-gated** path to grow curated, additive and deduped, with the human as the
+library's editor:
+1. **Shemaiah** (evaluate) emits a structured `curated_promotion_candidate` (name, url, problem_class,
+   team, source_tier, why) **only when** `verdict=resolved` + `confidence≥medium` +
+   `curated_library_agreement=not_covered` + real cross-project reuse. It nominates; it writes nothing.
+2. **Baruch** (report) copies the candidate into the research-log **and** appends it to an engineer queue
+   `~/.claude/mishkan/curated-candidates.jsonl`. Baruch has `Write` but still **no** curated-write tool —
+   the boundary holds. The research-log schema is `additionalProperties:false`, so the new optional field
+   was added to **both** `templates/research-log.schema.json` and `scripts/validate-research-log.sh`
+   (with a bash-layer shape check so a malformed candidate fails without ajv).
+3. **The engineer** runs `mishkan knowledge curate` — it lists pending candidates, asks per candidate, and
+   on approval runs `scripts/promote-curated.sh` → `cognee/promote-curated.py`: an **additive** write
+   (`CuratedResource` DataPoint + `add_data_points`, **no prune**), deduped by url against the seed manifest
+   and a promoted ledger, via `docker exec` into `mishkan-curated-mcp`. Stateful — the human runs it, never
+   an agent, never automatic.
+4. **Telemetry.** Ezra's curated short-circuit records the matched resource (a `CuratedLibraryHit` signal),
+   so a promoted resource's usefulness is measurable and dead weight is auditable.
+
+**Why engineer-gated, not auto.** Auto-promotion was rejected: the curated surface is shared across every
+project, so an unvetted write pollutes it for all, and (per D-012) research output can carry PII/secrets —
+a human scrub before a shared write is the safety boundary. Phinehas reviews PII/secret-scrub on a
+candidate; Bezalel ratifies the additive-write design; Nathan authored the ADR.
+
+**Consequences.** *Positive:* curated grows from real work without a re-seed; the prune-based seed stays
+intact for bootstrap; the agent-layer read-only boundary is preserved end-to-end; dedup keeps the library
+clean; the hit signal makes promotions falsifiable. *Negative:* one more human-gated step (the engineer
+must run `mishkan knowledge curate`); the dedup ledger assumes these scripts own curated writes (a manual
+out-of-band write to curated would not be in the ledger — documented boundary).
+
+**Out of scope:** auto-promotion (rejected); the seed (`ensure-curated-box.sh` / `seed-curated-library.sh`
+unchanged); work-store promotion (`cognee-promote` work tiers unchanged); any agent curated-write tool
+(stays read-only).
+
+**Refs:** rides on D-005 (asymmetric delegation — the write is the engineer's hands), D-007 (curated
+library), D-008 (knowledge surfaces), D-012 (per-project store / PII boundary), D-013 (ontology types
+`CuratedResource` + `CuratedLibraryHit`), D-015 (the `mishkan knowledge curate` control surface).
+
+---
+
 *Decisions locked May 2026. Revisit only with a dated amendment below.*

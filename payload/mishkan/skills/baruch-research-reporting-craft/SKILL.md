@@ -69,6 +69,7 @@ Optional:
 |---|---|
 | `cognee_node_id` | the ID of the written node, when `knowledge_graph_write: true` |
 | `timestamp` | RFC 3339 UTC; set at write time |
+| `curated_promotion_candidate` | object \| null — copy Shemaiah's structured candidate verbatim when it set one; `null`/absent otherwise. See §6. |
 
 Three rules:
 
@@ -206,7 +207,40 @@ Three rules:
 
 ---
 
-## 6. Worked example A — a resolved cross-harness finding
+## 6. The curated-promotion candidate (D-016)
+
+When Shemaiah's verdict carries a non-null `curated_promotion_candidate`, Baruch
+does **two** things — and neither one writes to the curated library:
+
+1. **Copy it verbatim into the research-log** under `curated_promotion_candidate`.
+   Faithful carriage — Baruch does not invent, edit, or second-guess the candidate;
+   if Shemaiah set `null` (or no candidate), the field is `null`/absent.
+2. **Append the candidate object to the engineer queue** — one JSON object per line
+   in `~/.claude/mishkan/curated-candidates.jsonl` (Baruch has `Write`; create the
+   file if absent, append otherwise). This is the queue `mishkan knowledge curate`
+   reads when the engineer reviews promotions.
+
+```bash
+# Append the candidate (and ONLY the candidate object) to the engineer queue.
+jq -c '.curated_promotion_candidate' ./research-log.json \
+  >> ~/.claude/mishkan/curated-candidates.jsonl
+```
+
+Three rules:
+
+- **The boundary is absolute.** Baruch queues a *candidate*; it has **no**
+  curated-write tool and never `docker exec`s into the curated stack. The write is
+  the engineer's, via `mishkan knowledge curate` → `promote-curated.sh` (additive,
+  no prune, dedup by url). Auto-promotion was rejected (D-016): it would pollute the
+  shared surface and risks D-012 PII bleed.
+- **Queue only on a real candidate.** `null` → append nothing. Don't queue partials,
+  blocked outcomes, or `agrees`/`conflicts` curated matches.
+- **The research-log is still the contract.** The candidate rides in the log as an
+  optional field; it must pass `validate-research-log.sh` like everything else.
+
+---
+
+## 7. Worked example A — a resolved cross-harness finding
 
 Scenario: Hizkiah hit an unknown ("how does asyncpg recover from a
 network blip during a long-running transaction"). Pipeline ran through
@@ -252,7 +286,7 @@ What Baruch did NOT do:
 
 ---
 
-## 7. Worked example B — a partial outcome, no Cognee write
+## 8. Worked example B — a partial outcome, no Cognee write
 
 Scenario: Salma asked whether a specific Next.js App Router pattern
 (streaming + Server Actions + dynamic imports) has a documented
@@ -289,7 +323,7 @@ What Baruch did:
 
 ---
 
-## 8. Worked example C — a blocked outcome
+## 9. Worked example C — a blocked outcome
 
 Scenario: Pipeline asked a question whose answer requires non-public
 information (a vendor's internal API behaviour). Caleb could not find
@@ -323,7 +357,7 @@ What Baruch did:
 
 ---
 
-## 9. Failure modes Baruch watches for in upstream output
+## 10. Failure modes Baruch watches for in upstream output
 
 Sometimes the upstream stages produce something that cannot be faithfully
 recorded. Baruch's response is to surface, not to paper over.
@@ -350,7 +384,7 @@ Three rules:
 
 ---
 
-## 10. The interface with the rest of the pipeline
+## 11. The interface with the rest of the pipeline
 
 - **Shemaiah → Baruch.** Verdict, confidence, gap list. Baruch
   transcribes; does not edit.
@@ -371,7 +405,7 @@ Three rules:
 
 ---
 
-## 11. The `mishkan-deep-research` workflow path
+## 12. The `mishkan-deep-research` workflow path
 
 The research pipeline is also available as a dynamic workflow that
 adversarially verifies findings (3-vote refute) before they reach
@@ -392,7 +426,7 @@ Workflow({
 The sequential pipeline (Task-delegated stage-by-stage) remains the
 default for routine lookups; the workflow is for high-stakes
 verification where false-confident answers carry real cost.
-## 12. The recurring traps Baruch rejects on sight
+## 13. The recurring traps Baruch rejects on sight
 
 1. **"I'll improve Shemaiah's confidence wording."** No. The verdict
    is the verdict.
@@ -431,7 +465,7 @@ verification where false-confident answers carry real cost.
 
 ---
 
-## 13. Style — Baruch's working voice
+## 14. Style — Baruch's working voice
 
 - **Transcription discipline.** A scribe's hand is steady. The
   posture is "what was decided was X; here is X" — not "X, with my

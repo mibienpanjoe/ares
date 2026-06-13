@@ -1100,13 +1100,64 @@ function knowledgeIngest(argv) {
   process.exit(r.status || 0);
 }
 
+// D-016 — engineer-gated promotion of research-found resources into the shared
+// curated library. Baruch queues candidates (one JSON object per line) into
+// ~/.claude/mishkan/curated-candidates.jsonl; this walks them, asks per candidate,
+// and on approval runs the ADDITIVE promote-curated.sh (no prune, dedup by url).
+// Stateful by design — a human runs this CLI; agents never get the bin (rule 5).
+async function knowledgeCurate() {
+  const queue = join(MISHKAN, "curated-candidates.jsonl");
+  if (!existsSync(queue)) {
+    console.log("No pending curated-library candidates.");
+    console.log(c.dim("  Baruch queues them here when a resolved research run finds a reusable,"));
+    console.log(c.dim("  not-yet-curated resource: " + tilde(queue)));
+    return;
+  }
+  const lines = readFileSync(queue, "utf8").split("\n").map(s => s.trim()).filter(Boolean);
+  if (lines.length === 0) { console.log("No pending curated-library candidates."); return; }
+  const script = join(SCRIPTS_DIR, "promote-curated.sh");
+  if (!existsSync(script)) { console.error(c.red("promote-curated.sh not found — run `mishkan install` first.")); process.exit(1); }
+
+  const tmp = join(COGNEE_DIR, ".curate-candidate.json");
+  const remaining = [];                 // kept for retry (e.g. container down)
+  let approved = 0, rejected = 0;
+  const processedOut = [];
+  for (const line of lines) {
+    let cand;
+    try { cand = JSON.parse(line); }
+    catch { console.error(c.red("skipping malformed queue line: ") + line.slice(0, 80)); continue; }
+    console.log();
+    console.log(c.bold(cand.name || "(unnamed)") + c.dim("   [" + (cand.team || "?") + " · " + (cand.problem_class || "?") + "]"));
+    console.log("  " + (cand.url || c.red("(no url)")));
+    if (cand.why) console.log(c.dim("  why: " + cand.why));
+    const ok = await promptYN("Promote this into the shared curated library?", false);
+    if (!ok) { rejected++; processedOut.push(JSON.stringify({ ...cand, decision: "rejected" })); console.log(c.dim("  rejected — nothing written.")); continue; }
+    writeFileSync(tmp, JSON.stringify(cand) + "\n");
+    const r = spawnSync("bash", [script, tmp], { stdio: "inherit" });
+    if (r.status === 0) { approved++; processedOut.push(JSON.stringify({ ...cand, decision: "approved" })); }
+    else { console.error(c.red("  promotion failed (see above) — kept in the queue for retry.")); remaining.push(line); }
+  }
+  try { if (existsSync(tmp)) rmSync(tmp); } catch { /* best-effort cleanup */ }
+  // Rewrite the queue with only the lines kept for retry; record decisions durably.
+  writeFileSync(queue, remaining.length ? remaining.join("\n") + "\n" : "");
+  if (processedOut.length) {
+    const log = join(MISHKAN, "curated-candidates.processed.jsonl");
+    const prev = existsSync(log) ? readFileSync(log, "utf8") : "";
+    writeFileSync(log, prev + processedOut.join("\n") + "\n");
+  }
+  console.log();
+  console.log(c.green(`curate: ${approved} approved, ${rejected} rejected`) + (remaining.length ? c.dim(`, ${remaining.length} kept for retry`) : ""));
+}
+
 async function knowledgeCmd(argv) {
   const sub = argv[0];
   if (sub === "configure") { await configureKnowledge(); return; }
   if (sub === "ingest") { knowledgeIngest(argv.slice(1)); return; }
-  console.error("usage: mishkan knowledge <configure | ingest [paths…]>");
+  if (sub === "curate") { await knowledgeCurate(); return; }
+  console.error("usage: mishkan knowledge <configure | ingest [paths…] | curate>");
   console.log("  configure          wizard: LLM provider + cognee secrets");
   console.log("  ingest [paths…]    add docs to THIS project's store");
+  console.log("  curate             review + approve research-found resources into the shared curated library (D-016)");
   process.exit(1);
 }
 
