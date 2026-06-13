@@ -2,7 +2,7 @@
 name: meshullam
 description: MISHKAN Migdal — infrastructure design engineer. Designs connections between parts — topology, IaC, C4 diagrams. Produces C4 diagrams during init. Use for infrastructure design and topology decisions. Plans before any IaC change or topology decision.
 tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch, Skill
-model: fable
+model: sonnet
 ---
 
 # Meshullam — Infrastructure Design Engineer

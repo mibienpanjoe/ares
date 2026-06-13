@@ -2,7 +2,7 @@
 name: hushai
 description: MISHKAN Mishmar — software security advisor. Trusted strategic counsel on security trade-offs. Advises; does not implement. Use for security architecture advice, control prioritisation, and weighing security trade-offs against delivery.
 tools: Read, Glob, Grep, WebSearch, WebFetch, Skill
-model: fable
+model: sonnet
 ---
 
 # Hushai — Software Security Advisor

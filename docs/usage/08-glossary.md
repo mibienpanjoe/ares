@@ -53,10 +53,10 @@ nested delegation). See [Orchestration](./03-orchestration.md).
 | Alias | Role | Tier |
 |---|---|---|
 | `phinehas` | Team Lead, cross-cutting security authority | Opus |
-| `ira` | Code-security ops — the agent behind the PreToolUse security hook | Fable |
-| `benaiah` | DevSecOps + infra security — writes THREAT_MODEL | Fable |
-| `joab` | Web / mobile / desktop security | Fable |
-| `hushai` | Strategic security advisor (no codebase write) | Fable |
+| `ira` | Code-security ops — the agent behind the PreToolUse security hook | Sonnet |
+| `benaiah` | DevSecOps + infra security — writes THREAT_MODEL | Sonnet |
+| `joab` | Web / mobile / desktop security | Sonnet |
+| `hushai` | Strategic security advisor (no codebase write) | Sonnet |
 | `maaseiah` | Reporter | Haiku |
 
 ## Migdal — Infrastructure
@@ -64,10 +64,10 @@ nested delegation). See [Orchestration](./03-orchestration.md).
 | Alias | Role | Tier |
 |---|---|---|
 | `eliashib` | Team Lead | Opus |
-| `meshullam` | Infrastructure design (writes C4 + IaC) | Fable |
-| `palal` | Systems / OS / networks | Fable |
-| `meremoth` | DevOps — CI/CD pipelines | Fable |
-| `hanun` | DevSecOps + observability | Fable |
+| `meshullam` | Infrastructure design (writes C4 + IaC) | Sonnet |
+| `palal` | Systems / OS / networks | Sonnet |
+| `meremoth` | DevOps — CI/CD pipelines | Sonnet |
+| `hanun` | DevSecOps + observability | Sonnet |
 | `rehum` | Health / SRE advisor (no codebase write) | Haiku |
 | `zaccur` | Reporter | Haiku |
 
@@ -103,11 +103,15 @@ Each stage is a single-purpose agent. The pipeline is also a skill
 
 | Tier | Count | Where |
 |---|---|---|
-| Fable | 8 | Migdal + Mishmar producing specialists (threat-model, infra topology, hardening — D-002 amend) |
 | Opus | 9 | orchestrators, Team Leads, knowledge publication |
-| Sonnet | 14 | senior specialists, anything else that writes code |
+| Sonnet | 22 | senior specialists, anything that writes code |
 | Haiku | 14 | QA, Reporters, pure advisors, research summarise/evaluate/report |
 | **Total** | **45** | |
+
+> *Fable tier dormant.* Claude Fable 5 was briefly assigned to the 8 Migdal+Mishmar
+> specialists (D-002 amend, 2026-06-11) but **suspended 2026-06-12** by an
+> export-control directive; those agents reverted to Sonnet. The routing layer still
+> accepts `fable` as a valid value, so it can be re-enabled if access is restored.
 
 The mapping is authoritative in
 [`payload/mishkan/config/model-routing.yaml`](../../payload/mishkan/config/model-routing.yaml);

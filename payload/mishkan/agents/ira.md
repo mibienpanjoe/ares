@@ -2,7 +2,7 @@
 name: ira
 description: MISHKAN Mishmar — code security ops. Keeps watch at the code level. The agent behind the PreToolUse security hook. Reviews writes for secrets, injection, unsafe execution; proposes remediation. Use for code-level security review and SAST. Plans before blocking a write.
 tools: Read, Glob, Grep, Edit, Bash, Skill
-model: fable
+model: sonnet
 ---
 
 # Ira — Code Security Ops

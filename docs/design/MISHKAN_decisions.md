@@ -35,16 +35,19 @@ runtime selection — for no benefit given the target. Removing it simplifies th
 build materially.
 
 **Implications:**
-- Four tiers: Fable, Opus, Sonnet, Haiku.
-  - **Fable (8):** the producing **specialists** of the two hardest-reasoning
-    teams — Mishmar (Ira, Benaiah, Joab, Hushai) + Migdal (Meshullam, Palal,
-    Meremoth, Hanun). See the 2026-06-11 amendment below.
+- Tier *values* the hook accepts: Fable, Opus, Sonnet, Haiku — but **Fable is
+  dormant** (0 agents) since its 2026-06-12 suspension (amendment below). Live
+  distribution is Opus 9 · Sonnet 22 · Haiku 14.
+  - **Fable (0 — dormant):** briefly the producing specialists of Mishmar + Migdal
+    (2026-06-11 amendment), reverted to Sonnet on 2026-06-12 (suspension amendment).
+    The value stays valid so the tier can be re-enabled if access is restored.
   - **Opus (9):** Nehemiah, Bezalel, all Team Leads, Jehonathan.
-  - **Sonnet (14):** every other agent that **writes code/config into the
+  - **Sonnet (22):** every agent that **writes code/config into the
     codebase** (precision matters on Y4NN's code) + senior specialists + research
     clarify/formulate/research. Includes implementation specialists Hizkiah,
-    Salma, Hiram, Obed, Asaph — plus Nathan, Zadok, Shallum, Oholiab, Seraiah,
-    Joah, Jakin, Ezra, Caleb.
+    Salma, Hiram, Obed, Asaph, Palal, Meremoth, Hanun — plus Nathan, Zadok,
+    Shallum, Ira, Benaiah, Joab, Hushai, Oholiab, Meshullam, Seraiah, Joah,
+    Jakin, Ezra, Caleb.
   - **Haiku (14):** agents that do **not** write code — QA (Uriah, Jahaziel),
     all Team Reporters, pure advisors (Deborah, Rehum), Sefer team-layer docs
     (Shevna), research summarise/evaluate/report (Shaphan, Shemaiah, Baruch).
@@ -74,6 +77,20 @@ Verified before rollout: `fable` is a valid bare subagent alias resolving to
 transcript). The `model-route.py` hook's `VALID` set, the `observability-log` schema
 `model_tier` enum, and the `usage_parser.py` price table were extended for the new
 tier in the same change.
+
+**Amendment 2026-06-12 (Fable suspended — reverted to Sonnet):** less than a day
+after the four-tier amendment landed, Anthropic disabled Claude Fable 5 (and Mythos 5)
+for **all customers** under a US export-control directive
+(anthropic.com/news/fable-mythos-access, 2026-06-12 17:21 ET) — `claude-fable-5` now
+hard-errors on spawn (verified: a subagent routed to it returns "model … may not
+exist or you may not have access", 0 tokens). The eight Migdal+Mishmar specialists are
+therefore **reverted to Sonnet** (frontmatter + `model-routing.yaml`), restoring the
+pre-amendment distribution (Opus 9 · Sonnet 22 · Haiku 14). The four-tier **mechanism
+is kept dormant** — `fable` stays in the hook's `VALID` set, the telemetry enum, and
+the price table — so re-enabling is a one-line routing change if Anthropic restores
+access ("working to restore access as soon as possible"). This episode is the concrete
+motivation for D-017 (user-editable dynamic tier routing): model availability can
+change abruptly, and routing should adapt without a code change + reinstall.
 - Tier declared per-agent in frontmatter `model:` field.
 - Overridable centrally via `~/.claude/mishkan/config/model-routing.yaml`.
 - Cost discipline lives entirely in tier assignment + prompt caching +

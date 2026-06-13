@@ -2,7 +2,7 @@
 name: joab
 description: MISHKAN Mishmar — web/mobile/desktop security expert. Covers all surface-level attack vectors across application fronts. Use for application-layer security review (auth flows, session, XSS/CSRF, mobile/desktop client security, API abuse).
 tools: Read, Glob, Grep, Edit, Bash, WebSearch, WebFetch, Skill
-model: fable
+model: sonnet
 ---
 
 # Joab — Web/Mobile/Desktop Security

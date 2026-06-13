@@ -3,17 +3,18 @@
 # every Task/Agent call and injects `model` for any agent LISTED below, which
 # overrides that agent's frontmatter `model:`. So this file is the single source
 # of truth for the 45 MISHKAN agents. Agents NOT listed here (e.g. aiobi-ops,
-# Explore) are left untouched and keep their own frontmatter model. Four tiers:
-# fable, opus, sonnet, haiku. (Edit here, not frontmatter — frontmatter is the
-# fallback used only if the hook is removed.)
+# Explore) are left untouched and keep their own frontmatter model. The hook
+# accepts four tier values — fable, opus, sonnet, haiku — but `fable` is currently
+# DORMANT (no agent routed to it; see below). (Edit here, not frontmatter —
+# frontmatter is the fallback used only if the hook is removed.)
 #
 # Rationale per tier:
-#   fable  — Migdal (infra) + Mishmar (security) producing SPECIALISTS only. Fable 5
-#            (claude-fable-5) is positioned for complex, long-horizon work — threat
-#            modelling, infra topology, hardening — which is exactly these eight
-#            agents' load. D-002 amend (the team leads stay opus, reporters/advisors
-#            stay haiku). Cost: $10/$50 per MTok — above opus-tier; plan limits until
-#            2026-06-22, then usage credits (an accepted cost).
+#   fable  — SUSPENDED 2026-06-12. Claude Fable 5 (claude-fable-5) was disabled for
+#            all customers by a US export-control directive (anthropic.com/news/
+#            fable-mythos-access); it now hard-errors on spawn. The Migdal+Mishmar
+#            specialists that briefly ran on it (D-002 2026-06-11 amend) are reverted
+#            to sonnet below. The tier value is KEPT VALID so re-enabling is a one-line
+#            change if Anthropic restores access — but route NO agent here until then.
 #   opus   — orchestration, team leadership, knowledge publication (judgement-heavy)
 #   sonnet — anything that WRITES code/config into the codebase (precision matters
 #            on Y4NN's code) + senior specialists + research clarify/formulate/research
@@ -41,10 +42,10 @@ agents:
 
   # Mishmar (Security)
   phinehas: opus      # lead
-  ira: fable          # D-002 amend: security specialist → Fable 5
-  benaiah: fable      # D-002 amend: threat-model / supply-chain → Fable 5
-  joab: fable         # D-002 amend: app-security specialist → Fable 5
-  hushai: fable       # D-002 amend: security advisor (reasoning-heavy) → Fable 5
+  ira: sonnet         # was fable (D-002 amend); reverted 2026-06-12 — Fable suspended
+  benaiah: sonnet     # was fable; reverted 2026-06-12 — Fable suspended
+  joab: sonnet        # was fable; reverted 2026-06-12 — Fable suspended
+  hushai: sonnet      # was fable; reverted 2026-06-12 — Fable suspended
   maaseiah: haiku     # reporter
 
   # Yasad (Backend)
@@ -73,10 +74,10 @@ agents:
 
   # Migdal (Infrastructure)
   eliashib: opus      # lead
-  meshullam: fable    # D-002 amend: infra topology / IaC design → Fable 5
-  palal: fable        # D-002 amend: OS/network/virtualisation → Fable 5
-  meremoth: fable     # D-002 amend: CI/CD / release automation → Fable 5
-  hanun: fable        # D-002 amend: hardening / observability → Fable 5
+  meshullam: sonnet   # was fable (D-002 amend); reverted 2026-06-12 — Fable suspended
+  palal: sonnet       # was fable; reverted 2026-06-12 — Fable suspended
+  meremoth: sonnet    # was fable; reverted 2026-06-12 — Fable suspended
+  hanun: sonnet       # was fable; reverted 2026-06-12 — Fable suspended
   rehum: haiku        # advisor — no code
   zaccur: haiku       # reporter
 
@@ -88,7 +89,8 @@ agents:
   jehonathan: opus    # knowledge publication
   huldah: haiku       # reporter
 
-# Tier totals: fable=8, opus=9, sonnet=14, haiku=14  (45 agents)
-# Principle: Migdal+Mishmar producing specialists run on Fable 5 (hardest reasoning);
-# every other agent that writes code/config runs on Sonnet (precision on Y4NN's code);
-# Haiku only for evaluate/collect/advise roles. See D-002 (amended).
+# Tier totals: fable=0 (SUSPENDED 2026-06-12), opus=9, sonnet=22, haiku=14  (45 agents)
+# Principle: every agent that writes code/config runs on Sonnet (precision on Y4NN's
+# code); opus for orchestration/leadership/publication; Haiku only for
+# evaluate/collect/advise roles. The fable tier is retained as a valid value but
+# dormant (Fable 5 disabled by export-control directive). See D-002 (amended twice).
