@@ -1166,15 +1166,28 @@ async function knowledgeCurate() {
   console.log(c.green(`curate: ${approved} approved, ${rejected} rejected`) + (remaining.length ? c.dim(`, ${remaining.length} kept for retry`) : ""));
 }
 
+// D-017 cleanup — full reset of the knowledge layer to the stable baseline.
+// Wipes all work stores, prunes cognee-memory, re-seeds curated. Stateful
+// (docker rm / docker exec): the human runs it; the script type-to-confirms.
+function knowledgeReset(argv) {
+  const script = join(SCRIPTS_DIR, "reset-knowledge-data.sh");
+  if (!existsSync(script)) { console.error(c.red("reset-knowledge-data.sh not found — run `mishkan install` first.")); process.exit(1); }
+  warn("FULL knowledge-data reset — wipes all work stores, prunes memory, re-seeds curated to baseline.");
+  const r = spawnSync("bash", [script, ...argv], { stdio: "inherit" });
+  process.exit(r.status || 0);
+}
+
 async function knowledgeCmd(argv) {
   const sub = argv[0];
   if (sub === "configure") { await configureKnowledge(); return; }
   if (sub === "ingest") { knowledgeIngest(argv.slice(1)); return; }
   if (sub === "curate") { await knowledgeCurate(); return; }
-  console.error("usage: mishkan knowledge <configure | ingest [paths…] | curate>");
+  if (sub === "reset") { knowledgeReset(argv.slice(1)); return; }
+  console.error("usage: mishkan knowledge <configure | ingest [paths…] | curate | reset>");
   console.log("  configure          wizard: LLM provider + cognee secrets");
   console.log("  ingest [paths…]    add docs to THIS project's store");
   console.log("  curate             review + approve research-found resources into the shared curated library (D-016)");
+  console.log("  reset              wipe all stores → re-seed curated to the stable baseline (destructive; confirms)");
   process.exit(1);
 }
 
@@ -1443,6 +1456,7 @@ function printHelp() {
   console.log("  " + c.bold(`${prefix} knowledge configure`)       + "        Wizard: LLM provider + cognee secrets");
   console.log("  " + c.bold(`${prefix} knowledge ingest [paths…]`) + "  Add docs to THIS project's store");
   console.log("  " + c.bold(`${prefix} knowledge-stack up|down|restart|status`) + "  The shared running infra (up = guided)");
+  console.log("  " + c.bold(`${prefix} knowledge reset`)             + "  Wipe all stores → re-seed curated baseline (destructive)");
   console.log("  " + c.bold(`${prefix} project-work-store [<slug>] up|down|reset`) + "  A project's own store");
   console.log("");
   console.log(c.bold("Inspect / observe"));
