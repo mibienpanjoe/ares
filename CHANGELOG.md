@@ -6,6 +6,8 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-06-13
+
 ### Added
 
 - **Semantic `mishkan <object> <verb>` control surface (D-015).** One CLI for the
@@ -555,7 +557,8 @@ Initial npm release. The harness becomes distributable via
 - Dependency-free `npx` installer with idempotent + non-clobbering semantics.
 - ADRs D-001 through D-007.
 
-[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.6...HEAD
+[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.7...HEAD
+[0.2.7]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.3...v0.2.4

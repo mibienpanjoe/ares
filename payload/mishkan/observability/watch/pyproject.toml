@@ -1,6 +1,6 @@
 [project]
 name = "mishkan-watch"
-version = "0.2.6"
+version = "0.2.7"
 description = "MISHKAN observability TUI — Textual client that reads the mishkan-watchd UNIX socket and renders the 8-tab dashboard."
 readme = "../README.md"
 requires-python = ">=3.11"
