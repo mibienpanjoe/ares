@@ -1358,4 +1358,47 @@ library), D-008 (knowledge surfaces), D-012 (per-project store / PII boundary), 
 
 ---
 
+## D-017 — User-editable model-tier routing via a preserved overlay (added 2026-06-13)
+
+**Context.** D-002 made `model-routing.yaml` the central tier map and the `model-route.py` hook reads it
+live, so a tier change takes effect on the next delegation with no reinstall. But two gaps made re-tiering
+impractical for the engineer: (1) it is developer-facing YAML with no friendly surface, and (2)
+`mishkan install` overwrites `model-routing.yaml` (it sits inside the `copyDir(payload/mishkan,…)` tree),
+so a hand edit is clobbered on the next update. The Fable suspension (D-002 amendment 2026-06-12) made
+this urgent: a tier can vanish overnight, and the engineer needs to adapt routing — for availability,
+cost, or preference — without editing source and reinstalling.
+
+**Decision.** Add a `mishkan model` control surface backed by a **preserved overlay file**:
+- **`model-routing.local.yaml`** holds the engineer's per-agent overrides. The hook reads the shipped
+  default, then overlays local (local wins per-agent); fail-open is preserved (absent or malformed
+  overlay → behaves exactly as the single-file routing). The installer **places it once and preserves
+  it** — and because `copyDir` ships no such file and never deletes destination extras, a refresh can
+  never clobber it (the same place-once philosophy as `engineer-standards.md`). This is an **overlay**,
+  not a preserve-the-whole-file scheme: the shipped default keeps flowing on every update (new agents,
+  baseline changes), while the engineer's deltas persist on top — no drift.
+- **`mishkan model show | set <agent|team|all> <tier> | reset [target]`** edits ONLY the overlay — never
+  the shipped default, never the 45 frontmatter files. `team` expands via `org/org.json` (the same source
+  as `mishkan org show`). `set` validates the tier and, for a **dormant** tier (`fable`, currently
+  suspended), warns and confirms. `show` flags any agent routed to a dormant tier.
+
+**Why overlay over preserve-the-file (Bezalel ratified).** Preserving a user-edited `model-routing.yaml`
+would freeze it: future baseline changes (the Fable revert, a new agent, a re-tier) would never reach an
+engineer who once edited it — the installed-runtime-vs-source drift trap. The overlay keeps the two
+concerns separate: harness owns the default, engineer owns the deltas.
+
+**Consequences.** *Positive:* routing is now the engineer's to change at will, instantly (hook reads live)
+and durably (survives updates); responds to abrupt availability changes without a code change; no
+45-frontmatter churn. *Negative:* two files now express routing (default + overlay) — mitigated by
+`mishkan model show` rendering the effective merge; an overlay entry set equal to the default is harmless
+redundancy.
+
+**Out of scope:** named profiles (`thrifty`/`max`) — `set`/`reset` cover edit-by-intent; profiles are a
+thin future follow-up over the same overlay. No auto-detection of model availability (the dormant warning
+is static). Agent frontmatter `model:` stays the shipped fallback used only if the hook is absent.
+
+**Refs:** rides on D-002 (the tier model + the routing hook), D-005 (the CLI is human-run), D-015 (the
+semantic `mishkan <object> <verb>` surface this extends with `model`).
+
+---
+
 *Decisions locked May 2026. Revisit only with a dated amendment below.*

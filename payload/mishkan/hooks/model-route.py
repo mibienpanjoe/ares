@@ -22,6 +22,10 @@ import sys
 VALID = {"opus", "sonnet", "haiku", "fable"}
 SUBAGENT_TOOLS = {"Task", "Agent"}
 YAML = os.path.join(os.path.dirname(__file__), "..", "config", "model-routing.yaml")
+# D-017 — user overlay. Engineer overrides written by `mishkan model set/reset`.
+# Preserved across `mishkan install`; entries here WIN over the shipped default.
+# Absent by default -> behaves exactly as the single-file routing did.
+LOCAL_YAML = os.path.join(os.path.dirname(__file__), "..", "config", "model-routing.local.yaml")
 
 # Make the observability bus importable; fail-open if it isn't (older harness
 # installs, missing payload, broken path). Never block delegation on a bus
@@ -83,6 +87,15 @@ def main():
         agents, _default = parse_routing(YAML)
     except Exception:
         return  # missing/broken routing file -> fail open
+
+    # D-017 overlay: the engineer's local overrides win per-agent. Fail-open —
+    # a missing or malformed overlay leaves the shipped default untouched.
+    if os.path.exists(LOCAL_YAML):
+        try:
+            local_agents, _ = parse_routing(LOCAL_YAML)
+            agents.update(local_agents)
+        except Exception:
+            pass
 
     # Authoritative ONLY for agents the YAML explicitly lists (the MISHKAN fleet).
     # Foreign agents (e.g. aiobi-ops, Explore) keep their own frontmatter model —

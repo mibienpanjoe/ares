@@ -113,9 +113,12 @@ Each stage is a single-purpose agent. The pipeline is also a skill
 > export-control directive; those agents reverted to Sonnet. The routing layer still
 > accepts `fable` as a valid value, so it can be re-enabled if access is restored.
 
-The mapping is authoritative in
+The shipped mapping lives in
 [`payload/mishkan/config/model-routing.yaml`](../../payload/mishkan/config/model-routing.yaml);
 the hook `payload/mishkan/hooks/model-route.py` injects it at delegation time.
+**You can re-tier any agent** with `mishkan model set <agent|team|all> <tier>` (D-017) —
+overrides land in a `model-routing.local.yaml` overlay that survives updates, take effect
+on the next delegation, and win over the shipped defaults above.
 
 ## Key terms
 

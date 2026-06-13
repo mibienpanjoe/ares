@@ -44,6 +44,29 @@ vs data-lifecycle (`reset`/wipe a per-project store) — named differently on pu
 | `mishkan code-graph status \| open \| scan` | The project's code graph (Graphify) |
 | `mishkan observability install \| open` | The live monitor — install the daemon+TUI, or open it |
 | `mishkan org show [--json]` | The 45-agent organisation reference |
+| `mishkan model show \| set \| reset` | Re-tier which Claude model an agent runs on (D-017) |
+
+## Re-tier the agent fleet — `mishkan model`
+
+Every MISHKAN agent runs on a Claude tier (D-002). The shipped defaults live in
+`model-routing.yaml`; **your** overrides live in `model-routing.local.yaml`, an overlay
+the installer never clobbers — so re-tiering survives `mishkan install`, and you never
+edit 45 frontmatter files.
+
+| Command | Does |
+|---|---|
+| `mishkan model show` | Effective tier per agent (default + your overrides), marking overrides and flagging any **dormant** tier |
+| `mishkan model set <agent\|team\|all> <tier>` | Override a tier. `<tier>` ∈ `opus \| sonnet \| haiku \| fable`. `<team>` is an org id (`mishmar`, `migdal`, …); `all` = every agent |
+| `mishkan model reset [<agent\|team\|all>]` | Drop override(s); no argument clears them all (back to shipped defaults) |
+
+Changes take effect on the **next delegation** — the `model-route.py` hook reads the
+overlay live; no reinstall needed. Use it for cost (drop a tier), availability (a tier
+can be suspended — see the **fable** note below), or preference.
+
+> **`fable` is dormant.** Claude Fable 5 was suspended for all customers on 2026-06-12
+> (export-control directive). `mishkan model set … fable` warns and confirms; agents
+> routed to it will fail to spawn until access is restored. The tier value is kept so
+> re-enabling is one command if it returns.
 
 The TUI binary is `mishkan-watch`; `mishkan-watchd start|stop|status` is the manual
 daemon control. In the TUI, **`c`** copies the fix command for a down store to your

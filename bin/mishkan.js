@@ -629,6 +629,23 @@ async function install() {
   ensureDir(join(MISHKAN, "logs"));
   ensureDir(join(MISHKAN, "cognee"));
 
+  // D-017: place the model-routing overlay once (the engineer's tier overrides).
+  // copyDir ships no such file, so it is never clobbered on refresh — place-once,
+  // then preserve (same philosophy as engineer-standards.md). `mishkan model` edits it.
+  const overlayPath = join(MISHKAN, "config", "model-routing.local.yaml");
+  if (!existsSync(overlayPath)) {
+    ensureDir(join(MISHKAN, "config"));
+    writeFileSync(overlayPath,
+      "# MISHKAN model-routing OVERLAY (D-017) — your per-agent tier overrides.\n" +
+      "# Preserved across `mishkan install`. Managed by `mishkan model set/reset`\n" +
+      "# (hand-edits are fine). Entries here WIN over config/model-routing.yaml.\n" +
+      "# Empty = no overrides (shipped defaults apply). Tiers: opus, sonnet, haiku, fable.\n\n" +
+      "agents: {}\n");
+    log("placed model-routing overlay ~/.claude/mishkan/config/model-routing.local.yaml");
+  } else {
+    log("preserved your ~/.claude/mishkan/config/model-routing.local.yaml");
+  }
+
   // D-011 Phase 2: rebuild the universal skill-discovery index at install
   // time so the router has a live index.json before the first session boots.
   // The SessionStart hook keeps it fresh thereafter; this seeds it.
@@ -1224,6 +1241,144 @@ function orgCmd(argv) {
   process.exit(1);
 }
 
+// D-017 — user-editable model-tier routing. The hook (hooks/model-route.py) reads
+// the shipped default (config/model-routing.yaml) then overlays the engineer's
+// overrides (config/model-routing.local.yaml, preserved across installs). This
+// command edits ONLY the overlay — never the shipped default, never the 45
+// agent frontmatter files. So defaults keep flowing on update while your deltas persist.
+const ROUTING_DEFAULT = join(MISHKAN, "config", "model-routing.yaml");
+const ROUTING_LOCAL = join(MISHKAN, "config", "model-routing.local.yaml");
+const ORG_JSON = join(MISHKAN, "org", "org.json");
+const TIERS = new Set(["opus", "sonnet", "haiku", "fable"]);
+const DORMANT_TIERS = new Set(["fable"]); // valid but currently unavailable (Fable 5 suspended 2026-06-12)
+
+// Minimal reader matching hooks/model-route.py parse_routing: agents map + default tier.
+function readRouting(path) {
+  const agents = {};
+  let dflt = "sonnet", section = null;
+  if (!existsSync(path)) return { agents, dflt };
+  for (const raw of readFileSync(path, "utf8").split("\n")) {
+    const line = raw.split("#")[0].replace(/\s+$/, "");
+    if (!line.trim()) continue;
+    if (!/^[ \t]/.test(line)) { section = line.trim().replace(/:$/, ""); continue; }
+    const idx = line.indexOf(":");
+    if (idx < 0) continue;
+    const key = line.slice(0, idx).trim();
+    const val = line.slice(idx + 1).trim();
+    if (!val) continue;
+    if (section === "defaults" && key === "unlisted_agent" && TIERS.has(val)) dflt = val;
+    else if (section === "agents" && TIERS.has(val)) agents[key] = val;
+  }
+  return { agents, dflt };
+}
+
+function writeOverlay(map) {
+  const keys = Object.keys(map).sort();
+  let out =
+    "# MISHKAN model-routing OVERLAY (D-017) — your per-agent tier overrides.\n" +
+    "# Preserved across `mishkan install`. Managed by `mishkan model set/reset`\n" +
+    "# (hand-edits are fine). Same shape as model-routing.yaml; entries here WIN\n" +
+    "# over the shipped default. Empty = no overrides. Tiers: opus, sonnet, haiku, fable.\n\n";
+  out += keys.length ? "agents:\n" + keys.map(k => `  ${k}: ${map[k]}`).join("\n") + "\n" : "agents: {}\n";
+  ensureDir(dirname(ROUTING_LOCAL));
+  writeFileSync(ROUTING_LOCAL, out);
+}
+
+function allMishkanAgents() { return Object.keys(readRouting(ROUTING_DEFAULT).agents).sort(); }
+
+function teamAgents(teamId) {
+  if (!existsSync(ORG_JSON)) return null;
+  let org; try { org = JSON.parse(readFileSync(ORG_JSON, "utf8")); } catch { return null; }
+  const t = teamId.toLowerCase();
+  for (const g of (org.groups || [])) {
+    if ((g.id || "").toLowerCase() === t || (g.label || "").toLowerCase() === t) {
+      return (g.agents || []).map(a => (typeof a === "string" ? a : a.alias)).filter(Boolean);
+    }
+  }
+  return null;
+}
+
+// Resolve <agent|team|all> to a list of known MISHKAN agent aliases.
+function resolveTargets(target, all) {
+  if (target === "all") return all;
+  if (all.includes(target)) return [target];
+  const team = teamAgents(target);
+  if (team && team.length) return team.filter(a => all.includes(a));
+  return null;
+}
+
+async function modelCmd(argv) {
+  const sub = argv[0] || "show";
+  const def = readRouting(ROUTING_DEFAULT);
+  const overlay = readRouting(ROUTING_LOCAL).agents;
+
+  if (sub === "show") {
+    const names = allMishkanAgents();
+    if (names.length === 0) { console.error(c.red("no model-routing.yaml found — run `mishkan install` first.")); process.exit(1); }
+    const nOver = Object.keys(overlay).length;
+    console.log(c.bold("MISHKAN model-tier routing") + c.dim("   " + (nOver ? nOver + " override(s)" : "no overrides — shipped defaults")));
+    let dormantSeen = false;
+    for (const n of names) {
+      const eff = overlay[n] || def.agents[n];
+      const overridden = overlay[n] && overlay[n] !== def.agents[n];
+      const dormant = DORMANT_TIERS.has(eff);
+      if (dormant) dormantSeen = true;
+      const mark = overridden ? c.bold("  ←override (was " + def.agents[n] + ")") : "";
+      const warnTxt = dormant ? c.red("  ⚠ DORMANT — " + eff + " unavailable, will fail to spawn") : "";
+      console.log("  " + n.padEnd(12) + " " + eff.padEnd(7) + mark + warnTxt);
+    }
+    console.log(c.dim("\n  set:  mishkan model set <agent|team|all> <tier>   ·   revert:  mishkan model reset [target]"));
+    if (dormantSeen) console.log(c.red("  ⚠ agent(s) route to a dormant tier — re-tier them (mishkan model set …) or restore access."));
+    return;
+  }
+
+  if (sub === "set") {
+    const target = argv[1], tier = argv[2];
+    if (!target || !tier) { console.error("usage: mishkan model set <agent|team|all> <tier>"); process.exit(1); }
+    if (!TIERS.has(tier)) { console.error(c.red(`invalid tier '${tier}' — valid: opus, sonnet, haiku, fable`)); process.exit(1); }
+    const all = allMishkanAgents();
+    const targets = resolveTargets(target, all);
+    if (!targets) { console.error(c.red(`unknown agent or team '${target}'.`) + c.dim("  see: mishkan model show / mishkan org show")); process.exit(1); }
+    if (DORMANT_TIERS.has(tier)) {
+      warn(`'${tier}' is DORMANT — Claude Fable 5 was suspended 2026-06-12; agents routed here will fail to spawn.`);
+      const ok = await promptYN(`Route ${targets.length} agent(s) to '${tier}' anyway?`, false);
+      if (!ok) { console.log("aborted."); return; }
+    }
+    for (const a of targets) overlay[a] = tier;
+    writeOverlay(overlay);
+    console.log(c.green(`✓ set ${targets.length} agent(s) → ${tier}`) + c.dim("   overlay: " + tilde(ROUTING_LOCAL)));
+    console.log(c.dim("  live on the next delegation (hook reads the overlay) · survives `mishkan install`."));
+    return;
+  }
+
+  if (sub === "reset") {
+    const target = argv[1];
+    if (!target) {
+      const n = Object.keys(overlay).length;
+      if (n === 0) { console.log("no overrides to reset."); return; }
+      const ok = await promptYN(`Clear ALL ${n} routing override(s) — revert the whole fleet to shipped defaults?`, false);
+      if (!ok) { console.log("aborted."); return; }
+      writeOverlay({});
+      console.log(c.green(`✓ cleared ${n} override(s) — fleet back to shipped defaults.`));
+      return;
+    }
+    const all = allMishkanAgents();
+    const targets = target === "all" ? Object.keys(overlay) : (resolveTargets(target, all) || []);
+    let removed = 0;
+    for (const a of targets) if (overlay[a]) { delete overlay[a]; removed++; }
+    writeOverlay(overlay);
+    console.log(removed ? c.green(`✓ reset ${removed} override(s) → shipped default.`) : `no overrides on '${target}'.`);
+    return;
+  }
+
+  console.error("usage: mishkan model <show | set <agent|team|all> <tier> | reset [agent|team|all]>");
+  console.log("  show                  effective tier per agent (shipped default + your overrides)");
+  console.log("  set <target> <tier>   override a tier — target is an agent alias, a team id, or 'all'");
+  console.log("  reset [target]        drop override(s); no target = clear them all");
+  console.log("  tiers: opus · sonnet · haiku · fable" + c.dim(" (fable dormant — suspended 2026-06-12)"));
+  process.exit(1);
+}
+
 const cmd = process.argv[2];
 const flags = new Set(process.argv.slice(3));
 switch (cmd) {
@@ -1238,6 +1393,7 @@ switch (cmd) {
   case "code-graph": codeGraphCmd(process.argv.slice(3)); break;
   case "observability": observabilityCmd(process.argv.slice(3)); break;
   case "org": orgCmd(process.argv.slice(3)); break;
+  case "model": await modelCmd(process.argv.slice(3)); break;
   // deprecated flat aliases — kept working (not advertised) so nothing breaks mid-migration
   case "configure-knowledge": await knowledgeCmd(["configure"]); break;
   case "ingest": knowledgeIngest(process.argv.slice(3)); break;
@@ -1293,6 +1449,7 @@ function printHelp() {
   console.log("  " + c.bold(`${prefix} code-graph status|open|scan`)  + "      The project's code graph (Graphify)");
   console.log("  " + c.bold(`${prefix} observability install|open`)   + "      The live monitor (daemon + TUI)");
   console.log("  " + c.bold(`${prefix} org show [--json]`)            + "           The 45-agent reference");
+  console.log("  " + c.bold(`${prefix} model show|set|reset`)          + "        Re-tier agents (per-agent/team/all) — survives updates");
   console.log("  " + c.dim("(the TUI binary is ") + c.bold("mishkan-watch") + c.dim("; `mishkan-watchd start|stop|status` for manual daemon control)"));
   console.log("");
   console.log(c.bold("Inside a Claude Code session"));
