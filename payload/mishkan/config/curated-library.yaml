@@ -104,7 +104,7 @@ sefer:   # Documentation
   - { name: "Google Dev Documentation Style Guide", url: "https://developers.google.com/style", problem_class: "technical-writing-style" }
   - { name: "MADR ADR template", url: "https://adr.github.io/madr/", problem_class: "adr-format" }
   - { name: "C4 Model", url: "https://c4model.com/", problem_class: "architecture-diagrams" }
-  - { name: "Mermaid — browser-free syntax validation (jsdom + mermaid.parse(); no Chromium; cf. theY4NN/infra-model/tools/validate.mjs)", url: "https://mermaid.js.org/", problem_class: "diagram-as-code-validation" }
+  - { name: "Mermaid — validate diagrams without a browser (mermaid.parse() under jsdom, no Chromium)", url: "https://mermaid.js.org/intro/syntax-reference.html", problem_class: "diagram-as-code-validation" }
   - { name: "Keep a Changelog", url: "https://keepachangelog.com/en/1.1.0/", problem_class: "changelog-convention" }
   - { name: "Semantic Versioning 2.0", url: "https://semver.org/", problem_class: "versioning" }
   - { name: "Conventional Commits", url: "https://www.conventionalcommits.org/en/v1.0.0/", problem_class: "commit-convention" }

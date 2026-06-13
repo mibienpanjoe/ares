@@ -48,20 +48,40 @@ claude                    # starts in exploration mode — Nehemiah + Bezalel
 
 ```mermaid
 flowchart TD
-    You(["You"]) --> MS[["MAIN SESSION — leadership<br/>Nehemiah (PM) + Bezalel (CTO)<br/>one orchestrator · delegates one level deep"]]
-    MS -->|Task| TEAMS["6 teams<br/>Lead → Specialists → QA → Reporter"]
-    MS -->|Task| RP["research pipeline · 6 stages"]
-    MS -. queries .-> KN
-    subgraph KN["4 knowledge surfaces"]
+    You(["You · the engineer"]) -->|talk| MS[["MAIN SESSION = leadership<br/>Nehemiah · PM + Bezalel · CTO<br/>the one orchestrator — delegates one level deep, then synthesises"]]
+
+    MS -->|Task| CH["Chosheb<br/>Design / UX"]
+    MS -->|Task| PA["Panim<br/>Frontend"]
+    MS -->|Task| YA["Yasad<br/>Backend & data"]
+    MS -->|Task| MI["Migdal<br/>Infrastructure"]
+    MS -->|Task| SE["Sefer<br/>Documentation"]
+    MS -->|Task| RP["Research pipeline<br/>Jakin → Ezra → Caleb → Shaphan → Shemaiah → Baruch"]
+
+    MM["Mishmar · Security<br/>cross-cutting — gates every team"]
+    MM -. gates .-> CH
+    MM -. gates .-> PA
+    MM -. gates .-> YA
+    MM -. gates .-> MI
+    MM -. gates .-> SE
+
+    MS -. reads / writes .-> KN
+    subgraph KN["Knowledge — 4 surfaces"]
       direction LR
-      GFY[("Graphify<br/>code structure")]
-      WORK[("cognee work<br/>per-project")]
-      MEM[("cognee-memory :7777<br/>session · shared")]
-      CUR[("cognee-curated :7730<br/>reference · shared")]
+      GFY[("Graphify<br/>code structure · per-project")]
+      WORK[("cognee work<br/>per-project · isolated")]
+      MEM[("cognee-memory :7777<br/>session memory · shared")]
+      CUR[("cognee-curated :7730<br/>reference library · shared")]
     end
+
+    MS -. stateful ops stay yours .-> HANDS["your hands<br/>git push · prod · schema migrations"]
 ```
 
-*MISHKAN at a glance — one orchestrating session over six teams + a research pipeline (one level deep), across four knowledge surfaces. (Diagrams render on GitHub.)*
+*One leadership session (Nehemiah + Bezalel) delegates one level deep to the six teams + the
+research pipeline, then synthesises. Within each team: `Lead → Specialists → QA → Reporter`
+(QA & Reporter structurally separate — no agent grades its own work). Mishmar's security gate
+crosses every team. It reads/writes four knowledge surfaces, and **stateful operations — `git
+push`, production, schema migrations — stay in your hands** (the asymmetric AI/human boundary).
+Diagrams render on GitHub.*
 
 | Team | Hebrew | Domain |
 |------|--------|--------|
