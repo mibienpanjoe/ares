@@ -173,6 +173,28 @@ All notable changes to MISHKAN are documented here. Format:
   static- and source-verified; the per-project bring-up + recall test is the
   remaining runtime validation.**
 
+### Changed (docs & agents)
+
+- **Agents gained a "surface the unknown" reflex.** The normalized constraints
+  block (AGENT_SPEC §4 + all 45 agents) now carries the *positive* complement to
+  "no fabricated facts": a subagent that hits something it can't resolve surfaces
+  it to the main session rather than guessing — it cannot run the research pipeline
+  itself (no nested delegation; a subagent's `Task` is inert), so the orchestrator
+  runs it.
+- **Mermaid diagrams across the README and usage docs** (orchestration/delegation,
+  the 6-team org, the research pipeline, the knowledge topology, the ingest pipeline,
+  the four-surface model, project-init, workflows, skill-discovery). They render on
+  GitHub; ASCII file-trees kept as-is. Validated with the official Mermaid parser.
+- **Curated library** gains a browser-free Mermaid-validation technique
+  (`mermaid.parse()` under jsdom, no Chromium) as a `CuratedResource`.
+- **Doc reconciliation** — workflow counts (10 org + 10 team = 20), the four-surface
+  knowledge model, and the D-016/D-017 command surface squared across README, usage
+  index, and the CLI reference; D-015 QA + staleness sweeps folded in.
+
+**Validation note:** the D-016 promotion path and the default `mishkan knowledge
+reset` were proven live end-to-end before release; all 11 Mermaid diagrams parse
+clean under the official parser.
+
 ## [0.2.6] — 2026-06-09
 
 Observability hardening release. Live testing against a real multi-session,
