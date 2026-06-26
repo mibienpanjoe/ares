@@ -5,7 +5,8 @@
 # session, tool_calls[], outcome, timestamp, agent/team/sprint/tokens/cost
 # all preserved) plus type-specific derived events:
 #
-#   - Write/Edit/MultiEdit    -> file_change (path + lines_added/removed)
+#   - Write/Edit/MultiEdit or apply_patch
+#                              -> file_change (path + lines_added/removed)
 #   - Task                    -> agent_complete (subagent_type + tool_use_id)
 #                                (agent_spawn is emitted at PreToolUse by
 #                                pre-tool-trace.sh, when the agent starts)
@@ -28,12 +29,18 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-MISHKAN_HOME_RES="${MISHKAN_HOME:-$HOME/.claude/mishkan}"
+runtime_home() {
+  if [ -n "${ARES_HOME:-}" ]; then printf '%s' "$ARES_HOME"; return; fi
+  if [ -n "${MISHKAN_HOME:-}" ]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [ -d "$HOME/.ares" ] || [ ! -d "$HOME/.claude/mishkan" ]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
 # shellcheck disable=SC1091
-source "${MISHKAN_HOME_RES}/observability/bus.sh" 2>/dev/null || exit 0
+source "${ARES_HOME_RES}/observability/bus.sh" 2>/dev/null || exit 0
 
-LOG_DIR="${MISHKAN_LOG_DIR:-$HOME/.claude/mishkan/logs}"
-TRACE_DIR="${MISHKAN_TRACE_DIR:-/tmp}"
+LOG_DIR="${ARES_LOG_DIR:-${MISHKAN_LOG_DIR:-${ARES_HOME_RES}/logs}}"
+TRACE_DIR="${ARES_TRACE_DIR:-${MISHKAN_TRACE_DIR:-/tmp}}"
 mkdir -p "$LOG_DIR" 2>/dev/null || exit 0
 
 session="$(printf '%s' "$INPUT" | jq -r '.session_id // "unknown"' 2>/dev/null)"
@@ -44,6 +51,9 @@ ts_legacy="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 # Outcome inferred from tool_response if present.
 outcome="$(printf '%s' "$INPUT" | jq -r '
   if (.tool_response.error? // empty) != "" then "errored"
+  elif (.tool_response.isError? // false) == true then "errored"
+  elif (.tool_response.is_error? // false) == true then "errored"
+  elif (.tool_response.status? // empty) == "error" then "errored"
   elif (.tool_response.permissionDecision? // empty) == "deny" then "blocked"
   else "completed" end
 ' 2>/dev/null)"
@@ -71,7 +81,8 @@ fi
 # ---------------------------------------------------------------------------
 # Canonical tool_call event — back-compat with the original schema.
 # ---------------------------------------------------------------------------
-project="$(pwd 2>/dev/null || printf 'unknown')"
+project="$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)"
+[ -z "$project" ] && project="$(pwd 2>/dev/null || printf 'unknown')"
 jq -nc \
   --arg session "$session" \
   --arg project "$project" \
@@ -137,6 +148,45 @@ case "$tool" in
       payload="$(jq -cn --arg p "$path" --argjson la "$la" --argjson lr "$lr" \
         '{path:$p, op:"multiedit", lines_added:$la, lines_removed:$lr}')"
       bus_emit "$session" "file_change" "$tool" "$outcome" "$payload"
+    fi
+    ;;
+
+  apply_patch)
+    # Codex exposes the raw patch in tool_input.command. Emit one file_change
+    # per patch file and count only unified-diff +/- lines for that file.
+    patch_command="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+    if [ -n "$patch_command" ] && [ "$outcome" = "completed" ]; then
+      while IFS=$'\t' read -r path op la lr; do
+        [ -z "$path" ] && continue
+        [ -z "$la" ] && la=0
+        [ -z "$lr" ] && lr=0
+        payload="$(jq -cn \
+          --arg p "$path" --arg op "$op" --argjson la "$la" --argjson lr "$lr" \
+          '{path:$p, op:$op, lines_added:$la, lines_removed:$lr}')"
+        bus_emit "$session" "file_change" "$tool" "$outcome" "$payload"
+      done < <(printf '%s\n' "$patch_command" | awk '
+        function emit() {
+          if (path != "") printf "%s\t%s\t%d\t%d\n", path, op, added, removed
+        }
+        /^\*\*\* (Add|Update|Delete) File: / {
+          emit()
+          op = tolower($2)
+          path = $0
+          sub(/^\*\*\* (Add|Update|Delete) File: /, "", path)
+          added = 0
+          removed = 0
+          next
+        }
+        /^\*\*\* Move to: / {
+          path = $0
+          sub(/^\*\*\* Move to: /, "", path)
+          op = "move"
+          next
+        }
+        /^\+/ { added++; next }
+        /^-/ { removed++; next }
+        END { emit() }
+      ' 2>/dev/null)
     fi
     ;;
 
@@ -294,8 +344,8 @@ fi
 # emits one `token_usage` event per new assistant turn. Synchronous but fast
 # (typical < 50 ms); any error path returns immediately.
 # ---------------------------------------------------------------------------
-if command -v python3 >/dev/null 2>&1 && [ -f "${MISHKAN_HOME_RES}/observability/usage_parser.py" ]; then
-  python3 "${MISHKAN_HOME_RES}/observability/usage_parser.py" "$session" 2>/dev/null || true
+if command -v python3 >/dev/null 2>&1 && [ -f "${ARES_HOME_RES}/observability/usage_parser.py" ]; then
+  python3 "${ARES_HOME_RES}/observability/usage_parser.py" "$session" 2>/dev/null || true
 fi
 
 exit 0

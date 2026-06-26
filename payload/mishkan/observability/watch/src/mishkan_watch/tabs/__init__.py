@@ -1,1 +1,1 @@
-"""Tab modules — one per top-level tab in mishkan-watch."""
+"""Tab modules — one per top-level tab in ares-watch."""

@@ -1,8 +1,8 @@
-"""mishkan-watch Textual App.
+"""ares-watch Textual App.
 
 5 tabs (Live default, Agents/Workflows/Knowledge stubs for Phase 4,
 Activity), permanent status bar at the bottom (cost + session age +
-fan-out), Header on top with tab labels. Connects to mishkan-watchd via
+fan-out), Header on top with tab labels. Connects to ares-watchd via
 UNIX socket and dispatches snapshot + deltas to the appropriate tab.
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ class MishkanWatch(App):
     """The TUI."""
 
     CSS_PATH = "theme.tcss"
-    TITLE = "mishkan-watch"
+    TITLE = "ares-watch"
 
     BINDINGS = [
         Binding("q", "quit", "quit"),
@@ -141,7 +141,7 @@ class MishkanWatch(App):
 
         If this TUI forked the daemon (owned_daemon_pid is set) we stop
         it with SIGTERM and best-effort unlink the socket so the next
-        ``mishkan-watch`` invocation starts clean. A daemon that was
+        ``ares-watch`` invocation starts clean. A daemon that was
         already running before this TUI launched is left untouched.
         The kill is fire-and-forget — we don't block TUI teardown on it.
         """
@@ -163,7 +163,7 @@ class MishkanWatch(App):
         a per-project store. copy_to_clipboard is OSC-52 (no xclip dep); on a
         Textual too old to support it we fall back to just showing the command.
         """
-        cmd = "mishkan knowledge-stack up"
+        cmd = "ares knowledge-stack up"
         copied = False
         try:
             self.copy_to_clipboard(cmd)
@@ -171,7 +171,7 @@ class MishkanWatch(App):
         except Exception:
             copied = False
         self.notify(
-            f"{cmd}\nwork store down?  mishkan project-work-store up",
+            f"{cmd}\nwork store down?  ares project-work-store up",
             title=("Copied — fix a down store" if copied else "Run to fix a down store"),
             timeout=6,
         )

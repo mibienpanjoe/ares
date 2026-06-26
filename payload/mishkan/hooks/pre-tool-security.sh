@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # MISHKAN PreToolUse security hook — Ira (Mishmar).
-# Inspects Write/Edit/MultiEdit content before it lands.
+# Inspects Claude Write/Edit/MultiEdit content and Codex apply_patch additions
+# before they land.
 # Blocks: hardcoded secrets, eval of untrusted input, SQL string concatenation,
 # :latest Docker tags. Returns a PreToolUse deny decision on violation.
 #
@@ -13,14 +14,20 @@ INPUT="$(cat)"
 
 # Need jq to inspect structured payload. Fail open if absent.
 if ! command -v jq >/dev/null 2>&1; then
-  echo "mishkan/pre-tool-security: jq not found — skipping inspection" >&2
+  echo "ares/pre-tool-security: jq not found — skipping inspection" >&2
   exit 0
 fi
 
 # Source observability bus (fail-open if missing).
-MISHKAN_HOME_RES="${MISHKAN_HOME:-$HOME/.claude/mishkan}"
+runtime_home() {
+  if [ -n "${ARES_HOME:-}" ]; then printf '%s' "$ARES_HOME"; return; fi
+  if [ -n "${MISHKAN_HOME:-}" ]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [ -d "$HOME/.ares" ] || [ ! -d "$HOME/.claude/mishkan" ]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
 # shellcheck disable=SC1091
-source "${MISHKAN_HOME_RES}/observability/bus.sh" 2>/dev/null || true
+source "${ARES_HOME_RES}/observability/bus.sh" 2>/dev/null || true
 
 tool_name="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)"
 file_path="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
@@ -33,6 +40,18 @@ content="$(printf '%s' "$INPUT" | jq -r '
     ( .tool_input.edits? // [] | .[].new_string? )
   ] | map(select(. != null)) | join("\n")
 ' 2>/dev/null)"
+
+# Codex serializes apply_patch as {tool_name:"apply_patch",
+# tool_input:{command:"*** Begin Patch ..."}}. Inspect only added lines so a
+# patch that removes an old secret is not blocked for doing the right thing.
+if [ "$tool_name" = "apply_patch" ]; then
+  patch_command="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+  file_path="$(printf '%s' "$patch_command" | sed -nE \
+    -e 's/^\*\*\* (Add|Update|Delete) File: (.*)$/\2/p' \
+    -e 's/^\*\*\* Move to: (.*)$/\1/p' 2>/dev/null)"
+  content="$(printf '%s' "$patch_command" | sed -n \
+    -e 's/^+//p' 2>/dev/null)"
+fi
 
 # Nothing to inspect.
 [ -z "$content" ] && exit 0
@@ -54,6 +73,14 @@ deny() {
 }
 
 lc_path="$(printf '%s' "$file_path" | tr '[:upper:]' '[:lower:]')"
+is_dynamic_code=0
+is_python=0
+is_javascript=0
+is_container_config=0
+printf '%s\n' "$lc_path" | grep -Eiq '\.(py|js|ts|tsx|jsx|mjs|cjs)$' && is_dynamic_code=1
+printf '%s\n' "$lc_path" | grep -Eiq '\.(py|pyi)$' && is_python=1
+printf '%s\n' "$lc_path" | grep -Eiq '\.(js|ts|tsx|jsx|mjs|cjs)$' && is_javascript=1
+printf '%s\n' "$lc_path" | grep -Eiq '(^|/)(dockerfile[^/]*|docker-compose[^/]*|compose[^/]*|[^/]+\.(yaml|yml))$' && is_container_config=1
 
 # 1. Hardcoded secrets — assignment of a non-env, non-placeholder literal.
 if printf '%s' "$content" | grep -Eiq \
@@ -80,8 +107,7 @@ if printf '%s' "$content" | grep -Eiq '(postgres|postgresql|mysql|mongodb|mongod
 fi
 
 # 3. Dynamic code execution / unsafe deserialization (py/js/ts).
-case "$lc_path" in
-  *.py|*.js|*.ts|*.tsx|*.jsx|*.mjs|*.cjs)
+if [ "$is_dynamic_code" -eq 1 ]; then
     if printf '%s' "$content" | grep -Eq '(^|[^a-zA-Z0-9_.])eval[[:space:]]*\(' \
        && ! printf '%s' "$content" | grep -Eiq '(ast\.literal_eval|# *safe-eval|json\.parse)'; then
       deny "Mishmar/Ira: eval() on dynamic input is forbidden. (rules/common/security.md)"
@@ -90,10 +116,8 @@ case "$lc_path" in
     if printf '%s' "$content" | grep -Eq 'new[[:space:]]+Function[[:space:]]*\('; then
       deny "Mishmar/Ira: new Function() builds code from a string. Forbidden. (rules/common/security.md)"
     fi
-    ;;
-esac
-case "$lc_path" in
-  *.py|*.pyi)
+fi
+if [ "$is_python" -eq 1 ]; then
     # exec() on dynamic input
     if printf '%s' "$content" | grep -Eq '(^|[^a-zA-Z0-9_.])exec[[:space:]]*\(' \
        && ! printf '%s' "$content" | grep -Eiq '# *safe-exec'; then
@@ -115,31 +139,26 @@ case "$lc_path" in
     if printf '%s' "$content" | grep -Eq 'subprocess\.[A-Za-z_]+\(.*shell[[:space:]]*=[[:space:]]*True'; then
       deny "Mishmar/Ira: subprocess with shell=True is a command-injection risk. Pass an argument list, shell=False. (rules/common/security.md)"
     fi
-    ;;
-esac
-case "$lc_path" in
-  *.js|*.ts|*.tsx|*.jsx|*.mjs|*.cjs)
+fi
+if [ "$is_javascript" -eq 1 ]; then
     # child_process exec with interpolation
     if printf '%s' "$content" | grep -Eq '(child_process|require\(.child_process.\))' \
        && printf '%s' "$content" | grep -Eq 'exec(Sync)?[[:space:]]*\(.*(\$\{|`.*\$|"[[:space:]]*\+)'; then
       deny "Mishmar/Ira: child_process exec with string interpolation is a command-injection risk. Use execFile with an args array. (rules/common/security.md)"
     fi
-    ;;
-esac
+fi
 
 # 4. SQL string concatenation / f-string interpolation.
 if printf '%s' "$content" | grep -Eiq '(select|insert|update|delete)[[:space:]].*("[[:space:]]*\+|\+[[:space:]]*"|f"[^"]*\{|%[[:space:]]*\()'; then
   deny "Mishmar/Ira: SQL built by string concatenation/interpolation. Use parameterised queries (asyncpg params / ORM bindings). (rules/common/security.md)"
 fi
 
-# 5. :latest Docker tags (and untagged FROM).
-case "$lc_path" in
-  *dockerfile*|*docker-compose*|*compose*|*.yaml|*.yml)
+# 5. :latest Docker tags.
+if [ "$is_container_config" -eq 1 ]; then
     if printf '%s' "$content" | grep -Eiq '(image:[[:space:]]*[^[:space:]]+:latest|^[[:space:]]*FROM[[:space:]]+[^[:space:]]+:latest)'; then
       deny "Mishmar/Ira: ':latest' tag detected. Pin all image versions. (rules/infrastructure/migdal.md, y4nn-standards)"
     fi
-    ;;
-esac
+fi
 
 # 6. TLS/certificate verification disabled.
 if printf '%s' "$content" | grep -Eiq '(verify[[:space:]]*=[[:space:]]*False|rejectUnauthorized[[:space:]]*:[[:space:]]*false|InsecureSkipVerify[[:space:]]*:[[:space:]]*true|NODE_TLS_REJECT_UNAUTHORIZED[[:space:]]*=[[:space:]]*.?0|curl_setopt.*CURLOPT_SSL_VERIFYPEER.*false|ssl[._]?verify[[:space:]]*=[[:space:]]*false)'; then

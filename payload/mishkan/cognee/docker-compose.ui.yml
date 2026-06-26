@@ -17,8 +17,8 @@ services:
   cognee-backend:
     build:
       context: ${COGNEE_SRC:?set COGNEE_SRC in .env to a cloned cognee repo}
-    image: mishkan/cognee-backend:${COGNEE_MCP_REF:?}
-    container_name: mishkan-cognee-backend
+    image: ${COGNEE_BACKEND_IMAGE:-ares/cognee-backend}:${COGNEE_MCP_REF:?}
+    container_name: ${COGNEE_BACKEND_CONTAINER:-ares-cognee-backend}
     restart: unless-stopped
     profiles: ["ui"]
     depends_on:
@@ -49,8 +49,8 @@ services:
   cognee-frontend:
     build:
       context: ${COGNEE_SRC:?set COGNEE_SRC in .env to a cloned cognee repo}/cognee-frontend
-    image: mishkan/cognee-frontend:${COGNEE_MCP_REF:?}
-    container_name: mishkan-cognee-frontend
+    image: ${COGNEE_FRONTEND_IMAGE:-ares/cognee-frontend}:${COGNEE_MCP_REF:?}
+    container_name: ${COGNEE_FRONTEND_CONTAINER:-ares-cognee-frontend}
     restart: unless-stopped
     profiles: ["ui"]
     depends_on:

@@ -22,8 +22,8 @@ import sys
 VALID = {"opus", "sonnet", "haiku", "fable"}
 SUBAGENT_TOOLS = {"Task", "Agent"}
 YAML = os.path.join(os.path.dirname(__file__), "..", "config", "model-routing.yaml")
-# D-017 — user overlay. Engineer overrides written by `mishkan model set/reset`.
-# Preserved across `mishkan install`; entries here WIN over the shipped default.
+# D-017 — user overlay. Engineer overrides written by `ares model set/reset`.
+# Preserved across `ares install`; entries here WIN over the shipped default.
 # Absent by default -> behaves exactly as the single-file routing did.
 LOCAL_YAML = os.path.join(os.path.dirname(__file__), "..", "config", "model-routing.local.yaml")
 

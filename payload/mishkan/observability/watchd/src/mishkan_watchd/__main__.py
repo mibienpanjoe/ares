@@ -1,10 +1,10 @@
-"""mishkan-watchd CLI entry point.
+"""ares-watchd CLI entry point.
 
 Commands:
-    mishkan-watchd start              run in foreground
-    mishkan-watchd stop               send SIGTERM to running daemon (PID file)
-    mishkan-watchd status             print current daemon state
-    mishkan-watchd install-service    write a systemd --user unit file
+    ares-watchd start              run in foreground
+    ares-watchd stop               send SIGTERM to running daemon (PID file)
+    ares-watchd status             print current daemon state
+    ares-watchd install-service    write a systemd --user unit file
 """
 from __future__ import annotations
 
@@ -21,15 +21,41 @@ from .lifecycle import install_systemd_user_unit
 from .server import DAEMON_IDLE_SHUTDOWN_S, WatchdServer
 from .state import HarnessState
 from .sources import (bus_tail, cognee_poll, graphify_tail, mcp_probe,
-                       session_discover, session_tail, subagent_tail,
+                       opencode_storage, session_discover, session_tail, subagent_tail,
                        worktree_poll)
 
 
 HOME = Path(os.path.expanduser("~"))
-DEFAULT_LOG_DIR = HOME / ".claude" / "mishkan" / "logs"
 DEFAULT_PROJECTS_DIR = HOME / ".claude" / "projects"
-DEFAULT_SOCKET = HOME / ".claude" / "mishkan" / "run" / "watch.sock"
-DEFAULT_PID = HOME / ".claude" / "mishkan" / "run" / "watchd.pid"
+CODEX_HOME = Path(os.path.expanduser(os.environ.get("CODEX_HOME", str(HOME / ".codex"))))
+DEFAULT_CODEX_SESSIONS_DIR = Path(os.path.expanduser(
+    os.environ.get("ARES_CODEX_SESSIONS_DIR")
+    or os.environ.get("ARES_CODEX_THREADS_DIR")
+    or str(CODEX_HOME / "sessions")
+))
+DEFAULT_OPENCODE_SESSIONS_DIR = Path(os.path.expanduser(
+    os.environ.get("ARES_OPENCODE_SESSIONS_DIR")
+    or os.environ.get("OPENCODE_DATA_DIR")
+    or str(HOME / ".local" / "share" / "opencode")
+))
+
+
+def _runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    ares = HOME / ".ares"
+    legacy = HOME / ".claude" / "mishkan"
+    if ares.exists() or not legacy.exists():
+        return ares
+    return legacy
+
+
+RUNTIME_HOME = _runtime_home()
+DEFAULT_LOG_DIR = Path(os.path.expanduser(os.environ.get("ARES_LOG_DIR") or os.environ.get("MISHKAN_LOG_DIR") or str(RUNTIME_HOME / "logs")))
+DEFAULT_SOCKET = RUNTIME_HOME / "run" / "watch.sock"
+DEFAULT_PID = RUNTIME_HOME / "run" / "watchd.pid"
 
 
 async def _dispatcher(queue: asyncio.Queue, state: HarnessState, server: WatchdServer) -> None:
@@ -43,16 +69,15 @@ async def _dispatcher(queue: asyncio.Queue, state: HarnessState, server: WatchdS
             continue
 
 
-def _active_sessions_provider(state: HarnessState):
+def _jsonl_sessions_provider(state: HarnessState):
     """Build a fresh active-session map from the current state."""
     def _provider() -> dict[str, Path]:
         out: dict[str, Path] = {}
         for sid, s in state.sessions.items():
-            # The session_discover source attaches jsonl_path via session_start
-            # payload but we don't keep it in SessionState; recover by globbing.
-            for jsonl in DEFAULT_PROJECTS_DIR.glob(f"*/{sid}.jsonl"):
-                out[sid] = jsonl
-                break
+            if s.jsonl_path:
+                p = Path(s.jsonl_path)
+                if p.exists() and p.suffix == ".jsonl":
+                    out[sid] = p
         return out
     return _provider
 
@@ -106,6 +131,8 @@ def _project_paths_provider(state: HarnessState):
 async def _run(
     log_dir: Path,
     projects_dir: Path,
+    codex_sessions_dir: Path,
+    opencode_sessions_dir: Path,
     socket_path: Path,
     idle_timeout_s: float = DAEMON_IDLE_SHUTDOWN_S,
 ) -> None:
@@ -123,16 +150,21 @@ async def _run(
     tasks = [
         asyncio.create_task(_dispatcher(queue, state, server), name="dispatch"),
         asyncio.create_task(bus_tail.run(queue, log_dir), name="bus_tail"),
-        asyncio.create_task(session_discover.run(queue, projects_dir), name="session_discover"),
+        asyncio.create_task(session_discover.run(queue, projects_dir, runtime="claude"),
+                            name="session_discover_claude"),
+        asyncio.create_task(session_discover.run(queue, codex_sessions_dir, runtime="codex", recursive=True),
+                            name="session_discover_codex"),
+        asyncio.create_task(opencode_storage.run(queue, opencode_sessions_dir),
+                            name="opencode_storage"),
         asyncio.create_task(worktree_poll.run(queue, _project_paths_provider(state)),
                             name="worktree_poll"),
         asyncio.create_task(mcp_probe.run(queue, projects_dir), name="mcp_probe"),
         asyncio.create_task(cognee_poll.run(queue, projects_dir), name="cognee_poll"),
-        asyncio.create_task(session_tail.run(queue, _active_sessions_provider(state)),
+        asyncio.create_task(session_tail.run(queue, _jsonl_sessions_provider(state)),
                             name="session_tail"),
         asyncio.create_task(graphify_tail.run(queue, _project_paths_provider(state)),
                             name="graphify_tail"),
-        asyncio.create_task(subagent_tail.run(queue, _active_sessions_provider(state)),
+        asyncio.create_task(subagent_tail.run(queue, _jsonl_sessions_provider(state)),
                             name="subagent_tail"),
     ]
 
@@ -146,11 +178,11 @@ async def _run(
         except NotImplementedError:
             pass
 
-    print(f"mishkan-watchd: listening on {socket_path}", file=sys.stderr)
+    print(f"ares-watchd: listening on {socket_path}", file=sys.stderr)
     try:
         await stop.wait()
     finally:
-        print("mishkan-watchd: stopping…", file=sys.stderr)
+        print("ares-watchd: stopping…", file=sys.stderr)
         for t in tasks:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -190,17 +222,18 @@ def _cmd_start(args: argparse.Namespace) -> int:
     # The server.start() also performs this check, but the early exit here
     # avoids overwriting a valid PID file with our own PID.
     if args.socket.exists() and _socket_is_live(args.socket):
-        print("mishkan-watchd: daemon already running, nothing to do", file=sys.stderr)
+        print("ares-watchd: daemon already running, nothing to do", file=sys.stderr)
         return 0
     _write_pid()
     try:
-        asyncio.run(_run(args.log_dir, args.projects_dir, args.socket, args.idle_timeout))
+        asyncio.run(_run(args.log_dir, args.projects_dir, args.codex_sessions_dir,
+                         args.opencode_sessions_dir, args.socket, args.idle_timeout))
     except RuntimeError as e:
         # server.start() raises RuntimeError when a live daemon is detected
         # after the PID file was written (narrow race). Clean up and exit 0
         # — another daemon is running, which is the desired state.
         _clear_pid()
-        print(f"mishkan-watchd: {e}", file=sys.stderr)
+        print(f"ares-watchd: {e}", file=sys.stderr)
         return 0
     finally:
         _clear_pid()
@@ -211,39 +244,39 @@ def _cmd_stop(_args: argparse.Namespace) -> int:
     try:
         pid_text = DEFAULT_PID.read_text().strip()
     except FileNotFoundError:
-        print("mishkan-watchd: no PID file (daemon not running?)", file=sys.stderr)
+        print("ares-watchd: no PID file (daemon not running?)", file=sys.stderr)
         return 0
     except Exception as e:
-        print(f"mishkan-watchd: cannot read PID file: {e}", file=sys.stderr)
+        print(f"ares-watchd: cannot read PID file: {e}", file=sys.stderr)
         return 1
 
     try:
         pid = int(pid_text)
     except ValueError:
-        print("mishkan-watchd: malformed PID file, clearing", file=sys.stderr)
+        print("ares-watchd: malformed PID file, clearing", file=sys.stderr)
         _clear_pid()
         return 1
 
-    # Verify the PID is actually a live mishkan-watchd process before killing.
+    # Verify the PID is actually a live watchd process before killing.
     try:
         # os.kill with signal 0 checks existence without sending a signal.
         os.kill(pid, 0)
     except ProcessLookupError:
         _clear_pid()
-        print("mishkan-watchd: process not found, cleared stale PID", file=sys.stderr)
+        print("ares-watchd: process not found, cleared stale PID", file=sys.stderr)
         return 0
     except PermissionError:
         # Process exists but is owned by another user — not ours to kill.
-        print(f"mishkan-watchd: PID {pid} exists but is not owned by this user", file=sys.stderr)
+        print(f"ares-watchd: PID {pid} exists but is not owned by this user", file=sys.stderr)
         _clear_pid()
         return 1
 
     try:
         os.kill(pid, signal.SIGTERM)
-        print(f"mishkan-watchd: sent SIGTERM to {pid}", file=sys.stderr)
+        print(f"ares-watchd: sent SIGTERM to {pid}", file=sys.stderr)
     except ProcessLookupError:
         _clear_pid()
-        print("mishkan-watchd: process vanished before SIGTERM, cleared PID", file=sys.stderr)
+        print("ares-watchd: process vanished before SIGTERM, cleared PID", file=sys.stderr)
     return 0
 
 
@@ -263,13 +296,13 @@ def _cmd_status(args: argparse.Namespace) -> int:
                     break
             line, _, _ = buf.partition(b"\n")
             if not line:
-                print("mishkan-watchd: empty response", file=sys.stderr)
+                print("ares-watchd: empty response", file=sys.stderr)
                 return 1
             obj = json.loads(line.decode("utf-8"))
             print(json.dumps(obj, indent=2))
             return 0
     except Exception as e:
-        print(f"mishkan-watchd: cannot connect to {args.socket}: {e}", file=sys.stderr)
+        print(f"ares-watchd: cannot connect to {args.socket}: {e}", file=sys.stderr)
         return 1
 
 
@@ -278,24 +311,31 @@ def _cmd_install_service(args: argparse.Namespace) -> int:
         socket_path=args.socket,
         log_dir=args.log_dir,
         projects_dir=args.projects_dir,
+        codex_sessions_dir=args.codex_sessions_dir,
+        opencode_sessions_dir=args.opencode_sessions_dir,
     )
-    print(f"mishkan-watchd: wrote {path}", file=sys.stderr)
-    print("Enable with: systemctl --user enable --now mishkan-watchd.service", file=sys.stderr)
+    print(f"ares-watchd: wrote {path}", file=sys.stderr)
+    print("Enable with: systemctl --user enable --now ares-watchd.service", file=sys.stderr)
     return 0
 
 
 def cli(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="mishkan-watchd",
-                                description="MISHKAN observability daemon.")
+    p = argparse.ArgumentParser(prog=Path(sys.argv[0]).name or "ares-watchd",
+                                description="ARES observability daemon.")
     p.add_argument("--socket", type=Path, default=DEFAULT_SOCKET,
                    help=f"UNIX socket path (default: {DEFAULT_SOCKET})")
     p.add_argument("--log-dir", type=Path, default=DEFAULT_LOG_DIR,
                    help=f"event bus log dir (default: {DEFAULT_LOG_DIR})")
     p.add_argument("--projects-dir", type=Path, default=DEFAULT_PROJECTS_DIR,
                    help=f"Claude Code projects dir (default: {DEFAULT_PROJECTS_DIR})")
+    p.add_argument("--codex-sessions-dir", "--codex-threads-dir", type=Path,
+                   default=DEFAULT_CODEX_SESSIONS_DIR, dest="codex_sessions_dir",
+                   help=f"Codex sessions dir (default: {DEFAULT_CODEX_SESSIONS_DIR}; env: ARES_CODEX_SESSIONS_DIR, legacy ARES_CODEX_THREADS_DIR, or CODEX_HOME)")
+    p.add_argument("--opencode-sessions-dir", type=Path, default=DEFAULT_OPENCODE_SESSIONS_DIR,
+                   help=f"OpenCode sessions/data dir (default: {DEFAULT_OPENCODE_SESSIONS_DIR}; env: ARES_OPENCODE_SESSIONS_DIR or OPENCODE_DATA_DIR)")
 
     # Idle-shutdown default: CLI arg > env var > compiled constant.
-    _env_idle = os.environ.get("MISHKAN_WATCHD_IDLE_TIMEOUT", "")
+    _env_idle = os.environ.get("ARES_WATCHD_IDLE_TIMEOUT") or os.environ.get("MISHKAN_WATCHD_IDLE_TIMEOUT", "")
     try:
         _default_idle: float = float(_env_idle) if _env_idle else DAEMON_IDLE_SHUTDOWN_S
     except ValueError:
@@ -312,7 +352,7 @@ def cli(argv: list[str] | None = None) -> int:
         help=(
             f"exit after SECONDS with no connected client "
             f"(default: {_default_idle}; 0 or negative disables; "
-            f"env: MISHKAN_WATCHD_IDLE_TIMEOUT)"
+            f"env: ARES_WATCHD_IDLE_TIMEOUT or MISHKAN_WATCHD_IDLE_TIMEOUT)"
         ),
     )
     sub.add_parser("stop", help="send SIGTERM to running daemon")

@@ -1,4 +1,4 @@
-"""Daemon socket client — connects to mishkan-watchd UNIX socket.
+"""Daemon socket client — connects to ares-watchd UNIX socket.
 
 NDJSON snapshot+delta+heartbeat protocol. The client receives the initial
 snapshot then a continuous stream of frames; each frame is dispatched to
@@ -18,8 +18,24 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 
-DEFAULT_SOCKET = Path(os.path.expanduser("~/.claude/mishkan/run/watch.sock"))
-DEBUG_LOG = Path(os.path.expanduser("~/.claude/mishkan/logs/_tui-debug.log"))
+def _runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    home = Path(os.path.expanduser("~"))
+    if (home / ".ares").exists() or not (home / ".claude" / "mishkan").exists():
+        return home / ".ares"
+    return home / ".claude" / "mishkan"
+
+
+RUNTIME_HOME = _runtime_home()
+DEFAULT_SOCKET = RUNTIME_HOME / "run" / "watch.sock"
+DEBUG_LOG = Path(os.path.expanduser(
+    os.environ.get("ARES_LOG_DIR")
+    or os.environ.get("MISHKAN_LOG_DIR")
+    or str(RUNTIME_HOME / "logs")
+)) / "_tui-debug.log"
 
 
 def _dlog(msg: str) -> None:
@@ -35,7 +51,7 @@ def _dlog(msg: str) -> None:
 
 
 class DaemonClient:
-    """Async client to the mishkan-watchd UNIX socket."""
+    """Async client to the ares-watchd UNIX socket."""
 
     def __init__(self, socket_path: Path | None = None) -> None:
         self.socket_path = socket_path or DEFAULT_SOCKET

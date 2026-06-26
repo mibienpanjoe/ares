@@ -1,7 +1,7 @@
 [project]
-name = "mishkan-watchd"
+name = "ares-watchd"
 version = "0.2.7"
-description = "MISHKAN observability daemon — aggregates event bus + filesystem polls into a UNIX-socket snapshot+delta stream for mishkan-watch."
+description = "ARES observability daemon — aggregates event bus + filesystem polls into a UNIX-socket snapshot+delta stream for ares-watch."
 readme = "../README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -13,6 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
+ares-watchd = "mishkan_watchd.__main__:cli"
 mishkan-watchd = "mishkan_watchd.__main__:cli"
 
 [build-system]

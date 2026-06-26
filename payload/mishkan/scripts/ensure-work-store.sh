@@ -2,7 +2,7 @@
 # MISHKAN — idempotently ensure a per-project cognee work store is up (D-012).
 #
 # Mirrors ensure-curated-box.sh. Safe to run repeatedly: does nothing if the
-# named container is already healthy. Called by /mishkan-init; prints the chosen
+# named container is already healthy. Called by /ares-init; prints the chosen
 # host port on stdout so the caller can patch .mcp.json.
 #
 # Usage:
@@ -24,12 +24,12 @@
 #   docker compose \
 #     -f docker-compose.work.yml \
 #     -f docker-compose.hardening.yml \
-#     -p mishkan-work-<slug> \
+#     -p ares-work-<slug> \
 #     up -d
 #
 # Runtime assumptions the engineer must validate on first real bring-up:
-#   1. Ollama reachability: mishkan-ollama must be running and joined to
-#      mishkan-cognee_cognee_net. If it is down, cognee will fail at cognify
+#   1. Ollama reachability: ares-ollama must be running and joined to
+#      ares-cognee_cognee_net. If it is down, cognee will fail at cognify
 #      time with an embedding error. Ensure the selfhosted stack is up first:
 #        docker compose -f docker-compose.selfhosted.yml up -d
 #      OR set LLM_PROVIDER + LLM_API_KEY in .env to a cloud embedding provider.
@@ -51,9 +51,16 @@ set -euo pipefail
 # 0. Resolve paths
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COGNEE_DIR="${HOME}/.claude/mishkan/cognee"
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+COGNEE_DIR="${ARES_HOME_RES}/cognee"
 
-# /mishkan-init copies payload into ~/.claude/mishkan; run from that location.
+# /ares-init copies payload into ~/.ares; run from that location.
 # If the script is being tested directly from the repo payload, fall back to
 # the sibling cognee directory.
 if [ ! -d "$COGNEE_DIR" ]; then
@@ -76,15 +83,40 @@ WORK_PROJECT="${1:-$(basename "$PWD")}"
 WORK_PROJECT="$(printf '%s' "$WORK_PROJECT" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//')"
 [ -n "$WORK_PROJECT" ] || { echo "project slug is empty after sanitisation" >&2; exit 1; }
 
-CONTAINER_NAME="mishkan-work-${WORK_PROJECT}"
-COMPOSE_PROJECT="mishkan-work-${WORK_PROJECT}"
+docker_name_exists() {
+  docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$1"
+}
+
+docker_network_exists() {
+  docker network inspect "$1" >/dev/null 2>&1
+}
+
+PREFERRED_CONTAINER="ares-work-${WORK_PROJECT}"
+LEGACY_CONTAINER="mishkan-work-${WORK_PROJECT}"
+if docker_name_exists "$LEGACY_CONTAINER" && ! docker_name_exists "$PREFERRED_CONTAINER"; then
+  CONTAINER_NAME="${WORK_CONTAINER:-$LEGACY_CONTAINER}"
+  COMPOSE_PROJECT="${WORK_COMPOSE_PROJECT:-mishkan-work-${WORK_PROJECT}}"
+  COGNEE_MCP_IMAGE="${COGNEE_MCP_IMAGE:-mishkan/cognee-mcp}"
+  COGNEE_WORK_NETWORK="${COGNEE_WORK_NETWORK:-mishkan-cognee_cognee_net}"
+elif docker_network_exists "mishkan-cognee_cognee_net" && ! docker_network_exists "ares-cognee_cognee_net"; then
+  CONTAINER_NAME="${WORK_CONTAINER:-$PREFERRED_CONTAINER}"
+  COMPOSE_PROJECT="${WORK_COMPOSE_PROJECT:-ares-work-${WORK_PROJECT}}"
+  COGNEE_MCP_IMAGE="${COGNEE_MCP_IMAGE:-ares/cognee-mcp}"
+  COGNEE_WORK_NETWORK="${COGNEE_WORK_NETWORK:-mishkan-cognee_cognee_net}"
+else
+  CONTAINER_NAME="${WORK_CONTAINER:-$PREFERRED_CONTAINER}"
+  COMPOSE_PROJECT="${WORK_COMPOSE_PROJECT:-ares-work-${WORK_PROJECT}}"
+  COGNEE_MCP_IMAGE="${COGNEE_MCP_IMAGE:-ares/cognee-mcp}"
+  COGNEE_WORK_NETWORK="${COGNEE_WORK_NETWORK:-ares-cognee_cognee_net}"
+fi
+export WORK_CONTAINER="$CONTAINER_NAME" WORK_COMPOSE_PROJECT="$COMPOSE_PROJECT" COGNEE_MCP_IMAGE COGNEE_WORK_NETWORK
 
 # Ontology staging (ADR D-013). The container's ONTOLOGY_FILE_PATH (set in
 # docker-compose.work.yml) points at /home/cognee/ontology.ttl; place the file
 # there so every cognify attaches the MISHKAN schema. Idempotent + fail-open: if
 # the ontology is absent, cognee logs a warning and ingests ontology-free.
 # chmod 0644 because docker cp preserves host uid/mode (container user is non-root).
-ONTOLOGY_TTL="${MISHKAN_ONTOLOGY:-${HOME}/.claude/mishkan/ontology.ttl}"
+ONTOLOGY_TTL="${ARES_ONTOLOGY:-${MISHKAN_ONTOLOGY:-${ARES_HOME_RES}/ontology.ttl}}"
 stage_ontology() {
   if [ -f "$ONTOLOGY_TTL" ]; then
     docker cp "$ONTOLOGY_TTL" "${CONTAINER_NAME}:/home/cognee/ontology.ttl" 2>/dev/null || return 0
@@ -176,7 +208,7 @@ echo "provisioning work store: project='${WORK_PROJECT}' container='${CONTAINER_
 # 5. Bring up (only if the canonical-named container is not already running)
 # ---------------------------------------------------------------------------
 # --force-recreate: when we reach here the canonical container is absent — but a
-# RENAMED leftover (e.g. `<hash>_mishkan-work-<slug>`, docker's rename when a prior
+# RENAMED leftover (e.g. `<hash>_ares-work-<slug>`, docker's rename when a prior
 # `rm -f` was still in flight) may still hold this service's compose labels, so a
 # plain `up` would just restart that stale container (wrong env, wrong name) and the
 # health-wait would hang on a name that never appears. Forcing recreate replaces it
@@ -224,7 +256,7 @@ echo "work store '${WORK_PROJECT}' ready on :${WORK_PORT}" >&2
 # 7. Stage the MISHKAN ontology (ADR D-013) — see stage_ontology() above.
 stage_ontology
 
-# Print the port on stdout so callers can capture it (e.g. /mishkan-init
+# Print the port on stdout so callers can capture it (e.g. /ares-init
 # substituting the port into .mcp.json):
 #   PORT=$(ensure-work-store.sh <slug>)
 printf '%s\n' "$WORK_PORT"

@@ -1,21 +1,21 @@
-# mishkan-watch
+# ares-watch
 
-MISHKAN observability TUI. Textual client to `mishkan-watchd`, renders
+ARES observability TUI. Textual client to `ares-watchd`, renders
 the 5-tab dashboard described in §7 of
 `docs/design/MISHKAN_observability.md`.
 
 Opt-in install:
 
 ```bash
-uv tool install --from <path-to-this-dir> mishkan-watch
+uv tool install --from <path-to-this-dir> ares-watch
 ```
 
 The daemon must be running for the TUI to populate. Start it in another
 tmux pane / systemd unit:
 
 ```bash
-mishkan-watchd start
-mishkan-watch
+ares-watchd start
+ares-watch
 ```
 
 ## What's in this release (Phase 3 core)

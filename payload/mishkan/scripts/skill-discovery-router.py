@@ -50,7 +50,21 @@ from collections import Counter
 from pathlib import Path
 
 HOME = Path(os.path.expanduser("~"))
-INDEX_DIR = HOME / ".claude" / "mishkan" / "skill-discovery"
+
+
+def runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    ares = HOME / ".ares"
+    legacy = HOME / ".claude" / "mishkan"
+    if ares.exists() or not legacy.exists():
+        return ares
+    return legacy
+
+
+INDEX_DIR = runtime_home() / "skill-discovery"
 INDEX_PATH = INDEX_DIR / "index.json"
 MISSES_PATH = INDEX_DIR / "misses.jsonl"
 
@@ -188,7 +202,7 @@ def route(
             "task_summary": task,
             "must_load": [], "should_consider": [], "adjacent": [],
             "total_returned": 0,
-            "warnings": ["index_missing_or_unreadable — run /mishkan-skills-reindex"],
+            "warnings": ["index_missing_or_unreadable — run /ares-skills-reindex"],
             "stale_rebuild_needed": True,
         }
 
@@ -271,8 +285,8 @@ def route(
             "description": e.get("description"),
             "triggers": e.get("triggers", [])[:3],
         }
-        # Mark non-mishkan origin for trust-asymmetry awareness
-        if e.get("origin") != "mishkan":
+        # Mark non-runtime origin for trust-asymmetry awareness.
+        if e.get("origin") not in {"ares", "mishkan"}:
             item["trust"] = f"third-party ({e.get('origin')}); not auto-loadable for stateful operations"
         item["score_breakdown"] = meta
         if s >= threshold_high and len(must_load) < 3:
@@ -327,7 +341,7 @@ def render_injection(result: dict, max_tokens: int = 600) -> str:
     adjacent is dropped (it's awareness-only and would pad without justifying
     its tokens at injection time).
 
-    Trust marker preserved: non-mishkan entries get a `(community)` suffix.
+    Trust marker preserved: non-runtime entries get a `(community)` suffix.
 
     Returns "" when every relevant bucket is empty — the caller should then
     skip injection entirely rather than prepending "no skills found".
@@ -343,7 +357,7 @@ def render_injection(result: dict, max_tokens: int = 600) -> str:
     def _line(item: dict) -> str:
         name = item.get("name", "")
         desc = _truncate_desc(item.get("description", ""))
-        suffix = "" if item.get("origin") == "mishkan" else " (community)"
+        suffix = "" if item.get("origin") in {"ares", "mishkan"} else " (community)"
         return f"- {name}{suffix}: {desc}"
 
     parts: list[str] = ["## Discovered skills (advisory)", ""]

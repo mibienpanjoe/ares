@@ -143,7 +143,7 @@ a skill name in its prompt and decides it applies, it invokes the skill on the
 fly. **No `skills:` frontmatter preload** is used — that would inject the full
 SKILL.md text into the agent's context on every startup for every preloaded
 skill, across 45 agents. The cost rationale is captured in
-`~/.claude/mishkan/AGENTS_SKILLS.md`.
+`payload/mishkan/AGENT_SPEC.md` while the organization rename is deferred.
 
 How an agent knows which skills to reach for: each agent's prompt carries a
 short **"Skills (invoke on demand)"** section listing its specific skills.
@@ -155,7 +155,7 @@ Skills shipped by MISHKAN itself (orchestrating the 150+ user skills):
 | Skill | Purpose |
 |---|---|
 | `mishkan-init` | scaffold a project (see [02](./02-project-init.md)) |
-| `mishkan-ingest` | selectively add docs to the work cognee (see [05](./05-selective-ingest.md)) |
+| `ares-ingest` | selectively add docs to the work cognee (see [05](./05-selective-ingest.md)) |
 | `research-pipeline` | run Jakin→Ezra→Caleb→Shaphan→Shemaiah→Baruch |
 | `sprint-report` | a Reporter assembles `team-report.json` at milestone |
 | `cognee-promote` | promote knowledge with blast-radius routing |
@@ -169,13 +169,13 @@ Skills shipped by MISHKAN itself (orchestrating the 150+ user skills):
 
 Hooks make the rules deterministic; rules and prompts alone wouldn't be enough.
 
-| Event | Script | What it does |
-|---|---|---|
-| `PreToolUse: Write|Edit|MultiEdit` | `pre-tool-security.sh` (Ira) | scan writes for secrets, eval, SQL string-concat, unsafe execution; block on match |
-| `PreToolUse: Task|Agent` | `model-route.py` | inject the model tier from `model-routing.yaml` |
-| `PreToolUse: Bash` | the existing bun command-validator (preserved) | command validation |
-| `PostToolUse: *` | `post-tool-observe.sh` | append one observability log entry per tool call |
-| `Stop` | `stop-reporter.sh` | if the stopped agent declares `role: reporter`, fire the `sprint-report` skill |
+| Event | Runtime coverage | Script | What it does |
+|---|---|---|---|
+| write/edit before hook | Claude, Codex `apply_patch`, OpenCode `write`/`edit`/`apply_patch` | `pre-tool-security.sh` (Ira) | scan added content for secrets, eval, SQL string-concat, unsafe execution; block on match |
+| `PreToolUse: Task|Agent` | Claude | `model-route.py` | inject the model tier from `model-routing.yaml` |
+| `PreToolUse: Bash` | Claude | existing bun command-validator (preserved) | command validation |
+| tool before/after | Claude, Codex, OpenCode | `pre-tool-trace.sh` + `post-tool-observe.sh` | record duration and append observability events |
+| `Stop` | Claude | `stop-reporter.sh` | if the stopped agent declares `role: reporter`, fire the `sprint-report` skill |
 
 The security hook is the one you'll notice — it caught the Gemini API key during
 the build (commit `e17f2a9` added a documented exception path for runtime
@@ -249,7 +249,7 @@ siblings, one level deep. The synthesis was the main session's job.
 
 - Plan / decision file behind the model-routing hook: commit `c6c5645`,
   `payload/mishkan/hooks/model-route.py`.
-- Skill wiring decisions: `~/.claude/mishkan/AGENTS_SKILLS.md` (instance-local).
+- Skill wiring decisions: `payload/mishkan/AGENT_SPEC.md`.
 - Research pipeline shape:
   [`docs/design/MISHKAN_harness_design.md`](../design/MISHKAN_harness_design.md)
   §5.

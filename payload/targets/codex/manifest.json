@@ -1,0 +1,9 @@
+{
+  "id": "codex",
+  "instructionFile": "AGENTS.md",
+  "agentFormat": "toml",
+  "commandSurface": "skill",
+  "hookSurface": "hooks.json",
+  "initInvocation": "$ares-init",
+  "initUsage": "`$ares-init` (or select `ares-init` through `/skills`)"
+}

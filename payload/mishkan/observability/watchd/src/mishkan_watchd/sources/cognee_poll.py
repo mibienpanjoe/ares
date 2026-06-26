@@ -2,15 +2,15 @@
 three-pillar model:
 
   work    — per-project store (alias "cognee" in the project's .mcp.json,
-             container mishkan-work-<slug>, dynamic port). Discovered from
+             container ares-work-<slug> or mishkan-work-<slug>, dynamic port). Discovered from
              each project's .mcp.json; no fixed port.
   memory  — session memory store (alias "cognee-memory"), Neo4j on :7777
              (http://localhost:7777/mcp). Holds claude_code_memory.
   curated — shared curated store (alias "cognee-curated"), :7730 (unchanged).
 
 Emits cognee_op events with up/down status and nodes count. neo4j
-credentials are read from ~/.claude/mishkan/cognee/.env (memory store)
-and ~/.claude/mishkan/cognee/.env.curated (curated store). If creds are
+credentials are read from the runtime cognee env files under ~/.ares/cognee
+(or legacy ~/.claude/mishkan/cognee). If creds are
 missing or auth fails, the event carries nodes=null and the Knowledge
 tab shows "?" rather than fabricating zero.
 """
@@ -47,7 +47,23 @@ NEO4J_HTTP: dict[str, str] = {
     "curated": "http://localhost:7731/db/neo4j/tx/commit",
 }
 
+def _runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    home = Path(os.path.expanduser("~"))
+    if (home / ".ares").exists() or not (home / ".claude" / "mishkan").exists():
+        return home / ".ares"
+    return home / ".claude" / "mishkan"
+
+
+RUNTIME_HOME = _runtime_home()
 COGNEE_ENV_FILES: dict[str, Path] = {
+    "memory": RUNTIME_HOME / "cognee" / ".env",
+    "curated": RUNTIME_HOME / "cognee" / ".env.curated",
+}
+LEGACY_COGNEE_ENV_FILES: dict[str, Path] = {
     "memory": Path(os.path.expanduser("~/.claude/mishkan/cognee/.env")),
     "curated": Path(os.path.expanduser("~/.claude/mishkan/cognee/.env.curated")),
 }
@@ -62,7 +78,7 @@ def _discover_project_mcp_servers(projects_dir: Path) -> list[tuple[str, dict]]:
     """Return a flat list of (project_path, servers_dict) from all known .mcp.json files.
 
     Mirrors the discovery logic in mcp_probe._discover_mcp_servers: reads
-    ~/.claude.json `.projects` keys first (the /mishkan-init layout where
+    ~/.claude.json `.projects` keys first (the /ares-init layout where
     .mcp.json lives at the project root), then falls back to the legacy
     projects_dir glob.
     """
@@ -120,7 +136,7 @@ def _resolve_endpoints(projects_dir: Path) -> dict[str, str]:
                   present only when at least one project declares it.
 
     Discovery priority for "work": the first project whose .mcp.json
-    carries a server named exactly "cognee" (the alias /mishkan-init
+    carries a server named exactly "cognee" (the alias /ares-init
     writes for the per-project Ladybug store) wins. This is intentionally
     first-match because only one project-local store is in scope for the
     current polling cycle; the project slug is also returned so the TUI
@@ -177,8 +193,8 @@ async def _probe(url: str, timeout: float = 2.0) -> bool:
 def _read_neo4j_creds_for(store: str) -> tuple[Optional[str], Optional[str]]:
     """Read NEO4J creds from the .env that pairs with this store.
 
-    memory  → ~/.claude/mishkan/cognee/.env
-    curated → ~/.claude/mishkan/cognee/.env.curated
+    memory  → ~/.ares/cognee/.env
+    curated → ~/.ares/cognee/.env.curated
     work    → per-project store (Ladybug embedded); no fixed .env path,
               returns (neo4j, None) so node-count is skipped gracefully.
 
@@ -189,6 +205,10 @@ def _read_neo4j_creds_for(store: str) -> tuple[Optional[str], Optional[str]]:
     user = "neo4j"
     pwd: Optional[str] = None
     env_path = COGNEE_ENV_FILES.get(store)
+    if env_path is not None and not env_path.exists():
+        legacy_env_path = LEGACY_COGNEE_ENV_FILES.get(store)
+        if legacy_env_path is not None and legacy_env_path.exists():
+            env_path = legacy_env_path
     if env_path is None or not env_path.exists():
         return user, pwd
     try:

@@ -14,7 +14,7 @@
 # To use PostgreSQL/pgvector or Neo4j instead, set the relevant cognee env vars
 # in .env per https://docs.cognee.ai and add the backend service here.
 
-name: mishkan-cognee
+name: ${COGNEE_COMPOSE_PROJECT:-ares-cognee}
 
 services:
   cognee-mcp:
@@ -24,8 +24,8 @@ services:
       args:
         COGNEE_MCP_REF: ${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
         PYTHON_VERSION: 3.12-slim
-    image: mishkan/cognee-mcp:${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
-    container_name: mishkan-cognee-mcp
+    image: ${COGNEE_MCP_IMAGE:-ares/cognee-mcp}:${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
+    container_name: ${COGNEE_MCP_CONTAINER:-ares-cognee-mcp}
     restart: unless-stopped
     env_file:
       - .env

@@ -11,15 +11,21 @@
 #
 # Fail-open by contract: any error -> exit 0 silently. The discovery layer
 # never blocks a session boot. If indexing fails, the router will surface
-# `index_missing_or_unreadable` on its next call and /mishkan-skills-reindex
+# `index_missing_or_unreadable` on its next call and /ares-skills-reindex
 # is the recovery path.
 #
 # Wired in payload/install/settings.hooks.json under SessionStart.
 
 set -uo pipefail
 
-MISHKAN_HOME_RES="${MISHKAN_HOME:-$HOME/.claude/mishkan}"
-INDEXER="${MISHKAN_HOME_RES}/scripts/skill-discovery-indexer.py"
+runtime_home() {
+  if [ -n "${ARES_HOME:-}" ]; then printf '%s' "$ARES_HOME"; return; fi
+  if [ -n "${MISHKAN_HOME:-}" ]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [ -d "$HOME/.ares" ] || [ ! -d "$HOME/.claude/mishkan" ]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+INDEXER="${ARES_HOME_RES}/scripts/skill-discovery-indexer.py"
 
 # Indexer missing (older harness install / partial payload) -> noop.
 [ -f "$INDEXER" ] || exit 0

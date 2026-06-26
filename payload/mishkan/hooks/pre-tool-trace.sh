@@ -30,7 +30,7 @@ if [ -z "$tool_use_id" ]; then
   tool_use_id="${tool}-$(date +%s%N 2>/dev/null || date +%s)"
 fi
 
-trace_dir="${MISHKAN_TRACE_DIR:-/tmp}"
+trace_dir="${ARES_TRACE_DIR:-${MISHKAN_TRACE_DIR:-/tmp}}"
 mkdir -p "$trace_dir" 2>/dev/null || exit 0
 
 start_ms="$(date +%s%3N 2>/dev/null)"
@@ -52,9 +52,15 @@ printf '%s\t%s\n' "$tool_use_id" "$start_ms" \
 # ---------------------------------------------------------------------------
 case "$tool" in
   Task|Agent)
-    MISHKAN_HOME_RES="${MISHKAN_HOME:-$HOME/.claude/mishkan}"
+    runtime_home() {
+      if [ -n "${ARES_HOME:-}" ]; then printf '%s' "$ARES_HOME"; return; fi
+      if [ -n "${MISHKAN_HOME:-}" ]; then printf '%s' "$MISHKAN_HOME"; return; fi
+      if [ -d "$HOME/.ares" ] || [ ! -d "$HOME/.claude/mishkan" ]; then printf '%s' "$HOME/.ares"; return; fi
+      printf '%s' "$HOME/.claude/mishkan"
+    }
+    ARES_HOME_RES="$(runtime_home)"
     # shellcheck disable=SC1091
-    source "${MISHKAN_HOME_RES}/observability/bus.sh" 2>/dev/null || exit 0
+    source "${ARES_HOME_RES}/observability/bus.sh" 2>/dev/null || exit 0
 
     subagent="$(printf '%s' "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2>/dev/null)"
     desc="$(printf '%s' "$INPUT" | jq -r '.tool_input.description // empty' 2>/dev/null)"

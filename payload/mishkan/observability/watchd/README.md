@@ -1,29 +1,29 @@
-# mishkan-watchd
+# ares-watchd
 
-MISHKAN observability daemon. Aggregates the Phase 1+1.5 event bus plus
+ARES observability daemon. Aggregates the Phase 1+1.5 event bus plus
 filesystem polls into a single UNIX-socket snapshot+delta stream. Read by
-`mishkan-watch` (TUI client, separate package).
+`ares-watch` (TUI client, separate package).
 
 Opt-in install per §10.2 of `docs/design/MISHKAN_observability.md`:
 
 ```bash
-uv tool install --from <path-to-this-dir> mishkan-watchd
+uv tool install --from <path-to-this-dir> ares-watchd
 ```
 
 ## Commands
 
 ```bash
-mishkan-watchd start                  # run in foreground (default tmux pane)
-mishkan-watchd stop                   # SIGTERM the running daemon (PID file)
-mishkan-watchd status                 # connect, print current snapshot
-mishkan-watchd install-service        # write ~/.config/systemd/user/mishkan-watchd.service
+ares-watchd start                     # run in foreground (default tmux pane)
+ares-watchd stop                      # SIGTERM the running daemon (PID file)
+ares-watchd status                    # connect, print current snapshot
+ares-watchd install-service           # write ~/.config/systemd/user/ares-watchd.service
 ```
 
 Defaults (overridable on every command):
 
 ```
---socket        ~/.claude/mishkan/run/watch.sock
---log-dir       ~/.claude/mishkan/logs
+--socket        ~/.ares/run/watch.sock
+--log-dir       ~/.ares/logs
 --projects-dir  ~/.claude/projects
 ```
 

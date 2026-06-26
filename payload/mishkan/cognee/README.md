@@ -1,7 +1,7 @@
-# cognee-mcp — MISHKAN knowledge graph
+# cognee-mcp — ARES knowledge graph
 
 Local Docker deployment of `cognee-mcp` — the MCP server that exposes the
-[Cognee](https://docs.cognee.ai) knowledge graph to Claude Code (decision D-001).
+[Cognee](https://docs.cognee.ai) knowledge graph to Claude Code, Codex, or OpenCode (decision D-001).
 Cognee core is a Python library; this container runs `cognee-mcp` in **HTTP
 transport on port 7777** (endpoint `/mcp`). Optional: agents run without it; only
 graph persistence is deferred until it's up.
@@ -11,8 +11,8 @@ Python env, provider keys, and backend choices.
 
 > ⚠️ **Project isolation.** Per **ADR D-012**, each project gets its **own**
 > physically-separate work store — a lightweight cognee-mcp container with an
-> embedded **Ladybug** graph + its own volume (`mishkan-work-<slug>`, own port),
-> provisioned by `ensure-work-store.sh` at `/mishkan-init`. Isolation is by
+> embedded **Ladybug** graph + its own volume (`ares-work-<slug>`, own port),
+> provisioned by `ensure-work-store.sh` at `/ares-init`. Isolation is by
 > topology, **not** cognee's `datasets=` filter: with
 > `ENABLE_BACKEND_ACCESS_CONTROL=false` (required on Neo4j) that filter is
 > advisory-only and does **not** isolate (cognee v1.1.0 / issue #1023).
@@ -23,7 +23,7 @@ Python env, provider keys, and backend choices.
 ## Bring it up
 
 ```bash
-cd ~/.claude/mishkan/cognee
+cd ~/.ares/cognee
 
 # 1. secrets (SOPS-managed; never commit plaintext .env)
 cp .env.example .env
@@ -37,25 +37,25 @@ nc -z localhost 7777 && echo "cognee-mcp (work) up on :7777"
 
 # 4. bring up the CURATED box (isolated reference library — decision D-007)
 cp .env.curated.example .env.curated   # fill secrets; create the DB once:
-docker exec mishkan-cognee-pg psql -U cognee -d cognee_db -c "CREATE DATABASE curated_db OWNER cognee;"
+docker exec ares-cognee-pg psql -U cognee -d cognee_db -c "CREATE DATABASE curated_db OWNER cognee;"
 docker compose --env-file .env.curated -f docker-compose.curated.yml up -d
 nc -z localhost 7730 && echo "cognee-mcp (curated) up on :7730"
 
 # 5. seed the curated reference library (96 nodes) INTO the curated box
-~/.claude/mishkan/scripts/seed-curated-library.sh   # targets mishkan-curated-mcp
+~/.ares/scripts/seed-curated-library.sh   # targets ares-curated-mcp
 ```
 
 ## Three stores (decisions D-007 + D-012)
 
 | Store | Containers | Port | Holds | MCP alias |
 |---|---|---|---|---|
-| **per-project work** | `mishkan-work-<slug>` | own port | this project's knowledge — embedded **Ladybug**, physically isolated per project (D-012) | `cognee` (read+write) |
-| **session memory** | `mishkan-cognee-*` | 7777 | `claude_code_memory` only — shared per-client session memory (the kept Neo4j box) | `cognee-memory` (read+write) |
-| **curated** | `mishkan-curated-*` | 7730 | the cross-project reference library only | `cognee-curated` (read) |
+| **per-project work** | `ares-work-<slug>` | own port | this project's knowledge — embedded **Ladybug**, physically isolated per project (D-012) | `cognee` (read+write) |
+| **session memory** | `ares-cognee-*` | 7777 | `claude_code_memory` only — shared per-client session memory (the kept Neo4j box) | `cognee-memory` (read+write) |
+| **curated** | `ares-curated-*` | 7730 | the cross-project reference library only | `cognee-curated` (read) |
 
 **Per-project work (D-012):** each project gets its own isolated work store —
 a cognee-mcp container with an embedded Ladybug graph + its own volume, on its
-own port, provisioned by `ensure-work-store.sh` at `/mishkan-init`. Isolation is
+own port, provisioned by `ensure-work-store.sh` at `/ares-init`. Isolation is
 by topology (container + volume), **not** the `datasets=` filter (which is
 advisory-only on Neo4j with access control off — cognee v1.1.0 / issue #1023).
 
@@ -71,8 +71,8 @@ Ollama and Postgres *server* (own database `curated_db`).
 
 ## How agents reach it
 
-Claude Code connects via the project's `.mcp.json` (rendered by `/mishkan-init`
-from `~/.claude/mishkan/templates/mcp.json`), which declares **three** doorways:
+Claude Code, Codex, and OpenCode connect via the project's generated MCP config
+(rendered by `/ares-init` from `~/.ares/templates/mcp.json`), which declares **three** doorways:
 `cognee` → this project's own work store (its own port), `cognee-memory` →
 `http://localhost:7777/mcp` (shared session memory), `cognee-curated` →
 `http://localhost:7730/mcp` (shared reference).

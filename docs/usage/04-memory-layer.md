@@ -15,7 +15,7 @@ per-project work stores from the shared session-memory box; both documented in
 flowchart LR
     OLL[("Ollama<br/>embeddings · local · serves all")]
     PG[("Postgres server<br/>cognee_db + curated_db")]
-    WORK[("cognee WORK — per-project<br/>mishkan-work-{slug}<br/>embedded Ladybug + LanceDB<br/>own port + volume · isolated")]
+    WORK[("cognee WORK — per-project<br/>ares-work-{slug}<br/>embedded Ladybug + LanceDB<br/>own port + volume · isolated")]
     MEM[("cognee-memory :7777<br/>Neo4j + cognee_db<br/>claude_code_memory · shared · never prune")]
     CUR[("cognee-curated :7730<br/>own Neo4j + curated_db<br/>curated_library · shared · read-mostly")]
     OLL -. embeddings .-> WORK
@@ -59,20 +59,21 @@ graph, so a query scoped to one project returned another project's data (with a
 live API key among it). Verified against cognee v1.1.0 / issue #1023.
 
 The fix: each project runs its own lightweight cognee-mcp container with an
-**embedded Ladybug** graph (no Neo4j) and its own volume — `mishkan-work-<slug>`
-on its own port, provisioned by `ensure-work-store.sh` at `/mishkan-init`.
+**embedded Ladybug** graph (no Neo4j) and its own volume — `ares-work-<slug>`
+on its own port, provisioned by `ares project-work-store up`.
 Isolation is by topology (container + volume + on-disk graph file), never the
 `datasets=` filter.
 
-Each project's `.mcp.json` then carries **three doorways** (the alias is the
-doorway; the backend behind each differs):
+Current ARES project wiring declares the two shared servers immediately and
+keeps per-project work-store provisioning explicit:
 
-- **`cognee`** → that per-project Ladybug store — isolated project knowledge.
 - **`cognee-memory`** → the **kept** Neo4j box on `:7777`, now holding only
   `claude_code_memory` — shared per-client session memory, one continuous thing
   across all your work, not re-derivable, so never fragmented per project or
   pruned. (Cross-project by nature → keep it scrubbed of project secrets/PII.)
 - **`cognee-curated`** → the shared reference library (`:7730`).
+- **Per-project work store** → provision with `ares project-work-store up`;
+  ingest project docs with `ares knowledge ingest ...`.
 
 The shared box's old *project* graphs are discarded (re-derivable from tagged
 docs); the box itself is **repurposed** as the session-memory pillar, not retired.
@@ -117,40 +118,39 @@ Each phase, in words:
 - **`search`** retrieves (vector + optionally graph) and is exposed via the
   cognee MCP. Agents call it.
 
-The session's wiring commit (`210f92b`) makes `cognify → memify` automatic in
-the curated seed and in `/mishkan-init` step 8 — extraction is always followed
-by enrichment, never manually.
+The session's wiring makes `cognify → memify` automatic in the curated seed and
+project ingest path — extraction is always followed by enrichment, never
+manually.
 
 ## The MCP — how agents reach memory
 
-Every MISHKAN-initialised project declares **three** servers in `.mcp.json`
-(written by `ensure-work-store.sh` at `/mishkan-init`):
+Every ARES-initialised Claude project declares the two shared servers in
+`.mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "cognee":         { "type": "http", "url": "http://localhost:<per-project-port>/mcp" },
     "cognee-memory":  { "type": "http", "url": "http://localhost:7777/mcp" },
     "cognee-curated": { "type": "http", "url": "http://localhost:7730/mcp" }
   }
 }
 ```
 
-The `<per-project-port>` is assigned by `ensure-work-store.sh` at init time
-and recorded in the project's `.mcp.json`. It is NOT `:7777`.
+The per-project work store gets its own port when `ares project-work-store up`
+provisions it. It is NOT `:7777`.
 
 So when an agent searches, it targets the right pillar explicitly:
 
-- `cognee` — read+write the project's own isolated Ladybug graph (typical for
-  project knowledge retrieval and ingest).
 - `cognee-memory` — read+write per-client session memory (`claude_code_memory`)
   shared across all work. Use when the agent needs to recall or record
   cross-session context.
 - `cognee-curated` — read the cross-project reference library (typical for
   Shemaiah cross-referencing curated resources).
+- Project ingest/search surfaces use the work-store lifecycle commands until
+  the per-project work-store MCP alias is wired by a runtime-specific adapter.
 
 MCP servers connect at **session start**. A fresh session is needed for
-`/mishkan-init`-written `.mcp.json` to take effect.
+`ares project init`-written MCP config to take effect.
 
 ## Datasets — a label inside a store, NOT an isolation boundary
 
@@ -237,14 +237,14 @@ cognee's static-HTML `visualize_graph("./graph.html")` export on the host.
 | Raw ingested files + cognee system metadata | volume `cognee_data` (mounted at `/app/cognee-mcp/.cognee_system`) | docker volume | yes (commit `e24fabf` made this volume-backed; before that, every `up --force-recreate` wiped the raw files) |
 | Ollama models | volume `ollama_models` | docker volume | re-pullable |
 
-`docker volume inspect mishkan-cognee_cognee_data` shows where on disk the
+`docker volume inspect ares-cognee_cognee_data` shows where on disk the
 volume lives. Standard restic / rsync covers it.
 
 ## Configuration anchors
 
-- `cognee-memory` box (`:7777`) env: `~/.claude/mishkan/cognee/.env` (gitignored, mode 600).
-- Curated box env: `~/.claude/mishkan/cognee/.env.curated` (gitignored, mode 600).
-- Per-project work store provisioner: `scripts/ensure-work-store.sh` (run at `/mishkan-init`; idempotent).
+- `cognee-memory` box (`:7777`) env: `~/.ares/cognee/.env` (gitignored, mode 600).
+- Curated box env: `~/.ares/cognee/.env.curated` (gitignored, mode 600).
+- Per-project work store provisioner: `ares project-work-store up` (idempotent).
 - Compose entrypoint: `docker-compose.yml` + overlays (`hardening`, `selfhosted`,
   `ui`, `curated`, `curated-ui`).
 - Curated singleton helper: `scripts/ensure-curated-box.sh` (idempotent).

@@ -1,4 +1,4 @@
-"""Shared loader for the MISHKAN org.json reference.
+"""Shared loader for the ARES org.json reference.
 
 Used by:
   - tabs/org.py     : full org tree + details panel
@@ -18,13 +18,17 @@ from typing import Any
 def _candidate_paths() -> list[Path]:
     """Where org.json may live, first hit wins.
 
-    Order matters: the installed (~/.claude) copy is canonical because
+    Order matters: the installed runtime copy is canonical because
     it tracks the harness version actually in use. Repo fallbacks are
-    for dev mode (running mishkan-watch out of the source checkout).
+    for dev mode (running ares-watch out of the source checkout).
     """
+    runtime_home = _runtime_home()
     paths: list[Path] = [
-        Path(os.path.expanduser("~/.claude/mishkan/org/org.json")),
+        runtime_home / "org" / "org.json",
     ]
+    legacy = Path(os.path.expanduser("~/.claude/mishkan/org/org.json"))
+    if legacy != paths[0]:
+        paths.append(legacy)
     # Walk up from this file looking for `payload/mishkan/org/org.json`
     # in case we're running from the repo checkout (dev mode).
     here = Path(__file__).resolve()
@@ -36,6 +40,17 @@ def _candidate_paths() -> list[Path]:
         if parent == parent.parent:
             break
     return paths
+
+
+def _runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    home = Path(os.path.expanduser("~"))
+    if (home / ".ares").exists() or not (home / ".claude" / "mishkan").exists():
+        return home / ".ares"
+    return home / ".claude" / "mishkan"
 
 
 def load_org() -> dict[str, Any]:

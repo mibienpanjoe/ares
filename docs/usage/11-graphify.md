@@ -247,25 +247,25 @@ changes today. Three equivalent ways to refresh:
 
 ```bash
 graphify update .                            # direct CLI
-npx mishkan-harness code-graph scan          # MISHKAN wrapper
+npx ares-harness code-graph scan             # ARES wrapper
 /code-graph scan                             # slash command (same wrapper)
 ```
 
 A read-only inspection of the current graph (no rebuild):
 
 ```bash
-npx mishkan-harness code-graph status        # nodes / edges / last scan timestamp
+npx ares-harness code-graph status           # nodes / edges / last scan timestamp
 /code-graph status                           # same
-npx mishkan-harness code-graph open          # opens graph.html in the browser
+npx ares-harness code-graph open             # opens graph.html in the browser
 ```
 
 When the advisory hook fires and you suspect the graph is stale, the
-hook's own advisory text reminds you to run `npx mishkan-harness
+hook's own advisory text reminds you to run `npx ares-harness
 code-graph scan` first.
 
 ## Project init
 
-`/mishkan-init` (per the updated skill) optionally runs the initial
+`/ares-init` (per the updated skill) optionally runs the initial
 `graphify update .` after the spec chain lands, so the project has a
 graph from sprint S0 onwards. Skipped automatically on projects that
 opted out of the structural layer.

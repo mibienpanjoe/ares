@@ -41,9 +41,15 @@ set -uo pipefail
 command -v jq >/dev/null 2>&1 || exit 0
 
 # Source the observability bus (fail-open if not yet installed).
-MISHKAN_HOME_RES="${MISHKAN_HOME:-$HOME/.claude/mishkan}"
+runtime_home() {
+  if [ -n "${ARES_HOME:-}" ]; then printf '%s' "$ARES_HOME"; return; fi
+  if [ -n "${MISHKAN_HOME:-}" ]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [ -d "$HOME/.ares" ] || [ ! -d "$HOME/.claude/mishkan" ]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
 # shellcheck disable=SC1091
-source "${MISHKAN_HOME_RES}/observability/bus.sh" 2>/dev/null || exit 0
+source "${ARES_HOME_RES}/observability/bus.sh" 2>/dev/null || exit 0
 
 INPUT="$(cat)"
 tool="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)"
@@ -120,7 +126,7 @@ fi
 # cache stays within the 50ms p95 budget (a probe wouldn't). When the
 # cache is missing or stale, we fall back to "?" — the cognee line in
 # the palette still appears, the agent just doesn't get the count.
-cognee_cache="$HOME/.cache/mishkan/cognee-counts.json"
+cognee_cache="${ARES_CACHE_DIR:-${MISHKAN_CACHE_DIR:-$HOME/.cache/ares}}/cognee-counts.json"
 cognee_work_nodes="?"
 cognee_curated_nodes="?"
 cognee_freshness=""

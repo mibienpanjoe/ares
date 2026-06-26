@@ -1,22 +1,44 @@
 {
-  "name": "mishkan-harness",
+  "name": "ares-harness",
   "version": "0.2.7",
-  "description": "MISHKAN — a personal advanced SWE R&D harness for Claude Code: 45 biblically-named agents across six teams, deterministic rules + hooks, a shared research pipeline, dependency/supply-chain vetting, and a Cognee-backed knowledge graph. Installs into ~/.claude.",
+  "description": "ARES harness — a portable SWE R&D agent harness for Claude Code, Codex CLI, and OpenCode. Keeps the current MISHKAN organization model while installing target-native agents, skills, commands, MCP, and knowledge tooling.",
   "type": "module",
   "bin": {
-    "mishkan": "bin/mishkan.js"
+    "ares": "bin/ares.js",
+    "ares-harness": "bin/ares.js",
+    "mishkan": "bin/mishkan.js",
+    "mishkan-harness": "bin/mishkan.js"
   },
   "files": [
     "bin/",
+    "scripts/",
     "payload/",
     "docs/",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "!**/__pycache__/**",
+    "!**/*.pyc",
+    "!ares-harness-*.tgz"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "postpack": "echo 'MISHKAN packed. Install on any machine with: npx mishkan-harness install'"
+    "check": "npm run check:layout && npm run check:cli && npm run check:runtimes && npm run check:hooks && npm run check:ingest && npm run check:work-store && npm run check:curated && npm run check:observability && npm run check:compose && npm run check:docs && npm run check:packlist && npm run check:package",
+    "check:layout": "node scripts/check-layout.mjs",
+    "check:cli": "node scripts/check-cli.mjs",
+    "check:runtimes": "node scripts/check-runtime-clis.mjs",
+    "check:compose": "node scripts/check-compose.mjs",
+    "check:curated": "node scripts/check-curated.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:ingest": "node scripts/check-ingest.mjs",
+    "check:hooks": "node scripts/check-hooks.mjs",
+    "check:observability": "node scripts/check-observability.mjs",
+    "check:package": "node scripts/check-package.mjs",
+    "check:packlist": "node scripts/check-packlist.mjs",
+    "check:work-store": "node scripts/check-work-store.mjs",
+    "prepack": "npm run check",
+    "postpack": "echo 'ARES/MISHKAN packed. Install: npx ares-harness install --target codex (legacy aliases: mishkan, mishkan-harness)'"
   },
   "keywords": [
     "claude-code",

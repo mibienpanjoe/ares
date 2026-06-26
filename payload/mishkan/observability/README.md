@@ -1,6 +1,6 @@
-# MISHKAN Observability — Phase 1
+# ARES Observability
 
-Bus enrichment. Auto-installed via `npx mishkan-harness install` — no
+Bus enrichment. Auto-installed via `npx ares-harness install` — no
 runtime dependencies beyond `jq` (shell) and stdlib Python 3.
 
 See `docs/design/MISHKAN_observability.md` (root of harness) for the full
@@ -26,7 +26,7 @@ model-route.py              ENRICHED — emits hook_fire (routing decision)
 ## Where events land
 
 ```
-~/.claude/mishkan/logs/<session-id>.jsonl     append-only NDJSON
+~/.ares/logs/<session-id>.jsonl               append-only NDJSON
 /tmp/mishkan-trace-<session-id>.tmp           ephemeral timing trace
 ```
 
@@ -62,7 +62,7 @@ Deferred (next phases of the observability stack):
 
 Every emitter exits 0 on any failure (jq missing, mkdir fails, JSON
 malformed, disk full, anything). Observability **never** blocks a tool
-call or breaks a hook decision. If `~/.claude/mishkan/logs/` is missing
+call or breaks a hook decision. If `~/.ares/logs/` is missing
 or unwritable, events silently disappear; correctness of the tool call is
 preserved.
 
@@ -71,26 +71,26 @@ preserved.
 Tail the current session's events:
 
 ```bash
-ls -t ~/.claude/mishkan/logs/*.jsonl | head -1 | xargs tail -F
+ls -t ~/.ares/logs/*.jsonl | head -1 | xargs tail -F
 ```
 
 Filter by type:
 
 ```bash
-tail -F ~/.claude/mishkan/logs/<session>.jsonl | jq -c 'select(.type=="file_change")'
+tail -F ~/.ares/logs/<session>.jsonl | jq -c 'select(.type=="file_change")'
 ```
 
 Count event types over a session:
 
 ```bash
-jq -r .type ~/.claude/mishkan/logs/<session>.jsonl | sort | uniq -c | sort -rn
+jq -r .type ~/.ares/logs/<session>.jsonl | sort | uniq -c | sort -rn
 ```
 
 ## Schema validation
 
 ```bash
 # Validate a session log against the schema (requires `ajv-cli` or similar)
-npx -y ajv-cli validate -s schema.json -d ~/.claude/mishkan/logs/<session>.jsonl
+npx -y ajv-cli validate -s schema.json -d ~/.ares/logs/<session>.jsonl
 ```
 
 ## Back-compatibility

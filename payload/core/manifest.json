@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sourceRoot": "../mishkan",
+  "migrationState": "legacy-layout-compatibility-mirror",
+  "domains": [
+    "agents",
+    "skills",
+    "rules",
+    "workflows",
+    "config",
+    "templates",
+    "cognee",
+    "observability",
+    "org",
+    "scripts"
+  ]
+}

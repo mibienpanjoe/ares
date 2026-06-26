@@ -1,8 +1,8 @@
 <div align="center">
 
-# מִשְׁכָּן · MISHKAN
+# ARES Harness · MISHKAN Runtime
 
-**A personal SWE R&D harness that lives inside Claude Code.**
+**A portable SWE R&D harness for Claude Code, Codex CLI, and OpenCode.**
 
 45 specialist agents · six teams · one research pipeline · one growing knowledge graph
 
@@ -10,22 +10,22 @@
 
 ---
 
-MISHKAN turns Claude Code into a standing engineering organisation. Quality and security aren't requested from the model — they're enforced by the environment: path-scoped rules, pre-write security hooks, structural separation of generation from review. The knowledge graph (Cognee) persists what you learn so sessions pick up where the last one stopped. A code-structure graph (Graphify) answers "who calls X, who depends on Y" at 88× less token cost than loading source files.
+ARES packages the current MISHKAN agent organisation as a portable harness. Quality and security aren't requested from the model — they're enforced by the environment: target-native guidance, skills, commands, MCP wiring, hooks where audited, and structural separation of generation from review. The knowledge graph (Cognee) persists what you learn so sessions pick up where the last one stopped. A code-structure graph (Graphify) answers "who calls X, who depends on Y" at 88× less token cost than loading source files.
 
 It's personal, opinionated infrastructure built around one engineer's standards. To make it yours, replace `docs/engineer/profile.md` and re-sync — nothing else hardcodes the author.
 
-> **v0.2.7** — agent fleet, rules, hooks, installer stable. Unified semantic `mishkan <object> <verb>` CLI (D-015) with engineer-gated curated promotion (`knowledge curate`, D-016), user-editable model-tier routing (`model`, D-017), and a confirm-gated `knowledge reset`. Cognee knowledge stack (per-project work · memory `:7777` · curated `:7730`) + Graphify code graph. Observability stack (watchd + TUI) as two `uv tool`-installable packages.
+> **v0.2.7** — agent fleet, rules, hooks, installer stable. Unified semantic `ares <object> <verb>` CLI with legacy `mishkan` aliases, engineer-gated curated promotion (`knowledge curate`, D-016), user-editable model-tier routing (`model`, D-017), and a confirm-gated `knowledge reset`. Cognee knowledge stack (per-project work · memory `:7777` · curated `:7730`) + Graphify code graph. Observability stack (`ares-watchd` + `ares-watch`) as two `uv tool`-installable packages.
 
 ---
 
 ## Install
 
-Requires Claude Code + Node ≥ 18.
+Requires Node >= 18 plus at least one target runtime: Claude Code, Codex CLI, or OpenCode.
 
 ```bash
-npx mishkan-harness install
-mishkan status
-mishkan observability install      # optional: daemon + TUI (needs uv)
+npx ares-harness install --target codex
+npx ares-harness status --target all
+npx ares-harness observability install      # optional: daemon + TUI (needs uv)
 ```
 
 Full guide: [`docs/usage/01-installation.md`](docs/usage/01-installation.md).
@@ -35,10 +35,13 @@ Full guide: [`docs/usage/01-installation.md`](docs/usage/01-installation.md).
 ```bash
 cd <project>
 claude                    # starts in exploration mode — Nehemiah + Bezalel
-/mishkan-init             # scaffold: spec chain → docs/ → Cognee → Sprint S0
+/ares-init                # Claude Code: scaffold spec chain → docs/ → Cognee → Sprint S0
 ```
 
-`/sprint-close` at a milestone. `/mishkan-resume` restores state next session. Details: [`docs/usage/02-project-init.md`](docs/usage/02-project-init.md).
+In Codex, invoke `$ares-init` after install/project init, or select `ares-init`
+through `/skills`. Codex does not support user-defined `/<skill-name>` commands,
+so bare `/ares-init` remains a Claude Code/OpenCode entrypoint. Details:
+[`docs/usage/02-project-init.md`](docs/usage/02-project-init.md).
 
 ---
 
@@ -98,32 +101,32 @@ A shared research pipeline (Jakin → Ezra → Caleb → Shaphan → Shemaiah �
 
 ## Knowledge stack
 
-Wired by `/mishkan-init` into each project's `.mcp.json`:
+Wired by `/ares-init` into each project's target-native MCP/config files:
 
-**Cognee** — semantic knowledge graph. Per-project isolated work store (own port, Ladybug) + shared session memory (`cognee-memory`, `:7777`) + cross-project curated reference library (`cognee-curated`, `:7730`). Docker-based, pinned, SOPS-managed secrets. Three pillars wired per project by `/mishkan-init` (D-007 + D-012).
+**Cognee** — semantic knowledge graph. Per-project isolated work store (own port, Ladybug) + shared session memory (`cognee-memory`, `:7777`) + cross-project curated reference library (`cognee-curated`, `:7730`). Docker-based, pinned, SOPS-managed secrets. Three pillars wired per project by `/ares-init` (D-007 + D-012).
 
 ```bash
-mishkan knowledge configure        # wizard: LLM provider + credentials + .env
-mishkan knowledge-stack up         # memory :7777 + curated :7730 (guided; preflights config, seeds curated)
+ares knowledge configure           # wizard: LLM provider + credentials + .env
+ares knowledge-stack up            # memory :7777 + curated :7730 (guided; preflights config, seeds curated)
 ```
 
 Guide: [`payload/mishkan/cognee/README.md`](payload/mishkan/cognee/README.md) · [`docs/usage/04-memory-layer.md`](docs/usage/04-memory-layer.md).
 
-**Graphify** — deterministic code-structure graph (D-008 + D-009). Indexes a project's full AST into a queryable graph. For structural questions ("who calls X", "what depends on Y") it costs ~1.8k tokens per query — 88× cheaper than loading the source tree. Runs as a PreToolUse advisory: before every structural Read or Grep, agents see a palette of four surfaces (Graphify, Cognee work, Cognee curated, literal content) with token costs and staleness signals so they pick the cheap path first. Auto-detected and wired by `/mishkan-init`.
+**Graphify** — deterministic code-structure graph (D-008 + D-009). Indexes a project's full AST into a queryable graph. For structural questions ("who calls X", "what depends on Y") it costs ~1.8k tokens per query — 88× cheaper than loading the source tree. Runs as a PreToolUse advisory: before every structural Read or Grep, agents see a palette of four surfaces (Graphify, Cognee work, Cognee curated, literal content) with token costs and staleness signals so they pick the cheap path first. Auto-detected and wired by `/ares-init`.
 
 ```bash
-mishkan code-graph scan            # build/refresh for the current project
-mishkan code-graph status          # node/edge count, last scan time
+ares code-graph scan               # build/refresh for the current project
+ares code-graph status             # node/edge count, last scan time
 ```
 
 ## Observability
 
-Two Python packages (`uv tool`-installable): a daemon (`mishkan-watchd`) that tails every session's event bus and a Textual TUI (`mishkan-watch`) with 8 tabs — Live, Agents, Workflows, Knowledge, Activity, Org-Ref, Usage, Skills. Cross-session, cross-project, near-zero overhead.
+Two Python packages (`uv tool`-installable): a daemon (`ares-watchd`) that tails every session's event bus and a Textual TUI (`ares-watch`) with 8 tabs — Live, Agents, Workflows, Knowledge, Activity, Org-Ref, Usage, Skills. Cross-session, cross-project, near-zero overhead.
 
 ```bash
-mishkan observability install      # install both packages
-mishkan-watch                      # opens TUI, auto-starts daemon if absent
-mishkan-watchd start|stop|status   # manual daemon control
+ares observability install         # install both packages
+ares-watch                         # opens TUI, auto-starts daemon if absent
+ares-watchd start|stop|status      # manual daemon control
 ```
 
 Guide + event schema: [`docs/design/MISHKAN_observability.md`](docs/design/MISHKAN_observability.md).
@@ -144,37 +147,38 @@ Governed by hard caps (10 org + 4 per team) and PM+CTO co-ownership per ADR D-01
 
 | Command | Purpose |
 |---|---|
-| `/mishkan-init` | Scaffold a project — spec chain, docs, Cognee, Sprint S0 |
-| `/mishkan-resume` | Restore sprint state + open blockers |
+| `/ares-init` | Scaffold a project — spec chain, docs, Cognee, Sprint S0 |
+| `/ares-resume` | Restore sprint state + open blockers |
 | `/sprint-close` | Team reporters → aggregate → docs pull → graph promote |
-| `/mishkan-org-reference` | Print the 45-agent org inline |
+| `/ares-org-reference` | Print the 45-agent org inline |
 | `/code-graph status\|open\|scan` | Inspect / open / refresh Graphify graph |
 | `/skills <task>` | Skill-discovery router (3-bucket result) |
-| `/mishkan-skills-reindex` | Rebuild skill index from disk |
-| `/mishkan-skills-misses` | Aggregate miss-log for threshold tuning |
+| `/ares-skills-reindex` | Rebuild skill index from disk |
+| `/ares-skills-misses` | Aggregate miss-log for threshold tuning |
 | `/eval-baruch` | Run Baruch contract eval |
-| `/dep-audit` | Cross-project dependency + supply-chain audit |
+| `/dependency-audit` | Cross-project dependency + supply-chain audit |
 | `/promote` | Promote a learning into Cognee by blast radius |
 | `/sefer-pull` | Trigger documentation pull |
 
 ## CLI commands (from any terminal)
 
 ```bash
-mishkan help                                        # full reference
-mishkan install                                     # install/refresh into ~/.claude
-mishkan uninstall                                   # remove harness (keeps CLAUDE.md + rules)
-mishkan uninstall --purge                           # also remove y4nn-standards.md
-mishkan knowledge configure                         # wizard: LLM provider + Cognee .env
-mishkan knowledge curate                            # approve research-found resources into curated (D-016)
-mishkan knowledge reset                             # wipe stores → re-seed curated baseline (destructive)
-mishkan model show|set|reset                        # re-tier agents per-agent/team/all — survives updates (D-017)
-mishkan observability install                       # install daemon + TUI only (needs uv)
-mishkan status                                      # install state, profile, version
-mishkan org show [--json]                                # print the 45-agent org
-mishkan code-graph [status|open|scan]               # inspect the project's Graphify graph
-mishkan-watch                                       # open observability TUI (auto-starts daemon)
-mishkan-watch --no-autostart                        # TUI only, no daemon fork
-mishkan-watchd start|stop|status                    # manual daemon lifecycle
+ares help                                           # full reference
+ares install --target codex                         # install/refresh a target
+ares project init --target codex                    # scaffold target-native project wiring
+ares uninstall                                      # remove Claude target files
+ares knowledge configure                            # wizard: LLM provider + Cognee .env
+ares knowledge curate                               # approve research-found resources into curated (D-016)
+ares knowledge reset                                # wipe stores → re-seed curated baseline (destructive)
+ares model show|set|reset                           # re-tier agents per-agent/team/all — survives updates (D-017)
+ares observability install                          # install daemon + TUI only (needs uv)
+ares status --target all                            # install state, profile, version
+ares runtime check --target all --dir .             # global + current-project readiness checklist
+ares org show [--json]                              # print the 45-agent org
+ares code-graph [status|open|scan]                  # inspect the project's Graphify graph
+ares-watch                                          # open observability TUI (auto-starts daemon)
+ares-watch --no-autostart                           # TUI only, no daemon fork
+ares-watchd start|stop|status                       # manual daemon lifecycle
 ```
 
 ---
@@ -184,7 +188,7 @@ mishkan-watchd start|stop|status                    # manual daemon lifecycle
 The harness serves the engineer described in [`docs/engineer/profile.md`](docs/engineer/profile.md). Swap in your own (keep the section structure), then:
 
 ```bash
-~/.claude/mishkan/scripts/sync-profile.sh
+~/.ares/scripts/sync-profile.sh
 ```
 
 Refreshes the runtime copy and audits references. Nothing else hardcodes the author. See [`docs/engineer/README.md`](docs/engineer/README.md).
@@ -195,8 +199,11 @@ Refreshes the runtime copy and audits references. Nothing else hardcodes the aut
 
 ```
 bin/mishkan.js              installer (dependency-free)
+bin/ares.js                 primary ARES entrypoint
 payload/
-  mishkan/                    agents, skills, rules, hooks, commands, templates, config, scripts, ontology
+  core/                       runtime-neutral manifest; resolves the compatibility source tree
+  targets/                    Claude, Codex, and OpenCode adapter manifests
+  mishkan/                    current compatibility source: agents, skills, hooks, workflows, Cognee
   user/                       user-level CLAUDE.md + standards rule (placed if absent)
   install/                    hook fragment merged into settings.json
 docs/

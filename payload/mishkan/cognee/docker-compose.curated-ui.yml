@@ -11,8 +11,8 @@
 
 services:
   curated-backend:
-    image: mishkan/cognee-backend:${COGNEE_MCP_REF:?}
-    container_name: mishkan-curated-backend
+    image: ${COGNEE_BACKEND_IMAGE:-ares/cognee-backend}:${COGNEE_MCP_REF:?}
+    container_name: ${CURATED_BACKEND_CONTAINER:-ares-curated-backend}
     restart: unless-stopped
     depends_on:
       curated-neo4j:
@@ -36,8 +36,8 @@ services:
           memory: 3g
 
   curated-frontend:
-    image: mishkan/cognee-frontend:${COGNEE_MCP_REF:?}
-    container_name: mishkan-curated-frontend
+    image: ${COGNEE_FRONTEND_IMAGE:-ares/cognee-frontend}:${COGNEE_MCP_REF:?}
+    container_name: ${CURATED_FRONTEND_CONTAINER:-ares-curated-frontend}
     restart: unless-stopped
     depends_on:
       - curated-backend
@@ -58,4 +58,4 @@ services:
 networks:
   shared:
     external: true
-    name: ${COGNEE_WORK_NETWORK:-mishkan-cognee_cognee_net}
+    name: ${COGNEE_WORK_NETWORK:-ares-cognee_cognee_net}

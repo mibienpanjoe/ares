@@ -1,14 +1,11 @@
 name: Create release draft on tag push
 
-# Two-step publish flow:
-#   1. `git push origin v0.2.3`            → this workflow creates a DRAFT release
-#   2. Review the draft on github.com      → click "Publish release" when ready
-#   3. Publishing the release fires npm-publish.yml → npm gets the package
+# Tag publish flow:
+#   1. `git push origin v0.2.3`            → npm-publish.yml publishes npm
+#   2. This workflow creates a DRAFT GitHub release for release notes
 #
-# A draft release is NOT visible publicly and does NOT trigger downstream
-# publish workflows. It's a safety net: tag pushes can no longer publish
-# accidentally to npm, and rolling back is `Delete draft` instead of
-# `npm unpublish` (which leaves a 24h zombie slot).
+# A draft release is NOT visible publicly. It is release-note convenience only;
+# npm publication is handled directly by the tag-triggered npm workflow.
 
 on:
   push:
@@ -44,7 +41,7 @@ jobs:
             git log --pretty='format:- %s' "$RANGE"
             echo
             echo
-            echo "Published to npm: https://www.npmjs.com/package/mishkan-harness/v/${GITHUB_REF_NAME#v}"
+            echo "Published to npm: https://www.npmjs.com/package/ares-harness/v/${GITHUB_REF_NAME#v}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
       - name: Create draft release

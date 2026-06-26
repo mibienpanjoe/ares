@@ -19,8 +19,16 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
 VALIDATOR_CANDIDATES=(
-  "${MISHKAN_HOME:-$HOME/.claude/mishkan}/scripts/validate-research-log.sh"
+  "${ARES_HOME_RES}/scripts/validate-research-log.sh"
+  "$HOME/.claude/mishkan/scripts/validate-research-log.sh"
   "$HERE/../../scripts/validate-research-log.sh"
 )
 VALIDATOR=""

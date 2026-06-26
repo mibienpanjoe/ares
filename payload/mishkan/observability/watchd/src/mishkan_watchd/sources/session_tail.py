@@ -1,13 +1,10 @@
-"""Session JSONL tail — extract inter_agent and compaction events.
+"""Session JSONL tail — extract runtime events from active transcript files.
 
-Tails the active Claude Code session JSONL files (discovered by
-session_discover) and synthesizes events that the PostToolUse hook
-cannot observe directly:
+Tails active runtime JSONL files discovered by session_discover and synthesizes
+events that hooks cannot observe directly:
 
-  - inter_agent : subagent returning a final message to its parent
-                  (assistant message after Task tool_result block)
-  - compaction  : context compression event surfaced in the session
-                  log (Claude Code emits a distinct event line)
+  - Claude Code: inter_agent and compaction events.
+  - Codex: tool_call, token_usage, and compaction events.
 """
 from __future__ import annotations
 
@@ -73,6 +70,10 @@ class _SessionTailer:
             await self._scan(obj)
 
     async def _scan(self, obj: dict[str, Any]) -> None:
+        if self.session_id.startswith("codex:"):
+            await self._scan_codex(obj)
+            return
+
         otype = obj.get("type")
         # Compaction event: Claude Code logs these with type='summary' or
         # explicit type='compaction'. Cover both — fall back to a heuristic
@@ -127,6 +128,76 @@ class _SessionTailer:
                             "summary": text[:500],
                         },
                     })
+
+    async def _scan_codex(self, obj: dict[str, Any]) -> None:
+        """Parse the Codex CLI JSONL shape observed in ~/.codex/sessions.
+
+        The current Codex transcript stores records as top-level types such as
+        session_meta, event_msg, response_item, turn_context, and compacted.
+        The payload carries the actionable sub-type.
+        """
+        otype = obj.get("type")
+        payload = obj.get("payload") or {}
+        ptype = payload.get("type")
+        ts = obj.get("timestamp") or _iso()
+
+        if otype == "session_meta":
+            return
+
+        if otype == "compacted" or ptype == "context_compacted":
+            await self.queue.put({
+                "ts": ts,
+                "session": self.session_id,
+                "project": None,
+                "runtime": "codex",
+                "type": "compaction",
+                "tool": None,
+                "outcome": "completed",
+                "payload": {"runtime": "codex", "trigger": "context_compacted"},
+            })
+            return
+
+        if otype == "response_item" and ptype in ("function_call", "custom_tool_call"):
+            name = payload.get("name") or payload.get("call_name") or payload.get("tool")
+            if not name:
+                return
+            await self.queue.put({
+                "ts": ts,
+                "session": self.session_id,
+                "project": None,
+                "runtime": "codex",
+                "type": "tool_call",
+                "tool": str(name),
+                "outcome": "started",
+                "payload": {
+                    "runtime": "codex",
+                    "call_id": payload.get("call_id") or payload.get("id"),
+                    "kind": ptype,
+                },
+            })
+            return
+
+        if otype == "event_msg" and ptype == "token_count":
+            info = payload.get("info") or {}
+            usage = info.get("last_token_usage") or {}
+            await self.queue.put({
+                "ts": ts,
+                "session": self.session_id,
+                "project": None,
+                "runtime": "codex",
+                "type": "token_usage",
+                "tool": None,
+                "outcome": "completed",
+                "payload": {
+                    "runtime": "codex",
+                    "tokens_in": int(usage.get("input_tokens") or 0),
+                    "tokens_out": int(usage.get("output_tokens") or 0),
+                    "cache_read": int(usage.get("cached_input_tokens") or 0),
+                    "cache_write": 0,
+                    "reasoning_output_tokens": int(usage.get("reasoning_output_tokens") or 0),
+                    "model_context_window": info.get("model_context_window"),
+                },
+            })
 
 
 async def run(queue: asyncio.Queue[dict[str, Any]],

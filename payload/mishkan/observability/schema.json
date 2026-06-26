@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://mishkan.dev/observability/schema.json",
-  "title": "MISHKAN observability event",
-  "description": "One NDJSON line per event under ~/.claude/mishkan/logs/<session-id>.jsonl. Discriminated by the `type` field. Backward-compatible with the original post-tool-observe.sh shape: every event still carries `session`, `tool_calls`, `outcome`, `timestamp` so old consumers keep working; new consumers prefer `ts`, `project`, `type`, and the type-specific fields.",
+  "title": "ARES observability event",
+  "description": "One NDJSON line per event under ~/.ares/logs/<session-id>.jsonl, with ~/.claude/mishkan/logs supported as a legacy fallback. Discriminated by the `type` field. Backward-compatible with the original post-tool-observe.sh shape: every event still carries `session`, `tool_calls`, `outcome`, `timestamp` so old consumers keep working; new consumers prefer `ts`, `project`, `type`, and the type-specific fields.",
   "type": "object",
   "required": ["ts", "session", "type"],
   "properties": {

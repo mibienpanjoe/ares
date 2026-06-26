@@ -42,9 +42,10 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
      ```
      Isolation rides on this container/volume, not `datasets=`.
    - **Ingest (opt-in, never bulk):** `mishkan knowledge ingest --tagged-only` adds
-     anything tagged `mishkan: ingest` into THIS project's store (add → cognify →
+     anything tagged `ares: ingest` into THIS project's store (add → cognify →
      memify, throttled); the rest is added per-doc as you go. Never bulk-ingest the
-     tree, and scrub secrets/PII first (see the `mishkan-ingest` skill's security section).
+     tree, and scrub secrets/PII first (see the `ares-ingest` skill's security section
+     in Codex/OpenCode, or the legacy `mishkan-ingest` source skill in Claude).
    If the knowledge stack isn't up, init brings it up first; agents still work
    without it — persistence resumes when it's up.
 9. **Automated** — write `./CLAUDE.md` from

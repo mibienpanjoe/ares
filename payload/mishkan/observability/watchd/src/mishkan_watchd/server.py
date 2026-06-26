@@ -107,7 +107,7 @@ class WatchdServer:
         # Only unlink a socket whose owner is gone (stale file).
         if self.socket_path.exists() and self._socket_is_live(self.socket_path):
             raise RuntimeError(
-                f"mishkan-watchd: daemon already running on {self.socket_path}"
+                f"ares-watchd: daemon already running on {self.socket_path}"
             )
         try:
             self.socket_path.unlink()
@@ -232,7 +232,7 @@ class WatchdServer:
                 elapsed = time.monotonic() - idle_since
                 if elapsed >= self.idle_timeout_s:
                     print(
-                        f"mishkan-watchd: no clients for {elapsed:.0f}s, shutting down",
+                        f"ares-watchd: no clients for {elapsed:.0f}s, shutting down",
                         file=sys.stderr,
                     )
                     if self._shutdown_cb is not None:

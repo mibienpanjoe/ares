@@ -7,7 +7,7 @@
 #
 # <candidate.json> is one curated_promotion_candidate object
 # (name, url, problem_class, team, source_tier, why) — the shape Baruch queues
-# into ~/.claude/mishkan/curated-candidates.jsonl and the CLI hands here on approval.
+# into the runtime curated-candidates ledger and the CLI hands here on approval.
 #
 # Exit codes:
 #   0  → promoted (or already present — dedup skip; both are "nothing left to do")
@@ -15,7 +15,7 @@
 #   2  → environment problem (jq missing, curated container down)
 #
 # This is a STATEFUL step (docker exec into the curated stack). It is invoked by
-# `mishkan knowledge curate`, which a human runs — never an agent (rule 5 / D-005).
+# `ares knowledge curate`, which a human runs — never an agent (rule 5 / D-005).
 set -euo pipefail
 
 CANDIDATE="${1:-}"
@@ -25,11 +25,23 @@ if [[ -z "$CANDIDATE" || ! -r "$CANDIDATE" ]]; then
 fi
 command -v jq >/dev/null 2>&1 || { echo "error: jq is required" >&2; exit 2; }
 
-MISHKAN="${HOME}/.claude/mishkan"
-SEED_MANIFEST="${MISHKAN}/cognee/curated-resources.jsonl"     # written by seed-curated-library.sh
-PROMOTED_LEDGER="${MISHKAN}/cognee/curated-promoted.jsonl"    # this script's append-only record
-PROMOTE_PY="${MISHKAN}/cognee/promote-curated.py"
-CONTAINER="${COGNEE_CONTAINER:-mishkan-curated-mcp}"
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+SEED_MANIFEST="${ARES_HOME_RES}/cognee/curated-resources.jsonl"     # written by seed-curated-library.sh
+PROMOTED_LEDGER="${ARES_HOME_RES}/cognee/curated-promoted.jsonl"    # this script's append-only record
+PROMOTE_PY="${ARES_HOME_RES}/cognee/promote-curated.py"
+CONTAINER="${COGNEE_CONTAINER:-ares-curated-mcp}"
+if [[ -z "${COGNEE_CONTAINER:-}" ]]; then
+  if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "mishkan-curated-mcp" && \
+     ! docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "ares-curated-mcp"; then
+    CONTAINER="mishkan-curated-mcp"
+  fi
+fi
 CTR_CAND="/home/cognee/curated-candidate.json"
 CTR_PY="/home/cognee/promote-curated.py"
 
@@ -57,7 +69,7 @@ fi
 # The write is stateful — the container must be up.
 if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "${CONTAINER}"; then
   echo "error: curated container '${CONTAINER}' not running — bring the stack up first" >&2
-  echo "       (mishkan knowledge-stack up), then re-approve." >&2
+  echo "       (ares knowledge-stack up), then re-approve." >&2
   exit 2
 fi
 [[ -r "$PROMOTE_PY" ]] || { echo "error: promote script missing: $PROMOTE_PY" >&2; exit 2; }

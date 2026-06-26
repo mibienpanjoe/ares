@@ -2,7 +2,7 @@
 """
 skill-discovery-misses — aggregate the router miss log into a tuning report.
 
-Reads ``~/.claude/mishkan/skill-discovery/misses.jsonl`` (one JSON record per
+Reads ``~/.ares/skill-discovery/misses.jsonl`` (one JSON record per
 empty-bucket routing, written by the router) and produces a compact summary:
 
 - Top N task patterns that produced empty buckets, with count + last_seen.
@@ -10,7 +10,7 @@ empty-bucket routing, written by the router) and produces a compact summary:
   router_exception …).
 - Total miss count + observation window.
 
-Used at sprint close (and on demand via ``/mishkan-skills-misses``) to
+Used at sprint close (and on demand via ``/ares-skills-misses``) to
 identify skills whose ``description`` / ``triggers`` need richer keywords so
 the trigger-match catches the recurring patterns. Threshold-tuning happens
 *after* description-tuning has been tried — premature threshold changes chase
@@ -33,7 +33,21 @@ from collections import Counter
 from pathlib import Path
 
 HOME = Path(os.path.expanduser("~"))
-MISSES_PATH = HOME / ".claude" / "mishkan" / "skill-discovery" / "misses.jsonl"
+
+
+def runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    ares = HOME / ".ares"
+    legacy = HOME / ".claude" / "mishkan"
+    if ares.exists() or not legacy.exists():
+        return ares
+    return legacy
+
+
+MISSES_PATH = runtime_home() / "skill-discovery" / "misses.jsonl"
 
 STOPWORDS = {
     "the", "a", "an", "and", "or", "of", "for", "to", "in", "on", "with",

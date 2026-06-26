@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""MISHKAN observability — Phase 1.5 token usage parser.
+"""ARES observability — Phase 1.5 token usage parser.
 
 Parses the Claude Code session JSONL `usage` blocks per assistant turn and
-emits one `token_usage` event into the MISHKAN bus per new turn. Tracks
+emits one `token_usage` event into the ARES bus per new turn. Tracks
 per-session byte offset so each turn is emitted exactly once.
 
 Invoked best-effort from post-tool-observe.sh after the canonical tool_call
@@ -55,9 +55,16 @@ _MODEL_PRICES = {
 
 
 def _state_path(session: str) -> Path:
+    home = Path(os.path.expanduser("~"))
+    runtime_home = (
+        os.environ.get("ARES_HOME")
+        or os.environ.get("MISHKAN_HOME")
+        or (str(home / ".ares") if (home / ".ares").exists() or not (home / ".claude" / "mishkan").exists() else str(home / ".claude" / "mishkan"))
+    )
     state_dir = Path(
-        os.environ.get("MISHKAN_STATE_DIR")
-        or os.path.expanduser("~/.claude/mishkan/state")
+        os.environ.get("ARES_STATE_DIR")
+        or os.environ.get("MISHKAN_STATE_DIR")
+        or str(Path(runtime_home) / "state")
     )
     state_dir.mkdir(parents=True, exist_ok=True)
     return state_dir / f"usage-offset-{session}.txt"

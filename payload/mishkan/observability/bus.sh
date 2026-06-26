@@ -7,7 +7,7 @@
 #
 # Usage from a hook script:
 #
-#   source "${MISHKAN_HOME:-$HOME/.claude/mishkan}/observability/bus.sh"
+#   source "${ARES_HOME:-$HOME/.ares}/observability/bus.sh"
 #   bus_emit "$session" "$type" "$tool" "$outcome" '{"k": "v"}'
 #
 # Args (positional, all optional except $1 session and $2 type):
@@ -26,7 +26,17 @@ set -uo pipefail
 
 # Resolve log dir, fail-open if mkdir fails (e.g. read-only FS).
 _bus_log_dir() {
-  local dir="${MISHKAN_LOG_DIR:-$HOME/.claude/mishkan/logs}"
+  local runtime_home
+  if [ -n "${ARES_HOME:-}" ]; then
+    runtime_home="$ARES_HOME"
+  elif [ -n "${MISHKAN_HOME:-}" ]; then
+    runtime_home="$MISHKAN_HOME"
+  elif [ -d "$HOME/.ares" ] || [ ! -d "$HOME/.claude/mishkan" ]; then
+    runtime_home="$HOME/.ares"
+  else
+    runtime_home="$HOME/.claude/mishkan"
+  fi
+  local dir="${ARES_LOG_DIR:-${MISHKAN_LOG_DIR:-${runtime_home}/logs}}"
   mkdir -p "$dir" 2>/dev/null || return 1
   printf '%s' "$dir"
 }

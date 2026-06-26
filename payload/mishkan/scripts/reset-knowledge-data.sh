@@ -7,29 +7,50 @@
 #
 # DESTRUCTIVE and IRREVERSIBLE. Stateful (docker rm / docker exec): a human runs
 # this — never an agent (rule 5 / D-005). Work stores recreate on the next
-# /mishkan-init; memory is session-scoped; curated re-seeds from config.
+# /ares-init; memory is session-scoped; curated re-seeds from config.
 #
-# Usage:  mishkan knowledge reset        (interactive type-to-confirm)
+# Usage:  ares knowledge reset           (interactive type-to-confirm)
 #         bash reset-knowledge-data.sh --yes   (skip the prompt — scripted use)
 #
 # Exit: 0 ok / aborted · 2 environment problem (docker/scripts missing).
 set -euo pipefail
 
-MISHKAN="${HOME}/.claude/mishkan"
-PRUNE_PY="${MISHKAN}/cognee/prune-store.py"
-SEED="${MISHKAN}/scripts/seed-curated-library.sh"
-MEM_CONTAINER="${COGNEE_MEMORY_CONTAINER:-mishkan-cognee-mcp}"
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+PRUNE_PY="${ARES_HOME_RES}/cognee/prune-store.py"
+SEED="${ARES_HOME_RES}/scripts/seed-curated-library.sh"
 CTR_PRUNE="/home/cognee/prune-store.py"
 
 command -v docker >/dev/null 2>&1 || { echo "docker required" >&2; exit 2; }
 
-# Inventory what will be destroyed (work stores).
-mapfile -t WORK < <(docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E '^mishkan-work-' || true)
+docker_name_exists() {
+  docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$1"
+}
 
-echo "This RESETS the MISHKAN knowledge layer to a clean baseline:"
+prefer_existing_name() {
+  local primary="$1" legacy="$2"
+  if docker_name_exists "$legacy" && ! docker_name_exists "$primary"; then
+    printf '%s' "$legacy"
+  else
+    printf '%s' "$primary"
+  fi
+}
+
+MEM_CONTAINER="${COGNEE_MEMORY_CONTAINER:-$(prefer_existing_name ares-cognee-mcp mishkan-cognee-mcp)}"
+CURATED_CONTAINER="${COGNEE_CONTAINER:-$(prefer_existing_name ares-curated-mcp mishkan-curated-mcp)}"
+
+# Inventory what will be destroyed (work stores).
+mapfile -t WORK < <(docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E '^(ares|mishkan)-work-' || true)
+
+echo "This RESETS the ARES knowledge layer to a clean baseline:"
 echo "  • wipe ${#WORK[@]} work store(s): ${WORK[*]:-(none)}   (containers + *_work_data volumes)"
 echo "  • prune cognee-memory (${MEM_CONTAINER}) — all session memory"
-echo "  • re-seed curated (${COGNEE_CONTAINER:-mishkan-curated-mcp}) from config/curated-library.yaml"
+echo "  • re-seed curated (${CURATED_CONTAINER}) from config/curated-library.yaml"
 echo "    (the seed is prune-then-write: curated is reset to the stable ~96-node baseline)"
 echo
 if [[ "${1:-}" != "--yes" ]]; then
@@ -67,4 +88,4 @@ else
 fi
 
 echo
-echo "✓ knowledge layer reset to the stable baseline. Work stores recreate on the next /mishkan-init."
+echo "✓ knowledge layer reset to the stable baseline. Work stores recreate on the next /ares-init."

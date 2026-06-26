@@ -87,6 +87,8 @@ class SessionState:
     session_id: str
     project: str
     started: str
+    runtime: str = "claude"
+    jsonl_path: Optional[str] = None
     agents_active: dict[str, AgentState] = field(default_factory=dict)
     workflows_active: dict[str, WorkflowState] = field(default_factory=dict)
     recent_events: deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=200))
@@ -239,7 +241,10 @@ class HarnessState:
                 if etype == "session_start":
                     # session_discover has just confirmed this session is alive.
                     self._confirmed_alive.add(session_id)
-                    self._ensure_session(session_id, event.get("project") or "unknown")
+                    sess = self._ensure_session(session_id, event.get("project") or "unknown")
+                    payload = event.get("payload") or {}
+                    sess.runtime = event.get("runtime") or payload.get("runtime") or sess.runtime
+                    sess.jsonl_path = payload.get("jsonl_path") or sess.jsonl_path
                     self._flush_pending(session_id)
                 elif etype == "session_stop":
                     # Busy-guard handled below; fall through.
@@ -257,7 +262,10 @@ class HarnessState:
                     except ValueError:
                         pass
                     self._confirmed_alive.add(session_id)
-                    self._ensure_session(session_id, event.get("project") or "unknown")
+                    sess = self._ensure_session(session_id, event.get("project") or "unknown")
+                    payload = event.get("payload") or {}
+                    sess.runtime = event.get("runtime") or payload.get("runtime") or sess.runtime
+                    sess.jsonl_path = payload.get("jsonl_path") or sess.jsonl_path
                     self._flush_pending(session_id)
                     # fall through (NO return) so this event is applied below
                 elif session_id not in self._confirmed_alive:
@@ -270,7 +278,10 @@ class HarnessState:
                     # nested JSONL files. The _stopped_recently tombstone check
                     # above still blocks resurrection of recently-stopped sessions.
                     self._confirmed_alive.add(session_id)
-                    self._ensure_session(session_id, event.get("project") or "unknown")
+                    sess = self._ensure_session(session_id, event.get("project") or "unknown")
+                    payload = event.get("payload") or {}
+                    sess.runtime = event.get("runtime") or payload.get("runtime") or sess.runtime
+                    sess.jsonl_path = payload.get("jsonl_path") or sess.jsonl_path
                     self._flush_pending(session_id)
                     # Fall through (NO return) so this event reaches the
                     # dispatch below and agents_active / tokens / etc. populate
@@ -617,6 +628,8 @@ def _session_dict(s: SessionState) -> dict[str, Any]:
     return {
         "session_id": s.session_id,
         "project": s.project,
+        "runtime": s.runtime,
+        "jsonl_path": s.jsonl_path,
         "started": s.started,
         "agents_active": {k: _dc_to_dict(v) for k, v in s.agents_active.items()},
         "workflows_active": {k: _workflow_dict(v) for k, v in s.workflows_active.items()},

@@ -67,14 +67,16 @@ class SkillsTab(Container):
         for s in self._skills:
             groups[s.get("origin") or "?"][s.get("category") or "?"].append(s)
         origin_labels = {
+            "ares":    "ARES craft",
             "mishkan": "MISHKAN craft",
+            "portable": "Portable skills",
             "user":    "Community",
             "plugin":  "Plugins",
             "project": "Project-local",
             "builtin": "Built-in",
         }
-        # Render in fixed order so MISHKAN is always first.
-        for origin in ("mishkan", "user", "plugin", "project", "builtin"):
+        # Render in fixed order so the runtime skills are always first.
+        for origin in ("ares", "mishkan", "portable", "user", "plugin", "project", "builtin"):
             if origin not in groups:
                 continue
             cats = groups[origin]

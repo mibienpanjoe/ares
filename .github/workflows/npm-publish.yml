@@ -1,13 +1,14 @@
 name: Publish to npm
 
-# Triggered ONLY when a GitHub Release is published — never on a raw tag push.
-# This is the manual gate that prevents accidental npm publish from an
-# ad-hoc `git push --tags`. To publish: create a tag, then explicitly
-# publish a GitHub Release for that tag (release-draft.yml creates the
-# draft for you on every tag push).
+# Triggered by version tags only. Release flow:
+#   npm version patch|minor|major
+#   git push origin main --follow-tags
+#
+# The package is published to npm with the default `latest` dist-tag.
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 jobs:
   publish-npm:
@@ -16,22 +17,21 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org/
-      - name: Verify package.json version matches release tag
+      - name: Verify package.json version matches tag
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
-          TAG_VERSION="${{ github.event.release.tag_name }}"
+          TAG_VERSION="${GITHUB_REF_NAME}"
           TAG_VERSION="${TAG_VERSION#v}"
           if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
             echo "::error::package.json version ($PKG_VERSION) does not match release tag ($TAG_VERSION)"
             exit 1
           fi
       - run: npm install
-      - run: npm publish
+      - run: npm run check
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

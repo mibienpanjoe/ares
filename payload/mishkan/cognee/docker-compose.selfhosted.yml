@@ -18,7 +18,7 @@
 services:
   ollama:
     image: ollama/ollama:${OLLAMA_VERSION:?set OLLAMA_VERSION in .env to a pinned tag}
-    container_name: mishkan-ollama
+    container_name: ${OLLAMA_CONTAINER:-ares-ollama}
     restart: unless-stopped
     volumes:
       - ollama_models:/root/.ollama
@@ -42,7 +42,7 @@ services:
 
   neo4j:
     image: neo4j:5.26
-    container_name: mishkan-cognee-neo4j
+    container_name: ${COGNEE_NEO4J_CONTAINER:-ares-cognee-neo4j}
     restart: unless-stopped
     environment:
       NEO4J_AUTH: ${GRAPH_DATABASE_USERNAME:?}/${GRAPH_DATABASE_PASSWORD:?}
@@ -105,7 +105,7 @@ services:
 
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: mishkan-cognee-pg
+    container_name: ${COGNEE_PG_CONTAINER:-ares-cognee-pg}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:?}

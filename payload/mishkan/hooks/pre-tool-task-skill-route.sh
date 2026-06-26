@@ -30,7 +30,7 @@
 #     subagent prompt with "no skills found" noise.
 #   - Fail-open on every error path: no output, exit 0, never block the
 #     Task call.
-#   - Trust marker preserved: non-mishkan entries already get a
+#   - Trust marker preserved: non-runtime entries already get a
 #     "(community)" suffix from the router's injection renderer.
 #
 # Wired in payload/install/settings.hooks.json under PreToolUse with
@@ -43,13 +43,19 @@ command -v jq >/dev/null 2>&1 || exit 0
 # python3 absent -> noop, same reason.
 command -v python3 >/dev/null 2>&1 || exit 0
 
-MISHKAN_HOME_RES="${MISHKAN_HOME:-$HOME/.claude/mishkan}"
-ROUTER="${MISHKAN_HOME_RES}/scripts/skill-discovery-router.py"
+runtime_home() {
+  if [ -n "${ARES_HOME:-}" ]; then printf '%s' "$ARES_HOME"; return; fi
+  if [ -n "${MISHKAN_HOME:-}" ]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [ -d "$HOME/.ares" ] || [ ! -d "$HOME/.claude/mishkan" ]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+ROUTER="${ARES_HOME_RES}/scripts/skill-discovery-router.py"
 [ -f "$ROUTER" ] || exit 0
 
 # Source the observability bus (fail-open if not installed).
 # shellcheck disable=SC1091
-source "${MISHKAN_HOME_RES}/observability/bus.sh" 2>/dev/null || true
+source "${ARES_HOME_RES}/observability/bus.sh" 2>/dev/null || true
 
 INPUT="$(cat)"
 tool="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)"

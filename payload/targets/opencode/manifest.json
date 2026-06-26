@@ -1,0 +1,9 @@
+{
+  "id": "opencode",
+  "instructionFile": "AGENTS.md",
+  "agentFormat": "markdown",
+  "commandSurface": "slash-command",
+  "hookSurface": "plugin",
+  "initInvocation": "/ares-init",
+  "initUsage": "`/ares-init`"
+}

@@ -1,4 +1,4 @@
-# MISHKAN — per-project cognee work store (decision D-012).
+# ARES — per-project cognee work store (decision D-012).
 #
 # Each project gets its OWN physically-separate cognee-mcp instance with an
 # embedded Ladybug graph + LanceDB vector + SQLite relational store. Isolation
@@ -6,7 +6,7 @@
 # graph file), NOT by cognee's datasets= filter (D-012 §Why: filter is advisory-
 # only with ENABLE_BACKEND_ACCESS_CONTROL=false; see issue #1023).
 #
-# Reuses the already-patched mishkan/cognee-mcp image — DO NOT rebuild from a
+# Reuses the already-patched ares/cognee-mcp image — DO NOT rebuild from a
 # host source checkout. The recall fix (cognee-mcp-recall-user.py + core-align)
 # is baked into that image. Ref: decision D-012, amendment 2026-06-10.
 #
@@ -21,15 +21,15 @@
 #   docker compose \
 #     -f docker-compose.work.yml \
 #     -f docker-compose.hardening.yml \
-#     -p mishkan-work-${WORK_PROJECT} \
+#     -p ares-work-${WORK_PROJECT} \
 #     up -d
 #
 # The ensure-work-store.sh script wraps this with port assignment, health-wait,
 # and idempotency — prefer that over calling compose directly.
 #
 # Ollama (embeddings): the cognee-mcp container joins the EXTERNAL network
-# mishkan-cognee_cognee_net (created by docker-compose.selfhosted.yml) so it can
-# reach mishkan-ollama for embedding inference. The shared Ollama is model data,
+# ares-cognee_cognee_net (created by docker-compose.selfhosted.yml) so it can
+# reach ares-ollama for embedding inference. The shared Ollama is model data,
 # not project data — sharing it does not breach the isolation boundary. If Ollama
 # is not running, cognee will fall back to whatever LLM_PROVIDER / LLM_API_KEY
 # is set in .env (a cloud provider), or fail at cognify time with a clear error.
@@ -52,12 +52,12 @@
 # healthcheck, hardening overlay re-applied on every recreate (see Dockerfile
 # comment in docker-compose.hardening.yml).
 
-name: mishkan-work-${WORK_PROJECT:?set WORK_PROJECT to a project slug}
+name: ${WORK_COMPOSE_PROJECT:-ares-work-${WORK_PROJECT:?set WORK_PROJECT to a project slug}}
 
 services:
   cognee-mcp:
-    image: mishkan/cognee-mcp:${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
-    container_name: mishkan-work-${WORK_PROJECT:?set WORK_PROJECT to a project slug}
+    image: ${COGNEE_MCP_IMAGE:-ares/cognee-mcp}:${COGNEE_MCP_REF:?set COGNEE_MCP_REF in .env to a pinned cognee git tag/commit}
+    container_name: ${WORK_CONTAINER:-ares-work-${WORK_PROJECT:?set WORK_PROJECT to a project slug}}
     restart: unless-stopped
 
     # .env supplies LLM/embedding credentials (SOPS-managed by the engineer).
@@ -135,16 +135,16 @@ services:
     volumes:
       # Per-project named volume mounted at the Dockerfile-owned .cognee_system
       # path (writable by the non-root cognee user). The compose project name
-      # (mishkan-work-<slug>) is prepended by Docker → mishkan-work-<slug>_work_data.
+      # (ares-work-<slug>) is prepended by Docker → ares-work-<slug>_work_data.
       # This volume is the physical isolation boundary: each project's graph,
       # vector, and relational files live here and are never visible to others.
       - work_data:/app/cognee-mcp/.cognee_system
 
     networks:
-      # Join the shared network so this container can reach mishkan-ollama for
+      # Join the shared network so this container can reach ares-ollama for
       # embedding inference. This network is created by docker-compose.selfhosted.yml
-      # (name: mishkan-cognee, network alias cognee_net → external name
-      # mishkan-cognee_cognee_net). If the selfhosted stack is not running, bring
+      # (name: ares-cognee, network alias cognee_net → external name
+      # ares-cognee_cognee_net). If the selfhosted stack is not running, bring
       # it up first or point the embedding config at a cloud provider via .env.
       - cognee_shared_net
 
@@ -179,13 +179,13 @@ services:
 volumes:
   work_data:
     # Unnamed here; Docker prefixes the compose project name automatically:
-    #   mishkan-work-<WORK_PROJECT>_work_data
+    #   ares-work-<WORK_PROJECT>_work_data
     # Each project therefore owns a distinct, unambiguously-named volume.
 
 networks:
   cognee_shared_net:
-    # External: created by the selfhosted stack (mishkan-cognee project,
-    # network cognee_net). Join it to reach mishkan-ollama for embeddings.
+    # External: created by the selfhosted stack (ares-cognee project,
+    # network cognee_net). Join it to reach ares-ollama for embeddings.
     # Do NOT re-declare subnet here — Docker will reject a conflicting config.
     external: true
-    name: mishkan-cognee_cognee_net
+    name: ${COGNEE_WORK_NETWORK:-ares-cognee_cognee_net}

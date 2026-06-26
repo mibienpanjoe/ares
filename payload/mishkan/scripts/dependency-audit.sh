@@ -9,10 +9,16 @@
 # dependency-audit skill turns it into a coordinated, vetted update plan.
 set -uo pipefail
 
-MISHKAN="${HOME}/.claude/mishkan"
-REG="${MISHKAN}/config/projects.yaml"
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+REG="${ARES_HOME_RES}/config/projects.yaml"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
-OUT="${MISHKAN}/logs/dep-audit-${TS}.json"
+OUT="${ARES_HOME_RES}/logs/dep-audit-${TS}.json"
 
 command -v python3 >/dev/null 2>&1 || { echo "python3 required" >&2; exit 1; }
 [ -f "$REG" ] || { echo "project registry not found: $REG" >&2; exit 1; }
@@ -41,7 +47,7 @@ def expand(p):
 # Resolve project roots portably: explicit override > discovery under workspace.
 roots = [expand(r) for r in (reg.get("project_roots") or []) if r]
 if not roots:
-    ws = os.environ.get("MISHKAN_WORKSPACE") or expand(reg.get("workspace_root") or "")
+    ws = os.environ.get("ARES_WORKSPACE") or os.environ.get("MISHKAN_WORKSPACE") or expand(reg.get("workspace_root") or "")
     if not ws:
         ws = os.path.dirname(os.getcwd())  # cwd's parent
     # discover git repositories under the workspace root (one level of nesting)

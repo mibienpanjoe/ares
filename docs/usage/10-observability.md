@@ -1,30 +1,35 @@
 # 10 — Observability
 
 > Goal: see every running agent, workflow, tool call, hook decision, token
-> spend, and MCP/Cognee status across all your MISHKAN sessions in real
+> spend, and MCP/Cognee status across all your ARES sessions in real
 > time — in a single Textual TUI. Two `uv tool`-installable Python packages.
 
 ## What it is
 
 Two artefacts that ship as one stack:
 
-- **`mishkan-watchd`** — Python asyncio daemon. Aggregates the Phase 1+1.5
-  event bus (`~/.claude/mishkan/logs/<session>.jsonl`) plus 6 filesystem /
+- **`ares-watchd`** — Python asyncio daemon. Aggregates the Phase 1+1.5
+  event bus (`~/.ares/logs/<session>.jsonl`) plus 6 filesystem /
   network sources into a single in-memory snapshot. Exposes it on a UNIX
   socket as a snapshot + delta + heartbeat NDJSON stream.
-- **`mishkan-watch`** — Textual TUI client. Connects to the daemon socket,
+- **`ares-watch`** — Textual TUI client. Connects to the daemon socket,
   renders 8 tabs and a permanent status bar, with a project filter on `p`.
 
 See the design doc [`docs/design/MISHKAN_observability.md`](../design/MISHKAN_observability.md)
 for the full event schema, daemon architecture, and TUI layout.
 
+Claude emits directly from lifecycle hooks. Codex maps `PreToolUse` and
+`PostToolUse` into the same bus, including per-file `apply_patch` events.
+OpenCode's global `ares-tool-hooks.js` plugin adapts
+`tool.execute.before/after` to that shared schema.
+
 ## Install
 
-Auto-installed during `npx mishkan-harness install` (phase 7) — the installer
+Auto-installed during `npx ares-harness install` (phase 7) — the installer
 prompts once. Or run standalone any time:
 
 ```bash
-npx mishkan-harness observability install
+npx ares-harness observability install
 ```
 
 Requirements: `uv` (https://astral.sh/uv) and Python 3.11+. If `uv` is
@@ -37,19 +42,19 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Manual install (equivalent to what the installer does):
 
 ```bash
-uv tool install --from ~/.claude/mishkan/observability/watchd mishkan-watchd
-uv tool install --from ~/.claude/mishkan/observability/watch  mishkan-watch
+uv tool install --from ~/.ares/observability/watchd ares-watchd
+uv tool install --from ~/.ares/observability/watch  ares-watch
 ```
 
 ## Run
 
 Single command — the TUI auto-starts the daemon if its socket isn't
 present, waits up to 8 s for the bind, then opens. The daemon survives
-the TUI's exit so a second `mishkan-watch` (e.g. in another tmux pane)
+the TUI's exit so a second `ares-watch` (e.g. in another tmux pane)
 connects instantly.
 
 ```bash
-mishkan-watch
+ares-watch
 ```
 
 Power users who want to manage the daemon explicitly (separate logs,
@@ -57,30 +62,30 @@ custom socket path, attached over SSH from another host) can opt out:
 
 ```bash
 # terminal 1 — daemon, foreground (logs in your face)
-mishkan-watchd start
+ares-watchd start
 
 # terminal 2 — TUI; refuses to fork the daemon
-mishkan-watch --no-autostart
+ares-watch --no-autostart
 ```
 
 Stop the daemon when you're done:
 
 ```bash
-mishkan-watchd stop
+ares-watchd stop
 ```
 
 Daemon lifecycle is always manual. Auto-start follow-up:
 
 ```bash
-mishkan-watchd install-service     # writes ~/.config/systemd/user/mishkan-watchd.service
-systemctl --user enable --now mishkan-watchd.service
+ares-watchd install-service        # writes ~/.config/systemd/user/ares-watchd.service
+systemctl --user enable --now ares-watchd.service
 ```
 
 Quick state check:
 
 ```bash
-mishkan-watchd status              # connect, print current snapshot as JSON
-mishkan-watchd stop                # SIGTERM via the PID file
+ares-watchd status                 # connect, print current snapshot as JSON
+ares-watchd stop                   # SIGTERM via the PID file
 ```
 
 ## The 8 tabs
@@ -122,7 +127,7 @@ Six daemon sources, each independent and fail-open:
 
 | Source | Cadence | What |
 |---|---|---|
-| `bus_tail` | streaming (inotify) | every line of `~/.claude/mishkan/logs/*.jsonl` (Phase 1+1.5 events) |
+| `bus_tail` | streaming (inotify) | every line of `~/.ares/logs/*.jsonl` (Phase 1+1.5 events) |
 | `session_discover` | 10 s | active Claude Code sessions (mtime < 60 s) |
 | `worktree_poll` | 5 s | `git worktree list --porcelain` per known project |
 | `mcp_probe` | 60 s | discover MCPs from `~/.claude.json` + `.mcp.json` + `mcp-needs-auth-cache.json`; probe each by HTTP/TCP |
@@ -146,13 +151,13 @@ End     resume auto-scroll
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| TUI shows everything empty | Daemon not running, or socket missing | `pgrep -af mishkan-watchd`; if absent: `mishkan-watchd start` |
-| Status bar says `daemon offline: …` | Daemon process died or `~/.claude/mishkan/run/watch.sock` was unlinked | Restart the daemon; the TUI auto-reconnects |
-| Cognee cards show `0` or `?` nodes | Neo4j HTTP credentials missing or wrong | Verify `~/.claude/mishkan/cognee/.env` has `GRAPH_DATABASE_PASSWORD`; curated store reads `.env.curated` (different password). |
-| MCP table empty | No MCP configs found | Confirm `~/.claude.json` has projects with `.mcp.json`; or initialise a project with `/mishkan-init` to seed cognee MCP entries |
+| TUI shows everything empty | Daemon not running, or socket missing | `pgrep -af ares-watchd`; if absent: `ares-watchd start` |
+| Status bar says `daemon offline: …` | Daemon process died or `~/.ares/run/watch.sock` was unlinked | Restart the daemon; the TUI auto-reconnects |
+| Cognee cards show `0` or `?` nodes | Neo4j HTTP credentials missing or wrong | Verify `~/.ares/cognee/.env` has `GRAPH_DATABASE_PASSWORD`; curated store reads `.env.curated` (different password). |
+| MCP table empty | No MCP configs found | Confirm the project has target-native MCP config, or initialise it with `ares project init --target all`; then restart the runtime session. |
 | Agent history empty for a subagent | Subagent ran BEFORE the daemon started (`subagent_tail` seeks to end-of-file) | Launch a fresh Task — its tool calls will populate the history live |
 | TUI feels laggy under load | Event bursts exceeding render budget | Already throttled in v0.2.0 (status bar at 500 ms; ACTIVE re-renders only on structural events); restart the TUI if it inherited an old build |
-| Bytes diff between source & install | `uv tool install --force` reuses cache | `uv tool uninstall mishkan-watch mishkan-watchd && uv cache clean mishkan-watch mishkan-watchd && uv tool install --from <path> …` |
+| Bytes diff between source & install | `uv tool install --force` reuses cache | `uv tool uninstall ares-watch ares-watchd && uv cache clean ares-watch ares-watchd && uv tool install --from <path> …` |
 
 ## What it is NOT
 

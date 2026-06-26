@@ -10,17 +10,31 @@
 # seed — run before real session knowledge accumulates.
 set -euo pipefail
 
-MISHKAN="${HOME}/.claude/mishkan"
-LIB="${MISHKAN}/config/curated-library.yaml"
-OUT="${MISHKAN}/cognee/curated-resources.jsonl"
-INGEST="${MISHKAN}/cognee/ingest-curated.py"
-CONTAINER="${COGNEE_CONTAINER:-mishkan-curated-mcp}"
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+LIB="${ARES_HOME_RES}/config/curated-library.yaml"
+OUT="${ARES_HOME_RES}/cognee/curated-resources.jsonl"
+INGEST="${ARES_HOME_RES}/cognee/ingest-curated.py"
+CONTAINER="${COGNEE_CONTAINER:-ares-curated-mcp}"
+if [[ -z "${COGNEE_CONTAINER:-}" ]]; then
+  if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "mishkan-curated-mcp" && \
+     ! docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "ares-curated-mcp"; then
+    CONTAINER="mishkan-curated-mcp"
+  else
+    CONTAINER="ares-curated-mcp"
+  fi
+fi
 CTR_JSONL="/home/cognee/curated-resources.jsonl"
 CTR_INGEST="/home/cognee/ingest-curated.py"
 
 command -v python3 >/dev/null 2>&1 || { echo "python3 required" >&2; exit 1; }
 [ -f "$LIB" ] || { echo "curated library not found: $LIB" >&2; exit 1; }
-mkdir -p "${MISHKAN}/cognee"
+mkdir -p "${ARES_HOME_RES}/cognee"
 
 # Convert YAML → JSONL of CuratedResource nodes (ontology type=CuratedResource).
 python3 - "$LIB" "$OUT" <<'PY'

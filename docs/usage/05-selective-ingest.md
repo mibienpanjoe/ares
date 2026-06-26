@@ -6,7 +6,7 @@
 ## The contract
 
 **Nothing enters the work graph unless tagged or explicitly invoked.** This is
-the harness-wide rule that the `mishkan-ingest` skill enforces. It solves two
+the harness-wide rule behind `ares knowledge ingest`. It solves two
 real problems hit during the build (commit `6213611`):
 
 - **PII bleed.** Bulk-ingesting `docs/` pulls in incident reports that contain
@@ -26,23 +26,24 @@ Add a YAML frontmatter block at the very top of a doc:
 
 ```yaml
 ---
-mishkan: ingest
+ares: ingest
 ---
 
 # Doc title
 …
 ```
 
-That single key is enough. Any other frontmatter (`author`, `date`, etc.)
-co-exists fine. The tag means *"this doc is part of the project's persistent
-memory"*. The skill default mode walks `./docs/` and ingests every tagged file.
+That single key is enough. Existing `mishkan: ingest` tags are still accepted
+as a legacy alias. Any other frontmatter (`author`, `date`, etc.) co-exists
+fine. The tag means *"this doc is part of the project's persistent memory"*.
+The skill default mode walks `./docs/` and ingests every tagged file.
 
 ### 2. Explicit paths (ad-hoc pull)
 
 Skip the tag, name the files:
 
 ```bash
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh docs/SECURITY.md docs/ROADMAP.md
+ares knowledge ingest docs/SECURITY.md docs/ROADMAP.md
 ```
 
 Useful for one-off pulls or when the doc lives outside the standard `docs/`
@@ -52,23 +53,23 @@ tree.
 
 ```bash
 # Default — walk ./docs/ for tagged docs
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only
+ares knowledge ingest --tagged-only
 
 # Explicit files (no tag required)
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh path/to/a.md path/to/b.md
+ares knowledge ingest path/to/a.md path/to/b.md
 
 # Override the dataset name (default is basename of $PWD)
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --dataset=research docs/research.md
+ares knowledge ingest --dataset=research docs/research.md
 
 # Show inline help
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --help
+ares knowledge ingest --help
 ```
 
 ## What the skill runs
 
 1. **Selects files.** Tagged-only walks `./docs/` (or any directory you pass)
-   and keeps only `.md` files whose YAML frontmatter contains `mishkan: ingest`.
-   Explicit paths skip the filter.
+   and keeps only `.md` files whose YAML frontmatter contains `ares: ingest`
+   or legacy `mishkan: ingest`. Explicit paths skip the filter.
 2. **Stages** the files into the work cognee-mcp container at
    `/home/cognee/ingest_buf/`.
 3. **Runs `cognee.add(files, dataset_name=<project>)`** — registers and chunks
@@ -88,7 +89,7 @@ By default the dataset is named after the project directory:
 
 ```bash
 cd ~/code/aiobi-mail
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only
+ares knowledge ingest --tagged-only
 # → ingests into dataset "aiobi-mail" in the work store
 ```
 
@@ -100,7 +101,7 @@ Override with `--dataset=<name>` when:
 
 The skill **never** writes to `cognee-curated`. The curated store is read-only
 in normal use; only the harness's `seed-curated-library.sh` writes to it, and
-that targets `mishkan-curated-mcp` explicitly.
+that targets `ares-curated-mcp` explicitly.
 
 ## A worked example
 
@@ -112,15 +113,15 @@ cd ~/code/aiobi-mail
 # tag SECURITY.md and ROADMAP.md
 for f in docs/SECURITY.md docs/ROADMAP.md; do
   if ! head -1 "$f" | grep -qx '---'; then
-    printf '%s\n%s\n%s\n\n' '---' 'mishkan: ingest' '---' | cat - "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    printf '%s\n%s\n%s\n\n' '---' 'ares: ingest' '---' | cat - "$f" > "$f.tmp" && mv "$f.tmp" "$f"
   fi
 done
 
 # run the skill
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only
+ares knowledge ingest --tagged-only
 
 # verify in the graph
-docker exec mishkan-cognee-pg psql -U cognee -d cognee_db -tc \
+docker exec ares-cognee-pg psql -U cognee -d cognee_db -tc \
   "SELECT d.name, count(dd.data_id) AS items
    FROM datasets d LEFT JOIN dataset_data dd ON dd.dataset_id=d.id
    WHERE d.name='aiobi-mail' GROUP BY d.name;"
@@ -149,7 +150,7 @@ The skill is additive. To refresh a doc that's already been cognified:
            if d.name == "<project>": await delete_dataset(d)
    asyncio.run(m())
    ```
-3. Rerun `mishkan-ingest.sh --tagged-only`.
+3. Rerun `ares knowledge ingest --tagged-only`.
 
 That removes the relational dataset records cleanly. Note: with cognee access
 control off, deleting a dataset does **not** remove the graph nodes — for a

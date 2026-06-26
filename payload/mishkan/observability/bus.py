@@ -1,4 +1,4 @@
-"""MISHKAN observability bus — Python emitter (stdlib only).
+"""ARES observability bus — Python emitter (stdlib only).
 
 Same contract as bus.sh: append-only NDJSON, fail-open on every error path.
 Use this from Python-based hooks (e.g. model-route.py) to avoid shelling out.
@@ -17,9 +17,13 @@ from typing import Any, Optional
 
 def _log_dir() -> Optional[Path]:
     """Resolve and create the log directory. None on failure."""
-    base = os.environ.get("MISHKAN_LOG_DIR") or os.path.join(
-        os.path.expanduser("~"), ".claude", "mishkan", "logs"
+    home = Path(os.path.expanduser("~"))
+    runtime_home = (
+        os.environ.get("ARES_HOME")
+        or os.environ.get("MISHKAN_HOME")
+        or (str(home / ".ares") if (home / ".ares").exists() or not (home / ".claude" / "mishkan").exists() else str(home / ".claude" / "mishkan"))
     )
+    base = os.environ.get("ARES_LOG_DIR") or os.environ.get("MISHKAN_LOG_DIR") or str(Path(runtime_home) / "logs")
     try:
         p = Path(base)
         p.mkdir(parents=True, exist_ok=True)

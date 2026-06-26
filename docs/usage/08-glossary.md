@@ -131,11 +131,11 @@ on the next delegation, and win over the shipped defaults above.
 | **Cognify** | the LLM-heavy step that extracts entities + relationships from a document and writes them into the graph. |
 | **Memify** | the enrichment step that runs after cognify and embeds the triplet/edge layer into the vector store. |
 | **Search** | cognee's retrieval, exposed via MCP. Always pass `datasets=[...]` to scope it. |
-| **Work store** | a per-project cognee-mcp container running an embedded Ladybug graph (no Neo4j), on its own port and volume (`mishkan-work-<slug>`). Provisioned by `ensure-work-store.sh` at `/mishkan-init`. Reached via the `cognee` MCP alias. NOT port `:7777`. |
+| **Work store** | a per-project cognee-mcp container running an embedded Ladybug graph (no Neo4j), on its own port and volume (`ares-work-<slug>`). Provisioned by `ares project-work-store up` after `/ares-init` or project wiring. NOT port `:7777`. |
 | **Curated store** | the cross-project reference cognee box (`cognee-curated`, `:7730`). Read-mostly. |
 | **`cognee-memory` (`:7777`)** | the kept Neo4j-backed cognee box repurposed (D-012) to hold only `claude_code_memory` — shared per-client session memory. Reached via the `cognee-memory` MCP alias. |
 | **`claude_code_memory`** | the per-client memory dataset held in the `cognee-memory` (`:7777`) box. Shared across all projects; never prune it. |
-| **`mishkan: ingest`** | the YAML frontmatter tag that marks a doc as eligible for the work store. |
+| **`ares: ingest`** | the YAML frontmatter tag that marks a doc as eligible for the work store. Legacy `mishkan: ingest` tags still work. |
 | **Throttle** | the in-process LLM rate limiter (`LLM_RATE_LIMIT_*` in `.env`). Per-minute only; does not help with daily caps. |
 | **Asymmetric delegation** | the rule that stateful ops (`git push`, `ssh`, `sudo`, production `docker exec`, schema migrations, log forensics) stop at the engineer's hands — never executed by an agent. |
 

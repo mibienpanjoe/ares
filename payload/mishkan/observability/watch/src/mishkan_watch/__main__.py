@@ -1,15 +1,15 @@
-"""mishkan-watch CLI entry point.
+"""ares-watch CLI entry point.
 
-UX contract: ``mishkan-watch`` is a single command. If the daemon isn't
+UX contract: ``ares-watch`` is a single command. If the daemon isn't
 already running we fork it as a child process, wait briefly for its
 socket to appear, then launch the TUI. When this process forked the
 daemon, quitting the TUI with ``q`` sends SIGTERM to that daemon — no
 lingering processes. A daemon that was already running before the TUI
 launched is left alive on quit (other clients may be using it).
-``mishkan-watchd stop`` remains the explicit shutdown for pre-existing
+``ares-watchd stop`` remains the explicit shutdown for pre-existing
 daemons.
 
-The dual-terminal flow (one for ``mishkan-watchd start``, one for the
+The dual-terminal flow (one for ``ares-watchd start``, one for the
 TUI) still works for power users — pass ``--no-autostart`` and the
 client refuses to manage the daemon.
 """
@@ -26,7 +26,20 @@ import time
 from pathlib import Path
 
 
-DEFAULT_SOCKET = Path(os.path.expanduser("~/.claude/mishkan/run/watch.sock"))
+def _runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    home = Path(os.path.expanduser("~"))
+    ares = home / ".ares"
+    legacy = home / ".claude" / "mishkan"
+    if ares.exists() or not legacy.exists():
+        return ares
+    return legacy
+
+
+DEFAULT_SOCKET = _runtime_home() / "run" / "watch.sock"
 WATCHD_BOOT_TIMEOUT_S = 8.0
 WATCHD_BOOT_POLL_MS = 100
 
@@ -93,21 +106,21 @@ def _ensure_daemon(
 
     if not allow_autostart:
         print(
-            "mishkan-watch: daemon socket not found and --no-autostart was "
-            "passed.\n  Start the daemon manually:  mishkan-watchd start",
+            "ares-watch: daemon socket not found and --no-autostart was "
+            "passed.\n  Start the daemon manually:  ares-watchd start",
             file=sys.stderr,
         )
         return 1, None
-    watchd = shutil.which("mishkan-watchd")
+    watchd = shutil.which("ares-watchd") or shutil.which("mishkan-watchd")
     if not watchd:
         print(
-            "mishkan-watch: daemon socket not found and `mishkan-watchd` is "
+            "ares-watch: daemon socket not found and `ares-watchd` is "
             "not on PATH.\n  Install the observability stack:\n"
-            "    npx mishkan-harness observability install",
+            "    npx ares-harness observability install",
             file=sys.stderr,
         )
         return 1, None
-    print("mishkan-watch: starting daemon …", file=sys.stderr)
+    print(f"ares-watch: starting daemon via {Path(watchd).name} …", file=sys.stderr)
     # Detached child — survives this process. stdout/stderr go to /dev/null
     # so the TUI doesn't get polluted by daemon log lines.
     try:
@@ -120,7 +133,7 @@ def _ensure_daemon(
             close_fds=True,
         )
     except OSError as e:
-        print(f"mishkan-watch: failed to fork daemon: {e}", file=sys.stderr)
+        print(f"ares-watch: failed to fork daemon: {e}", file=sys.stderr)
         return 1, None
     owned_pid = proc.pid
     # Poll for socket. Bounded; the daemon binds the socket within the
@@ -132,9 +145,9 @@ def _ensure_daemon(
             return 0, owned_pid
         time.sleep(WATCHD_BOOT_POLL_MS / 1000)
     print(
-        f"mishkan-watch: daemon socket {socket_path} did not appear within "
+        f"ares-watch: daemon socket {socket_path} did not appear within "
         f"{WATCHD_BOOT_TIMEOUT_S:.0f} s.\n  Check daemon logs:  "
-        "mishkan-watchd status",
+        "ares-watchd status",
         file=sys.stderr,
     )
     return 1, owned_pid
@@ -142,8 +155,8 @@ def _ensure_daemon(
 
 def cli(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="mishkan-watch",
-        description="MISHKAN observability TUI. Auto-starts the daemon "
+        prog=Path(sys.argv[0]).name or "ares-watch",
+        description="ARES observability TUI. Auto-starts the daemon "
                     "if it isn't running.",
     )
     p.add_argument("--socket", type=Path, default=DEFAULT_SOCKET,

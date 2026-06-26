@@ -3,3 +3,6 @@ docs/engineer/profile-readable.md
 **/.env
 **/*.enc
 **/secrets/
+**/__pycache__/
+**/*.pyc
+ares-harness-*.tgz

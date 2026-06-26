@@ -29,8 +29,20 @@ from textual.widgets import ListItem, ListView, Static, Tree
 from textual.widgets.tree import TreeNode
 
 
+def _runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    home = Path(os.path.expanduser("~"))
+    if (home / ".ares").exists() or not (home / ".claude" / "mishkan").exists():
+        return home / ".ares"
+    return home / ".claude" / "mishkan"
+
+
 # Locations to scan for installed workflow scripts. First hit wins per name.
 _WORKFLOW_PATHS = [
+    _runtime_home() / "workflows",
     Path.home() / ".claude" / "mishkan" / "workflows",
 ]
 
@@ -43,7 +55,7 @@ def _scan_catalogue() -> list[dict[str, Any]]:
     so a missing one is a malformed workflow — silently skipped.
 
     Repo-mode fallback: walk up from this file looking for
-    payload/mishkan/workflows/ in case mishkan-watch runs from a source
+    payload/mishkan/workflows/ in case ares-watch runs from a source
     checkout without the runtime payload installed.
     """
     paths = list(_WORKFLOW_PATHS)
@@ -307,7 +319,7 @@ class WorkflowsTab(Container):
         elif not self._runs:
             lv.append(ListItem(Static(Text(
                 "(no workflows installed and no runs yet)\n"
-                "Install via `npx mishkan-harness install`,\n"
+                "Install via `npx ares-harness install`,\n"
                 "or run a workflow from the main session.",
                 style="dim italic",
             ))))

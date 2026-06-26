@@ -202,7 +202,7 @@ class KnowledgeTab(Container):
             text.append("  (per-project)\n", style="dim")
             text.append("\n")
             text.append("no per-project store discovered\n", style="dim italic")
-            text.append("run /mishkan-init in a project\n", style="dim italic")
+            text.append("run /ares-init in a project\n", style="dim italic")
             return text
 
         status = entry.get("status") or ("up" if entry.get("up") else "down")

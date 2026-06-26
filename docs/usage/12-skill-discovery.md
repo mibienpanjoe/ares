@@ -17,13 +17,13 @@ discovery layer collapses that tension into a single advisory pass.
 
 | Component | Path | Role |
 |---|---|---|
-| Indexer | `~/.claude/mishkan/scripts/skill-discovery-indexer.py` | Scans every skill root, writes `index.json` |
-| Router | `~/.claude/mishkan/scripts/skill-discovery-router.py` | Reads index, scores skills for a task, emits 3 buckets |
-| Skill | `~/.claude/mishkan/skills/skill-discovery/` | Tells the main session how to invoke + interpret |
+| Indexer | `~/.ares/scripts/skill-discovery-indexer.py` | Scans every skill root, writes `index.json` |
+| Router | `~/.ares/scripts/skill-discovery-router.py` | Reads index, scores skills for a task, emits 3 buckets |
+| Skill | `~/.ares/skills/skill-discovery/` | Tells the main session how to invoke + interpret |
 | `/skills` | `~/.claude/commands/skills.md` | Run the router on the current task |
-| `/mishkan-skills-reindex` | `~/.claude/commands/mishkan-skills-reindex.md` | Manual full rebuild |
+| `/ares-skills-reindex` | `~/.claude/commands/ares-skills-reindex.md` | Manual full rebuild |
 
-Output lands at `~/.claude/mishkan/skill-discovery/`:
+Output lands at `~/.ares/skill-discovery/`:
 
 ```
 index.json             — universal index, one entry per indexed skill
@@ -36,22 +36,23 @@ indexer-errors.jsonl   — per-skill indexer failures
 The indexer scans these roots **in order**. First hit on a name wins;
 shadowed entries are recorded in `meta.collisions`, not silently dropped:
 
-1. `~/.claude/mishkan/skills/`  — `origin = mishkan`
-2. `~/.claude/skills/`          — `origin = user`
-3. `~/.claude/plugins/*/skills/` — `origin = plugin`
-4. `<repo>/.claude/skills/`     — `origin = project`
+1. `~/.ares/skills/`            — `origin = ares`
+2. `~/.agents/skills/`          — `origin = portable` (shared by Codex/OpenCode)
+3. `~/.claude/skills/`          — `origin = user`
+4. `~/.claude/plugins/*/skills/` — `origin = plugin`
+5. `<repo>/.claude/skills/`     — `origin = project`
 
 ## Indexer commands
 
 ```bash
 # Full rescan (install/update default)
-python3 ~/.claude/mishkan/scripts/skill-discovery-indexer.py --rebuild
+python3 ~/.ares/scripts/skill-discovery-indexer.py --rebuild
 
 # Cheap session-boot sweep (rebuilds only if mtime is newer than last_scan)
-python3 ~/.claude/mishkan/scripts/skill-discovery-indexer.py --stat-only
+python3 ~/.ares/scripts/skill-discovery-indexer.py --stat-only
 
 # Manual rebuild (records manual=True in meta)
-python3 ~/.claude/mishkan/scripts/skill-discovery-indexer.py --manual
+python3 ~/.ares/scripts/skill-discovery-indexer.py --manual
 ```
 
 ## Router usage
@@ -60,7 +61,7 @@ The router accepts a task description on `--task` or on stdin, and emits a
 3-bucket JSON to stdout:
 
 ```bash
-python3 ~/.claude/mishkan/scripts/skill-discovery-router.py \
+python3 ~/.ares/scripts/skill-discovery-router.py \
     --task "Refactor the auth module to use JWT with refresh tokens" \
     --relevant-categories security,backend
 ```
@@ -120,7 +121,7 @@ skills are fine to load once you've read the description.
 |---|---|---|
 | Install / update | `--rebuild` | Full rescan; runs once at install time |
 | Session boot | `--stat-only` | mtime sweep vs `meta.last_scan`; rebuilds only on change |
-| Manual | `--manual` (or `/mishkan-skills-reindex`) | Sets `meta.manual = true` |
+| Manual | `--manual` (or `/ares-skills-reindex`) | Sets `meta.manual = true` |
 | Stale entry at routing time | router drops + warns | `stale_rebuild_needed: true` in output |
 
 ## Failure modes — fail-open
@@ -141,7 +142,7 @@ explicit naming, which is exactly how the harness worked before D-011.
 Wired in two places only:
 
 1. `/skills` slash command — invoke the router on demand.
-2. `mishkan-init` workflow — `SkillRouter` phase runs early; result is
+2. `ares-init` workflow — `SkillRouter` phase runs early; result is
    folded into Bezalel's signoff context as advisory.
 
 Other workflows route through their existing craft skills unchanged.
@@ -149,17 +150,17 @@ Other workflows route through their existing craft skills unchanged.
 ## Phase 2 — automatic discovery
 
 Phase 2 turns "the router exists" into "agents auto-discover skills
-without being asked." Three injection mechanisms ship; the `mishkan-init`
+without being asked." Three injection mechanisms ship; the `ares-init`
 canary above stays in place — Phase 2 adds auto-routing as the dominant
 path everywhere else. All three are fail-open and never block.
 
 ### Mechanism 1 — install-time rebuild
 
 The npm installer runs the indexer in `--rebuild` mode at the end of
-phase 1, so `~/.claude/mishkan/skill-discovery/index.json` is seeded
+phase 1, so `~/.ares/skill-discovery/index.json` is seeded
 before any session boots. A missing `python3` or an indexer error logs a
 warning and the install continues; recover with
-`/mishkan-skills-reindex`.
+`/ares-skills-reindex`.
 
 ### Mechanism 2 — SessionStart drift check
 
@@ -243,10 +244,10 @@ Code merges project settings over user-level ones.
 Every empty-bucket routing lands in `misses.jsonl`. Aggregate it with:
 
 ```bash
-python3 ~/.claude/mishkan/scripts/skill-discovery-misses.py --top 10
+python3 ~/.ares/scripts/skill-discovery-misses.py --top 10
 ```
 
-or the slash command `/mishkan-skills-misses`. The report clusters
+or the slash command `/ares-skills-misses`. The report clusters
 recurring task patterns by sorted-keyword signature, breaks down by
 reason (`no_match_above_threshold`, `index_missing_or_unreadable`,
 `router_exception:*`, …), and dates the observation window.
@@ -267,8 +268,8 @@ Use it at sprint close to drive the **threshold-tuning process**:
 ## Troubleshooting
 
 **`index_missing_or_unreadable` warning.**
-Run `/mishkan-skills-reindex`. If that fails, inspect
-`~/.claude/mishkan/skill-discovery/indexer-errors.jsonl`.
+Run `/ares-skills-reindex`. If that fails, inspect
+`~/.ares/skill-discovery/indexer-errors.jsonl`.
 
 **Buckets all empty for a query that obviously matches a skill.**
 The miss is already logged. Two likely causes:
@@ -298,7 +299,7 @@ shows a stable distribution of scores around the cutoffs across at least
 Per-invocation overrides:
 
 ```bash
-python3 ~/.claude/mishkan/scripts/skill-discovery-router.py \
+python3 ~/.ares/scripts/skill-discovery-router.py \
     --task "..." \
     --threshold-high 5.0 \
     --threshold-mid 2.0

@@ -6,6 +6,26 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+### Added
+
+- **ARES runtime portability.** Introduce the `ares-harness` package identity
+  and primary `ares` CLI while retaining `mishkan` and
+  `mishkan-harness` as legacy aliases. Add target-aware Claude Code, Codex
+  CLI, and OpenCode installs plus project scaffolding with `--wiring-only`.
+- **Portable runtime verification.** Add real-CLI, package-recovery,
+  shared-skill frontmatter, layout-manifest, hook-payload, and OpenCode callback
+  gates.
+- **Codex/OpenCode tool-hook adapters.** Add audited write security, tool
+  timing, and observability adapters using each runtime's native hook surface.
+
+### Changed
+
+- Move the primary runtime payload cache to `~/.ares` while preserving
+  migration from `~/.claude/mishkan`.
+- Use `$ares-init` or `/skills` as the supported Codex workflow
+  entrypoint; current Codex releases removed custom prompts and do not accept
+  literal `/ares-init` for a user-defined skill.
+
 ## [0.2.7] - 2026-06-13
 
 ### Added

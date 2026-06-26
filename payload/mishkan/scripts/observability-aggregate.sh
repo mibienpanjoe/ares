@@ -8,8 +8,14 @@
 # are enriched here where derivable and left null otherwise (hook payload limit).
 set -euo pipefail
 
-MISHKAN="${HOME}/.claude/mishkan"
-LOG_DIR="${MISHKAN}/logs"
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+LOG_DIR="${ARES_LOG_DIR:-${MISHKAN_LOG_DIR:-${ARES_HOME_RES}/logs}}"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="${LOG_DIR}/aggregate-${TS}.json"
 

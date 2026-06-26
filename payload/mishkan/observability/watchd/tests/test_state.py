@@ -3,10 +3,19 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import asyncio
+import json
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from mishkan_watchd.state import HarnessState
+from mishkan_watchd.sources.opencode_storage import (
+    _existing_message_and_part_paths,
+    _message_events,
+    _part_event,
+)
+from mishkan_watchd.sources.session_tail import _SessionTailer
 
 
 def test_agent_spawn_creates_session_and_agent():
@@ -223,6 +232,27 @@ def test_last_context_tokens_zero_on_fresh_session():
     s.apply({"ts": "x", "session": "fresh", "type": "session_start", "project": "/p"})
     snap = s.to_snapshot()
     assert snap["sessions"]["fresh"]["last_context_tokens"] == 0
+
+
+def test_session_start_preserves_runtime_and_jsonl_path_in_snapshot():
+    """Multi-runtime discovery annotates sessions with runtime + source path."""
+    s = HarnessState()
+    s.apply({
+        "ts": "x",
+        "session": "codex:abc123",
+        "type": "session_start",
+        "project": "threads",
+        "runtime": "codex",
+        "payload": {
+            "runtime": "codex",
+            "raw_session_id": "abc123",
+            "jsonl_path": "/tmp/codex/threads/abc123.jsonl",
+        },
+    })
+    snap = s.to_snapshot()
+    sess = snap["sessions"]["codex:abc123"]
+    assert sess["runtime"] == "codex"
+    assert sess["jsonl_path"] == "/tmp/codex/threads/abc123.jsonl"
 
 
 # ---------------------------------------------------------------------------
@@ -547,17 +577,131 @@ def test_session_start_after_live_confirm_is_harmless_reconfirm():
     assert "toolu_rc1" in s.sessions["reconfirm-sess"].agents_active
 
 
+def test_codex_session_tail_extracts_tool_tokens_and_compaction():
+    """Codex JSONL records map to normalized ARES bus events."""
+    async def _run():
+        q = asyncio.Queue()
+        tailer = _SessionTailer("codex:abc123", Path("/tmp/missing.jsonl"), q)
+        await tailer._scan({
+            "timestamp": "2026-06-18T10:00:00.000Z",
+            "type": "response_item",
+            "payload": {
+                "type": "function_call",
+                "name": "exec_command",
+                "call_id": "call_1",
+            },
+        })
+        await tailer._scan({
+            "timestamp": "2026-06-18T10:00:01.000Z",
+            "type": "event_msg",
+            "payload": {
+                "type": "token_count",
+                "info": {
+                    "last_token_usage": {
+                        "input_tokens": 100,
+                        "cached_input_tokens": 80,
+                        "output_tokens": 20,
+                        "reasoning_output_tokens": 5,
+                    },
+                    "model_context_window": 258400,
+                },
+            },
+        })
+        await tailer._scan({
+            "timestamp": "2026-06-18T10:00:02.000Z",
+            "type": "event_msg",
+            "payload": {"type": "context_compacted"},
+        })
+        return [await q.get(), await q.get(), await q.get()]
+
+    tool, usage, compaction = asyncio.run(_run())
+    assert tool["runtime"] == "codex"
+    assert tool["type"] == "tool_call"
+    assert tool["tool"] == "exec_command"
+    assert usage["type"] == "token_usage"
+    assert usage["payload"]["tokens_in"] == 100
+    assert usage["payload"]["cache_read"] == 80
+    assert usage["payload"]["tokens_out"] == 20
+    assert compaction["type"] == "compaction"
+
+
+def test_opencode_storage_extracts_message_tokens_and_tool_part():
+    """OpenCode storage message/part records map to normalized ARES bus events."""
+    events = _message_events({
+        "id": "msg_1",
+        "sessionID": "ses_1",
+        "role": "assistant",
+        "time": {"completed": 1770823140574},
+        "agent": "build",
+        "modelID": "gpt-5.3-codex",
+        "providerID": "openai",
+        "path": {"cwd": "/tmp/project"},
+        "cost": 0.01,
+        "tokens": {
+            "input": 598,
+            "output": 90,
+            "reasoning": 36,
+            "cache": {"read": 61312, "write": 0},
+        },
+    })
+    assert len(events) == 1
+    usage = events[0]
+    assert usage["session"] == "opencode:ses_1"
+    assert usage["runtime"] == "opencode"
+    assert usage["type"] == "token_usage"
+    assert usage["payload"]["tokens_in"] == 598
+    assert usage["payload"]["cache_read"] == 61312
+    assert usage["payload"]["tokens_out"] == 90
+
+    tool = _part_event({
+        "id": "prt_1",
+        "sessionID": "ses_1",
+        "messageID": "msg_1",
+        "type": "tool",
+        "callID": "call_1",
+        "tool": "grep",
+        "state": {
+            "status": "completed",
+            "time": {"start": 1770823140559, "end": 1770823140564},
+        },
+    })
+    assert tool is not None
+    assert tool["session"] == "opencode:ses_1"
+    assert tool["runtime"] == "opencode"
+    assert tool["type"] == "tool_call"
+    assert tool["tool"] == "grep"
+    assert tool["outcome"] == "completed"
+
+
+def test_opencode_startup_marks_existing_messages_and_parts_seen():
+    """OpenCode source starts at current storage state instead of backfilling."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "storage"
+        msg_dir = root / "message" / "ses_1"
+        part_dir = root / "part" / "msg_1"
+        msg_dir.mkdir(parents=True)
+        part_dir.mkdir(parents=True)
+        msg_path = msg_dir / "msg_1.json"
+        part_path = part_dir / "prt_1.json"
+        msg_path.write_text(json.dumps({"id": "msg_1", "sessionID": "ses_1"}))
+        part_path.write_text(json.dumps({
+            "id": "prt_1",
+            "messageID": "msg_1",
+            "sessionID": "ses_1",
+            "type": "tool",
+        }))
+
+        messages, parts = _existing_message_and_part_paths(Path(td), "ses_1")
+
+    assert msg_path in messages
+    assert part_path in parts
+
+
 if __name__ == "__main__":
-    test_agent_spawn_creates_session_and_agent()
-    test_agent_spawn_complete_pair_by_tool_use_id()
-    test_agent_spawn_legacy_fallback_no_tool_use_id()
-    test_token_usage_accumulates_per_session()
-    test_session_stop_removes_session()
-    test_snapshot_serializes_cleanly()
-    test_graphify_hook_event_increments_scan_count()
-    test_graphify_tail_stats_only_does_not_increment_scan_count()
-    test_graphify_query_hook_event_increments_query_count()
-    test_unknown_event_type_is_ignored_gracefully()
+    for _name, _fn in sorted(globals().items()):
+        if _name.startswith("test_") and callable(_fn):
+            _fn()
+    print("test_state ok")
     test_last_context_tokens_set_not_accumulated()
     test_last_context_tokens_in_snapshot()
     test_last_context_tokens_zero_on_fresh_session()

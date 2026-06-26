@@ -19,7 +19,7 @@
 services:
   curated-neo4j:
     image: neo4j:5.26
-    container_name: mishkan-curated-neo4j
+    container_name: ${CURATED_NEO4J_CONTAINER:-ares-curated-neo4j}
     restart: unless-stopped
     environment:
       NEO4J_AUTH: ${GRAPH_DATABASE_USERNAME:?}/${GRAPH_DATABASE_PASSWORD:?}
@@ -63,8 +63,8 @@ services:
           memory: 2g
 
   curated-mcp:
-    image: mishkan/cognee-mcp:${COGNEE_MCP_REF:?}
-    container_name: mishkan-curated-mcp
+    image: ${COGNEE_MCP_IMAGE:-ares/cognee-mcp}:${COGNEE_MCP_REF:?}
+    container_name: ${CURATED_MCP_CONTAINER:-ares-curated-mcp}
     restart: unless-stopped
     depends_on:
       curated-neo4j:
@@ -106,7 +106,7 @@ services:
 networks:
   shared:
     external: true
-    name: ${COGNEE_WORK_NETWORK:-mishkan-cognee_cognee_net}
+    name: ${COGNEE_WORK_NETWORK:-ares-cognee_cognee_net}
 
 volumes:
   curated_neo4j_data:

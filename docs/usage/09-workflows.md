@@ -119,7 +119,7 @@ Adding a team-level workflow requires PM + CTO joint review per ADR D-010
 | [`mishkan-migration-wave`](../../payload/mishkan/workflows/mishkan-migration-wave.js) | pipeline + worktree + judge panel on review | Lead routes large refactor | `{ project_root, target_glob, transformation, transformer_agent, reviewers, verify_command? }` |
 | [`mishkan-architecture-panel`](../../payload/mishkan/workflows/mishkan-architecture-panel.js) | judge panel + impact-fanout + synthesis | Bezalel gates wide-answer architecture decisions | `{ decision, context, horizon? }` |
 | [`mishkan-release-readiness`](../../payload/mishkan/workflows/mishkan-release-readiness.js) | barrier + nested workflow | Nehemiah + Bezalel before every prod deploy | `{ project_root, release_tag, verify_commands, audit_security? }` |
-| [`mishkan-init`](../../payload/mishkan/workflows/mishkan-init.js) | pipeline with overlap | `/mishkan-init` | `{ project_name, project_root, raw_intent, stack_hint? }` |
+| [`mishkan-init`](../../payload/mishkan/workflows/mishkan-init.js) | pipeline with overlap | `/ares-init` | `{ project_name, project_root, raw_intent, stack_hint? }` |
 | [`mishkan-blast-radius`](../../payload/mishkan/workflows/mishkan-blast-radius.js) | Graphify + 3-lens orthogonal | gated by `/plan` | `{ target, depth?, project, min_sites_to_verify? }` |
 | [`mishkan-knowledge-gap-discovery`](../../payload/mishkan/workflows/mishkan-knowledge-gap-discovery.js) | parallel probe + loop-until-dry | sprint close (optional) | `{ concepts[], project }` |
 | [`mishkan-standards-rollout`](../../payload/mishkan/workflows/mishkan-standards-rollout.js) | per-team translate + verify + ratify | new rule lands in `y4nn-standards.md` | `{ rule_text, rule_id?, scope_hint? }` |

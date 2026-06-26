@@ -1,6 +1,6 @@
 ---
 name: mishkan-ingest
-description: Selectively ingest specific documents into the project's cognee work store. Use to deliberately add docs to memory instead of bulk-ingesting a whole tree — the default is "nothing enters memory unless tagged or invoked", which prevents PII bleed (e.g. real addresses in incident reports) and oversized-doc embedding failures. Walks ./docs/ filtered by a `mishkan: ingest` YAML frontmatter tag, or accepts explicit paths. Always runs cognify → memify after adding.
+description: "Selectively ingest specific documents into the project's cognee work store. Use to deliberately add docs to memory instead of bulk-ingesting a whole tree; the default is \"nothing enters memory unless tagged or invoked\", which prevents PII bleed and oversized-doc embedding failures. Walks ./docs/ filtered by an `ares: ingest` YAML frontmatter tag (`mishkan: ingest` remains a legacy alias), or accepts explicit paths. Always runs cognify then memify after adding."
 ---
 
 # mishkan-ingest
@@ -18,14 +18,14 @@ read-only) — this skill only touches work.
 ## Usage
 
 ```bash
-# Default: walk ./docs/ for docs tagged `mishkan: ingest`
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only
+# Default: walk ./docs/ for docs tagged `ares: ingest`
+ares knowledge ingest --tagged-only
 
 # Explicit files (no tag check)
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh docs/SECURITY.md docs/ROADMAP.md
+ares knowledge ingest docs/SECURITY.md docs/ROADMAP.md
 
 # Different dataset (default: basename of cwd)
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --dataset=research docs/research.md
+ares knowledge ingest --dataset=research docs/research.md
 ```
 
 ## Tagging a doc as memory-eligible
@@ -34,15 +34,15 @@ Put a YAML frontmatter block at the top of the file:
 
 ```yaml
 ---
-mishkan: ingest
+ares: ingest
 ---
 
 # Doc title
 …
 ```
 
-That single tag is enough. Optional: any other frontmatter (author, date, etc.)
-stays as-is.
+That single tag is enough. Existing `mishkan: ingest` tags still work as a
+legacy alias. Optional: any other frontmatter (author, date, etc.) stays as-is.
 
 ## What the skill runs
 
@@ -75,7 +75,7 @@ still holds regardless — never put raw secrets/PII into *any* graph:
 - **No secrets, no credentials, no PII** into the work store — a prior aiobi-mail
   ingestion leaked a real Gemini API key into the graph exactly this way.
 - **Scrub before `cognee.add`** — strip keys/tokens/PII from a doc before ingesting,
-  even an explicitly-listed one. The opt-in default (a `mishkan: ingest` tag or an
+  even an explicitly-listed one. The opt-in default (an `ares: ingest` tag or an
   explicit path, **never a bulk tree**) is a *security control*, not just a sizing
   one.
 - A doc that genuinely must hold sensitive data does not belong in shared memory —
@@ -83,5 +83,5 @@ still holds regardless — never put raw secrets/PII into *any* graph:
 
 ## Default behaviour (zero args)
 
-Walks `./docs/` looking for `mishkan: ingest` tags. If none, exits cleanly with
+Walks `./docs/` looking for `ares: ingest` tags. If none, exits cleanly with
 "no docs selected" — the deliberate default: **memory is opt-in, not bulk**.

@@ -66,10 +66,10 @@ half an hour, graph not advancing.
 
 ```bash
 # is the LLM endpoint being called at all?
-docker logs --since 5m mishkan-cognee-mcp 2>&1 | grep -iE "extraction|nodes_extracted|429|timeout|embedding"
+docker logs --since 5m ares-cognee-mcp 2>&1 | grep -iE "extraction|nodes_extracted|429|timeout|embedding"
 
 # the cognee internal log file (more detail)
-docker exec mishkan-cognee-mcp sh -c 'tail -300 /home/cognee/.cognee/logs/$(ls -t /home/cognee/.cognee/logs/ | head -1)' \
+docker exec ares-cognee-mcp sh -c 'tail -300 /home/cognee/.cognee/logs/$(ls -t /home/cognee/.cognee/logs/ | head -1)' \
   | grep -iE "error|exception|retry|429" | tail -20
 ```
 
@@ -91,7 +91,7 @@ qualification check refuses to start a new run while one is "in progress".
 **Fix**
 
 ```bash
-docker exec mishkan-cognee-pg psql -U cognee -d cognee_db -c \
+docker exec ares-cognee-pg psql -U cognee -d cognee_db -c \
   "UPDATE pipeline_runs SET status='DATASET_PROCESSING_ERRORED'
    WHERE status='DATASET_PROCESSING_STARTED'
      AND created_at < NOW() - INTERVAL '5 minutes';"
@@ -132,7 +132,7 @@ chown.
 root-owned. Chown it once:
 
 ```bash
-docker run --rm -u 0 -v mishkan-cognee_cognee_data:/v busybox \
+docker run --rm -u 0 -v ares-cognee_cognee_data:/v busybox \
   sh -c 'chown -R 10001:10001 /v'
 docker compose ... up -d --force-recreate cognee-mcp
 ```
@@ -140,8 +140,8 @@ docker compose ... up -d --force-recreate cognee-mcp
 ## Per-project work store (Ladybug) — reset or stuck pipeline
 
 The cognify / lock / Postgres fixes above target the shared **`cognee-memory`**
-box (`mishkan-cognee-*`, Postgres-backed). **Per-project work stores (ADR D-012)
-are different:** each is a `mishkan-work-<slug>` container with an embedded
+box (`ares-cognee-*`, Postgres-backed). **Per-project work stores (ADR D-012)
+are different:** each is an `ares-work-<slug>` container with an embedded
 Ladybug graph + SQLite + LanceDB — no Postgres, no shared graph. So:
 
 - The Postgres `DATASET_PROCESSING_STARTED` lock fix does **not** apply — a stuck
@@ -151,10 +151,9 @@ Ladybug graph + SQLite + LanceDB — no Postgres, no shared graph. So:
 
 ```bash
 cd ~/theY4NN/<project>
-docker compose -p mishkan-work-<slug> \
-  -f ~/.claude/mishkan/cognee/docker-compose.work.yml down -v    # -v drops the volume
-WORK_PORT=$(~/.claude/mishkan/scripts/ensure-work-store.sh)      # re-provision (fresh graph)
-bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only   # re-ingest
+ares project-work-store reset          # drops this project's work-store volume
+ares project-work-store up             # re-provision (fresh graph)
+ares knowledge ingest --tagged-only    # re-ingest tagged docs
 ```
 
 Never do this to `cognee-memory` (`:7777`) — `claude_code_memory` is **not**
@@ -171,15 +170,15 @@ initially ran against the work box) and is what the curated box exists for.
 
 **Fix**
 
-1. Ensure the curated box is running (`scripts/ensure-curated-box.sh`).
-2. Re-run the curated seed against `mishkan-curated-mcp` (the script's default
-   container since commit `086e80e`).
+1. Ensure the curated box is running (`ares knowledge-stack up`).
+2. Re-run the curated seed against `ares-curated-mcp` (the script's default
+   container).
 3. Delete the `CuratedResource` and `Team` labels from the work Neo4j:
    ```bash
    P='<work neo4j password from .env>'
-   docker exec mishkan-cognee-neo4j cypher-shell -u neo4j -p "$P" \
+   docker exec ares-cognee-neo4j cypher-shell -u neo4j -p "$P" \
      "MATCH (n:CuratedResource) DETACH DELETE n;"
-   docker exec mishkan-cognee-neo4j cypher-shell -u neo4j -p "$P" \
+   docker exec ares-cognee-neo4j cypher-shell -u neo4j -p "$P" \
      "MATCH (n:Team) DETACH DELETE n;"
    ```
 4. Drop the stray `curated_library` dataset row from the work cognee_db via
@@ -240,7 +239,7 @@ voluminous.
 ## Auto-mode classifier blocks writing `.claude/settings.json` / `.mcp.json`
 
 **Symptom** — the Claude Code auto-mode classifier denies the agent's write to
-agent-config files even when invoked by `/mishkan-init`.
+agent-config files even when invoked by `/ares-init`.
 
 **Cause** — the classifier treats `.claude/settings.json`, `.mcp.json`,
 `settings.local.json`, and (sometimes) `CLAUDE.md` as **self-modification**
@@ -298,7 +297,7 @@ iptables -t nat -L PREROUTING -n -v | grep -B1 -A2 br-
 docker network rm <ghost-net-id>
 
 # bring the stack back up
-cd ~/.claude/mishkan/cognee
+cd ~/.ares/cognee
 docker compose ... up -d
 ```
 
@@ -310,22 +309,22 @@ avoid this collision class going forward (decision recorded in commit
 
 ```bash
 # container health
-docker ps --filter 'name=mishkan-' --format '{{.Names}}\t{{.Status}}'
+docker ps --filter 'name=ares-' --format '{{.Names}}\t{{.Status}}'
 
-# pipeline run status (work store)
-docker exec mishkan-cognee-pg psql -U cognee -d cognee_db -tc \
+# pipeline run status (shared memory store)
+docker exec ares-cognee-pg psql -U cognee -d cognee_db -tc \
   "SELECT status, count(*) FROM pipeline_runs GROUP BY status;"
 
 # graph topology (any store)
-docker exec mishkan-cognee-neo4j cypher-shell -u neo4j -p '<pw>' \
+docker exec ares-cognee-neo4j cypher-shell -u neo4j -p '<pw>' \
   "MATCH (n) RETURN labels(n) AS l, count(*) AS n ORDER BY n DESC;"
 
 # what's actually listening on the host
 ss -tlnp 2>/dev/null | grep -E '127.0.0.1:77[0-9][0-9]'
 
 # Ollama model list and embed endpoint sanity
-docker exec mishkan-ollama ollama list
-docker exec mishkan-cognee-mcp sh -c \
+docker exec ares-ollama ollama list
+docker exec ares-cognee-mcp sh -c \
   'python3 -c "import urllib.request,json; r=urllib.request.urlopen(urllib.request.Request(\"http://ollama:11434/api/embed\", data=json.dumps({\"model\":\"nomic-embed-text:latest\",\"input\":\"hi\"}).encode(), headers={\"Content-Type\":\"application/json\"}), timeout=10); print(r.status)"'
 ```
 

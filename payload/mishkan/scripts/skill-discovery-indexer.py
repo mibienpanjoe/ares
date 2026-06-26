@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """
-skill-discovery-indexer — universal indexer for Claude Code skills.
+skill-discovery-indexer — universal indexer for agent skills.
 
-Scans every installed skill on the user's Claude Code instance and produces a
-single flat JSON index at ~/.claude/mishkan/skill-discovery/index.json.
+Scans every installed skill on the user's agent runtime and produces a
+single flat JSON index at ~/.ares/skill-discovery/index.json.
 
 Roots scanned (in precedence order — first wins on name collisions):
-  1. ~/.claude/mishkan/skills/          (origin = mishkan)
-  2. ~/.claude/skills/                  (origin = user)
-  3. ~/.claude/plugins/*/skills/        (origin = plugin)
-  4. <repo>/.claude/skills/             (origin = project)
+  1. ~/.ares/skills/                    (origin = ares)
+  2. ~/.agents/skills/                  (origin = portable)
+  3. ~/.claude/skills/                  (origin = user)
+  4. ~/.claude/plugins/*/skills/        (origin = plugin)
+  5. <repo>/.claude/skills/             (origin = project)
 
 Frontmatter is YAML-ish but parsed by a minimal stdlib parser (no PyYAML).
 Triggers are extracted from "Use when…" / "Use this when…" sentences inside
 the description, plus any explicit ``triggers: [...]`` list.
 
-Categories are inferred from path segment first (e.g. -craft / mishkan- /
+Categories are inferred from path segment first (e.g. -craft / ares- /
 agent skills), then from a keyword heuristic on the description.
 
 CLI:
@@ -45,14 +46,31 @@ from pathlib import Path
 from typing import Iterable
 
 HOME = Path(os.path.expanduser("~"))
-INDEX_DIR = HOME / ".claude" / "mishkan" / "skill-discovery"
+
+
+def runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    ares = HOME / ".ares"
+    legacy = HOME / ".claude" / "mishkan"
+    if ares.exists() or not legacy.exists():
+        return ares
+    return legacy
+
+
+RUNTIME_HOME = runtime_home()
+INDEX_DIR = RUNTIME_HOME / "skill-discovery"
 INDEX_PATH = INDEX_DIR / "index.json"
 MISSES_PATH = INDEX_DIR / "misses.jsonl"
 ERRORS_PATH = INDEX_DIR / "indexer-errors.jsonl"
 
 # Precedence order matters: first hit on a duplicate name wins.
 ROOTS = [
+    ("ares", RUNTIME_HOME / "skills"),
     ("mishkan", HOME / ".claude" / "mishkan" / "skills"),
+    ("portable", HOME / ".agents" / "skills"),
     ("user", HOME / ".claude" / "skills"),
 ]
 
@@ -216,8 +234,8 @@ def infer_category(name: str, source_path: Path, description: str) -> str:
     # Path-segment hits
     if name.endswith("-craft"):
         return "craft"
-    if name.startswith("mishkan-"):
-        return "mishkan-workflow"
+    if name.startswith(("ares-", "mishkan-")):
+        return "ares-workflow"
     if "research" in name:
         return "research"
     if "cognee" in name:
@@ -230,7 +248,7 @@ def infer_category(name: str, source_path: Path, description: str) -> str:
                 return cat
     # Fallback by enclosing directory
     for seg in parts[::-1]:
-        if seg in {"skills", "mishkan"}:
+        if seg in {"skills", "ares", "mishkan"}:
             continue
         if seg.startswith("."):
             continue
@@ -429,7 +447,7 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--rebuild", action="store_true", help="Full rescan + write")
     group.add_argument("--stat-only", action="store_true", help="Session-boot mtime sweep")
-    group.add_argument("--manual", action="store_true", help="Manual rebuild via /mishkan-skills-reindex")
+    group.add_argument("--manual", action="store_true", help="Manual rebuild via /ares-skills-reindex")
     parser.add_argument("--cwd", default=None, help="Override cwd for project root discovery")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()

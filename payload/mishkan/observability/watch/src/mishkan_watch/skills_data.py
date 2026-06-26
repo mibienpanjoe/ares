@@ -16,7 +16,7 @@ What we expose
 A skill entry:
     {
       "name": str,
-      "origin": "mishkan" | "user" | "plugin" | "project" | "builtin",
+      "origin": "ares" | "mishkan" | "portable" | "user" | "plugin" | "project" | "builtin",
       "source_path": str,
       "description": str,
       "category": str,
@@ -33,9 +33,23 @@ from pathlib import Path
 from typing import Any
 
 
+def _runtime_home() -> Path:
+    if os.environ.get("ARES_HOME"):
+        return Path(os.path.expanduser(os.environ["ARES_HOME"]))
+    if os.environ.get("MISHKAN_HOME"):
+        return Path(os.path.expanduser(os.environ["MISHKAN_HOME"]))
+    home = Path(os.path.expanduser("~"))
+    if (home / ".ares").exists() or not (home / ".claude" / "mishkan").exists():
+        return home / ".ares"
+    return home / ".claude" / "mishkan"
+
+
 # Search order matters for name-collision resolution. First-hit wins.
+_RUNTIME_HOME = _runtime_home()
 _SKILL_SOURCES = [
+    ("ares",    _RUNTIME_HOME / "skills"),
     ("mishkan", Path.home() / ".claude" / "mishkan" / "skills"),
+    ("portable", Path.home() / ".agents" / "skills"),
     ("user",    Path.home() / ".claude" / "skills"),
 ]
 
@@ -120,10 +134,12 @@ def _category_for(path: Path, fm: dict[str, Any]) -> str:
 
 def _load_indexer_output() -> list[dict[str, Any]] | None:
     """If Bezalel's indexer has run, prefer its output."""
-    p = Path.home() / ".claude" / "mishkan" / "skill-discovery" / "index.json"
+    p = _RUNTIME_HOME / "skill-discovery" / "index.json"
+    legacy = Path.home() / ".claude" / "mishkan" / "skill-discovery" / "index.json"
     try:
-        if p.is_file():
-            data = json.loads(p.read_text())
+        source = p if p.is_file() else legacy
+        if source.is_file():
+            data = json.loads(source.read_text())
             if isinstance(data, dict) and "entries" in data:
                 return data["entries"]
             if isinstance(data, list):
@@ -136,7 +152,7 @@ def _load_indexer_output() -> list[dict[str, Any]] | None:
 def load_skills() -> list[dict[str, Any]]:
     """Return the full set of installed skills.
 
-    If `~/.claude/mishkan/skill-discovery/index.json` exists, use it;
+    If the runtime skill-discovery index exists, use it;
     otherwise scan the canonical paths directly. Entries are deduplicated
     by skill name (first hit by source precedence wins).
     """
@@ -248,9 +264,10 @@ def load_adr_index() -> dict[str, list[str]]:
 
 
 def _find_decisions_md() -> Path | None:
-    """Locate MISHKAN_decisions.md. Prefer ~/.claude install path, fall back
+    """Locate MISHKAN_decisions.md. Prefer the runtime install path, fall back
     to a repo-mode walk-up."""
     candidates: list[Path] = [
+        _RUNTIME_HOME / "design" / "MISHKAN_decisions.md",
         Path.home() / ".claude" / "mishkan" / "design" / "MISHKAN_decisions.md",
     ]
     here = Path(__file__).resolve()

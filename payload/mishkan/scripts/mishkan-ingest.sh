@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# MISHKAN — selectively ingest docs into the project's work cognee store.
-# Default: nothing enters memory unless tagged (`mishkan: ingest` frontmatter)
-# or explicitly listed — preventing PII bleed and oversized-doc errors.
+# ARES — selectively ingest docs into the project's work cognee store.
+# Default: nothing enters memory unless tagged (`ares: ingest` frontmatter,
+# with `mishkan: ingest` accepted as a legacy alias) or explicitly listed —
+# preventing PII bleed and oversized-doc errors.
 # Runs cognee.add -> cognify -> memify (extraction + enrichment).
 #
 #   mishkan-ingest.sh --tagged-only                # walk ./docs/ for tagged
@@ -13,10 +14,17 @@ TAGGED_ONLY=false
 DATASET="$(basename "$PWD")"
 PATHS=()
 # Per-project work store (ADR D-012): the default container is THIS project's own
-# store, mishkan-work-<slug> (provisioned by ensure-work-store.sh). Override with
-# COGNEE_CONTAINER=mishkan-cognee-mcp for a project still on the legacy shared store.
+# store, ares-work-<slug> (provisioned by ensure-work-store.sh). Existing legacy
+# mishkan-work-<slug> stores are used automatically until migrated.
 _SLUG="$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//')"
-CONTAINER="${COGNEE_CONTAINER:-mishkan-work-${_SLUG}}"
+if [[ -n "${COGNEE_CONTAINER:-}" ]]; then
+  CONTAINER="$COGNEE_CONTAINER"
+elif docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "mishkan-work-${_SLUG}" && \
+     ! docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "ares-work-${_SLUG}"; then
+  CONTAINER="mishkan-work-${_SLUG}"
+else
+  CONTAINER="ares-work-${_SLUG}"
+fi
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -45,7 +53,8 @@ for p in "${PATHS[@]}"; do
 done
 
 # Filter to tagged docs if requested. A doc is tagged when its YAML frontmatter
-# (the block between the first two `---` lines) contains `mishkan: ingest`.
+# (the block between the first two `---` lines) contains `ares: ingest`.
+# `mishkan: ingest` remains a legacy alias for already-tagged documents.
 if $TAGGED_ONLY; then
   KEPT=()
   for f in "${FILES[@]}"; do
@@ -53,7 +62,7 @@ if $TAGGED_ONLY; then
       BEGIN{infm=0;ok=0}
       NR==1 && $0=="---"{infm=1;next}
       infm && $0=="---"{exit}
-      infm && /^[[:space:]]*mishkan:[[:space:]]*ingest[[:space:]]*$/{ok=1;exit}
+      infm && /^[[:space:]]*(ares|mishkan):[[:space:]]*ingest[[:space:]]*$/{ok=1;exit}
       NR>50 && !infm{exit}
       END{exit !ok}
     ' "$f"; then KEPT+=("$f"); fi

@@ -1,0 +1,9 @@
+{
+  "id": "claude",
+  "instructionFile": "CLAUDE.md",
+  "agentFormat": "markdown",
+  "commandSurface": "slash-command",
+  "hookSurface": "settings.json",
+  "initInvocation": "/ares-init",
+  "initUsage": "`/ares-init`"
+}

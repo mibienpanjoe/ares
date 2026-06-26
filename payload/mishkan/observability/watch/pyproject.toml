@@ -1,7 +1,7 @@
 [project]
-name = "mishkan-watch"
+name = "ares-watch"
 version = "0.2.7"
-description = "MISHKAN observability TUI — Textual client that reads the mishkan-watchd UNIX socket and renders the 8-tab dashboard."
+description = "ARES observability TUI — Textual client that reads the ares-watchd UNIX socket and renders the dashboard."
 readme = "../README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -12,6 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
+ares-watch = "mishkan_watch.__main__:cli"
 mishkan-watch = "mishkan_watch.__main__:cli"
 
 [build-system]

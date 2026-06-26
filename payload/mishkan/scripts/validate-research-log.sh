@@ -26,8 +26,17 @@ if [[ ! -r "$LOG_PATH" ]]; then
   exit 2
 fi
 
+runtime_home() {
+  if [[ -n "${ARES_HOME:-}" ]]; then printf '%s' "$ARES_HOME"; return; fi
+  if [[ -n "${MISHKAN_HOME:-}" ]]; then printf '%s' "$MISHKAN_HOME"; return; fi
+  if [[ -d "$HOME/.ares" || ! -d "$HOME/.claude/mishkan" ]]; then printf '%s' "$HOME/.ares"; return; fi
+  printf '%s' "$HOME/.claude/mishkan"
+}
+ARES_HOME_RES="$(runtime_home)"
+
 SCHEMA_CANDIDATES=(
-  "${MISHKAN_HOME:-$HOME/.claude/mishkan}/templates/research-log.schema.json"
+  "${ARES_HOME_RES}/templates/research-log.schema.json"
+  "$HOME/.claude/mishkan/templates/research-log.schema.json"
   "$(dirname "$0")/../templates/research-log.schema.json"
 )
 SCHEMA_PATH=""

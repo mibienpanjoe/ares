@@ -1,44 +1,51 @@
-# 02 — Project initialisation
+# 02 — Project Initialisation
 
-> Goal: take a directory and turn it into a MISHKAN project: rules, deny-list,
-> MCP connections, and a `CLAUDE.md` carrying sprint state.
+> Goal: take a directory and add ARES target-native project wiring without
+> overwriting existing project content.
 
 ## When and where to run it
 
 ```bash
 cd <project root>
-claude              # opens a Claude Code session
-/mishkan-init       # invokes the init skill
+ares project init --target all   # writes target-native project wiring
 ```
 
-`/mishkan-init` is a **skill** (lives at
-`~/.claude/mishkan/skills/mishkan-init/SKILL.md`) and also exposed as a
-command. It is **not** something an agent should run unprompted — there is an
-explicit precondition check.
+Inside a runtime session, use the native workflow entrypoint:
 
-## The four artifacts it always writes
+| Runtime | Init entrypoint |
+|---|---|
+| Claude Code | `/ares-init` |
+| OpenCode | `/ares-init` |
+| Codex | `$ares-init`, or select `ares-init` through `/skills` |
 
-| File | Role | Tracked? |
-|---|---|---|
-| `CLAUDE.md` | project state: sprint slot, code orientation, two-store note | yes |
-| `.mcp.json` | declares both cognee MCP servers (`cognee` + `cognee-curated`) | yes |
-| `.claude/settings.json` | deny-list: `git push`, `ssh`, `sudo`, `docker exec` | yes |
-| `.claude/settings.local.json` | local allow-list; gitignored | no (added to `.gitignore` if absent) |
+The init workflow is **not** something an agent should run unprompted — there
+is an explicit precondition check.
 
-Plus the **7 path-scoped team rules** copied to `.claude/rules/` so they JIT-load
-only on matching files (see [Orchestration](./03-orchestration.md)).
+## What Project Wiring Writes
+
+`ares project init` writes the target-native surface for the runtimes you choose.
+
+| Target | Files |
+|---|---|
+| Claude Code | `CLAUDE.md`, `.mcp.json`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/rules/*` |
+| Codex | `AGENTS.md`, `.codex/config.toml`, `.codex/hooks.json`, `.codex/agents/*` |
+| OpenCode | `AGENTS.md`, `opencode.json`, `.opencode/agents/*`, `.opencode/commands/*` |
+
+Shared workflow skills remain global under `~/.agents/skills`; project init does
+not duplicate them into `.agents/skills` or `.opencode/skills`. This avoids
+non-deterministic duplicate discovery when Codex and OpenCode coexist. Shared
+docs scaffolding is created only outside `--wiring-only`.
 
 ## Scope choice — greenfield vs brownfield
 
-The skill detects whether the repo is empty or already mature and asks how much
-of the spec spine to run. Two common answers:
+There are two common paths:
 
-- **Harness wiring only** — drop the four artifacts + rules, do not generate
-  PRD/SRS/CONTRACT/ARCHITECTURE/THREAT_MODEL. Right for a mature repo with
-  existing docs (the aiobi-mail case during the build).
-- **Full init** — run the documented sequence with the right specialists writing
-  each spec. Right for greenfield. Slow on purpose: nothing is generated without
-  upstream artifacts existing.
+- **Wiring only** — run `ares project init --target all --wiring-only`. This
+  writes only target-native state/config/hook/MCP files and does not generate
+  docs, project agents, skills, or commands. Use it for a mature repo.
+- **Full workflow** — first run `ares project init --target all`, then start
+  the runtime and invoke `/ares-init` in Claude/OpenCode. In Codex, invoke `$ares-init` or select `ares-init` through `/skills`. Use it for greenfield or
+  when you want the spec spine produced.
 
 The full sequence (when chosen):
 
@@ -67,24 +74,30 @@ flowchart TD
 Each step that touches a contract requires `/plan` to run first — nothing is generated
 without its upstream artifact.
 
-## Step 8 in detail: cognee setup at init
+## Knowledge Setup At Init
 
-Two parts run automatically at init:
+The current CLI wiring declares the shared knowledge servers and leaves the
+per-project work store explicit.
 
-1. **Ensure the curated box** (global singleton, shared across projects).
-   `~/.claude/mishkan/scripts/ensure-curated-box.sh` is idempotent: it brings up
-   the curated stack if down, creates `curated_db`, and seeds only if the
-   curated graph is empty. It is safe to run repeatedly.
+1. Bring up the shared stack when needed:
 
-2. **Selectively seed the work store** for this project, **never bulk-ingest**.
-   `/mishkan-init` runs:
    ```bash
-   bash ~/.claude/mishkan/scripts/mishkan-ingest.sh --tagged-only
+   ares knowledge-stack up
    ```
-   That walks `./docs/` looking for files with a `mishkan: ingest` YAML
-   frontmatter tag and ingests *only* those. Untagged docs are ignored.
-   The whole point is memory is opt-in: see
-   [Selective ingest](./05-selective-ingest.md) and commit `6213611`.
+
+2. Provision this project's isolated work store explicitly:
+
+   ```bash
+   ares project-work-store up
+   ```
+
+3. Ingest only tagged or explicitly selected documents:
+
+   ```bash
+   ares knowledge ingest --tagged-only
+   ```
+
+The whole point is memory is opt-in: see [Selective ingest](./05-selective-ingest.md).
 
 ## What `CLAUDE.md` carries
 
@@ -93,18 +106,18 @@ A lean, dynamic file that loads **after** the user-level identity. It carries:
 - Codebase orientation (stack, key directories) — concrete facts the
   main session needs every turn.
 - Sprint slot — *current sprint*, *what's in flight*, *blockers*. Updated by
-  `/mishkan-resume`, `/sprint-close`, and you.
-- Note that init provisions two project-level MCP aliases (`cognee` = this
-  project's work store, `cognee-curated` = shared reference library; the latter
-  is read-only). The third cognee store — `cognee-memory` (`:7777`, shared
-  session memory) — is a pre-existing singleton, not provisioned here.
+  `/ares-resume`, `/sprint-close`, and you.
+- Note that init provisions shared MCP aliases (`cognee-memory` and
+  `cognee-curated`). The per-project work store is provisioned separately by
+  `ares project-work-store up`.
 - A pointer to the existing `docs/` if there is one (does not duplicate).
 
 ## Brownfield handling — what does *not* happen
 
-- **No overwrites.** Existing `README.md`, `CLAUDE.md`, and `docs/*` are left
-  alone. If a project `CLAUDE.md` already exists, the agent surfaces it and
-  asks before merging.
+- **No overwrites.** Existing `AGENTS.md`, `CLAUDE.md`, `docs/*`, `.mcp.json`,
+  Claude settings, Codex agent files, and OpenCode command files are preserved.
+  ARES appends managed blocks where supported and uses no-clobber writes for
+  project-owned files.
 - **No translation.** If the existing docs are in another language (the
   aiobi-mail repo was largely French), the MISHKAN docs are written in English
   per rule 12 of `y4nn-standards.md`, alongside the existing corpus.
@@ -113,34 +126,32 @@ A lean, dynamic file that loads **after** the user-level identity. It carries:
 
 ## Confirming a clean init
 
-After `/mishkan-init` completes:
+After `ares project init --target all` completes:
 
 ```bash
-# the four artifacts
+# Claude wiring
 ls -la .mcp.json CLAUDE.md .claude/settings.json .claude/settings.local.json
 
-# rules installed
-find .claude/rules -type f | sort
+# Codex/OpenCode wiring
+ls -la AGENTS.md .codex/config.toml .codex/hooks.json opencode.json
 
 # settings.local.json gitignored
 grep -E '\.claude/settings\.local\.json' .gitignore
 
-# the two project-level cognee aliases written to .mcp.json
-# (cognee-memory is a shared singleton; it does not appear in per-project .mcp.json)
+# shared cognee aliases written to .mcp.json
 python3 -c "import json; print(list(json.load(open('.mcp.json'))['mcpServers'].keys()))"
-# expected: ['cognee', 'cognee-curated']
+# expected: ['cognee-memory', 'cognee-curated']
 ```
 
 ## Verifying the MCP connections (next session)
 
-MCP servers connect **at session start** — so the session that ran
-`/mishkan-init` does *not* yet have `mcp__cognee__*` tools available. Open a new
+MCP servers connect **at session start**. After changing MCP config, open a new
 session in the same directory:
 
 ```bash
 exit          # leave the current session
 claude        # fresh session
-/mcp          # in the session: should list 'cognee' and 'cognee-curated'
+/mcp          # in the session: should list 'cognee-memory' and 'cognee-curated'
 ```
 
 ## Common edge cases
@@ -150,18 +161,17 @@ claude        # fresh session
   third-party endpoints. The per-project work store runs on a dynamically
   assigned port; `cognee-memory` is `:7777`; `cognee-curated` is `:7730`.
 - **Multiple projects on one host:** safe. Each project has its own physically
-  isolated work store container (`mishkan-work-<slug>`) provisioned by
-  `ensure-work-store.sh`. The curated box and the `cognee-memory` (`:7777`)
+  isolated work store container (`ares-work-<slug>`) provisioned by
+  `ares project-work-store up`. The curated box and the `cognee-memory` (`:7777`)
   session-memory box are shared singletons. See [Memory layer](./04-memory-layer.md)
   for the three-pillar layout (D-012).
-- **Running init twice:** safe. The four artifacts are not overwritten; the
-  curated ensure step is idempotent; rules are re-copied verbatim.
+- **Running init twice:** safe. Managed blocks are refreshed, user content is
+  preserved, and no-clobber files are left alone.
 
 ## See also
 
 - The init skill source: `payload/mishkan/skills/mishkan-init/SKILL.md`
-  (commit `a9a4bf1` wired the curated-box step; commit `6213611` made step 8
-  selective).
+  (still the legacy payload path during the ARES transition).
 - [Orchestration](./03-orchestration.md) — how the main session routes work
   once init has run.
 - [Memory layer](./04-memory-layer.md) — the three cognee stores (work,

@@ -1,4 +1,4 @@
-"""Bus tail source — inotify on ~/.claude/mishkan/logs/*.jsonl.
+"""Bus tail source — inotify on the runtime logs/*.jsonl directory.
 
 Picks up every new line from the Phase 1+1.5 emitters: tool_call,
 file_change, hook_fire, agent_spawn, skill_invoke, plan, web_query,

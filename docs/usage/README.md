@@ -1,14 +1,14 @@
-# MISHKAN — Usage Documentation
+# ARES / MISHKAN — Usage Documentation
 
-> מִשְׁכָּן, *"dwelling place"* — a personal SWE harness built natively on
-> Claude Code. This corpus is the **how**. The **why** lives in
+> ARES is the portable runtime namespace for the current MISHKAN organisation.
+> This corpus is the **how**. The **why** lives in
 > [`docs/design/`](../design/).
 
-A single Claude Code session, turned into a 45-agent software-engineering
-organisation with deterministic constraints (hooks, rules, schemas), an
-asymmetric AI-vs-human delegation boundary, and four knowledge surfaces
-that accumulate as you work: one code-structure surface (Graphify) plus three
-cognee stores (per-project work · session memory · curated reference).
+A Claude Code, Codex, or OpenCode session, turned into a 45-agent
+software-engineering organisation with deterministic constraints, an
+asymmetric AI-vs-human delegation boundary, and four knowledge surfaces that
+accumulate as you work: one code-structure surface (Graphify) plus three cognee
+stores (per-project work · session memory · curated reference).
 
 ## In five minutes
 
@@ -18,7 +18,7 @@ flowchart TD
     MS -->|Task| TL["Team Lead / Specialist"]
     MS -->|Task| OPS["aiobi-ops / other project agents"]
     MS -->|Task| RP["research pipeline"]
-    MS -. reads / writes .-> WORK[("cognee work · per-project<br/>mishkan-work-{slug} · Ladybug, own port+volume")]
+    MS -. reads / writes .-> WORK[("cognee work · per-project<br/>ares-work-{slug} · Ladybug, own port+volume")]
     MS -. reads / writes .-> MEM[("cognee-memory :7777<br/>per-client session memory · shared")]
     MS -. reads / writes .-> CUR[("cognee-curated :7730<br/>reference library · shared, read-mostly")]
 ```
@@ -33,7 +33,7 @@ reads/writes three Cognee stores. (Diagrams render on GitHub.)*
 - **Four knowledge surfaces** total — 1 code-structure + 3 cognee stores:
   - **Graphify** (per-project, `graphify-out/`) — code structure: call graphs,
     dependents, blast-radius. AST-derived, deterministic, re-derivable. D-008.
-    Not installed by `mishkan install`; run `uv tool install "graphifyy>=0.8.33"`.
+    Not installed by `ares install`; run `uv tool install "graphifyy>=0.8.33"`.
   - **Cognee work** (per-project Ladybug, own port) — project semantic memory:
     decisions, runbooks, ADRs. D-012.
   - **cognee-memory** (`:7777`, shared) — session memory shared across all
@@ -47,24 +47,24 @@ reads/writes three Cognee stores. (Diagrams render on GitHub.)*
   `search` operations are exposed via MCP for the three cognee stores. See
   D-007 + D-008 + D-012.
 - **Selective ingest**: docs enter the work graph only when tagged
-  (`mishkan: ingest`) or explicitly invoked. No bulk-ingest, no PII bleed.
+  (`ares: ingest`) or explicitly invoked. No bulk-ingest, no PII bleed.
 
 ## Chapter index
 
 | # | Chapter | What it covers |
 |---|---|---|
-| 01 | [Installation](./01-installation.md) | Prerequisites, `npx mishkan-harness install`, layout, uninstall |
-| 02 | [Project initialisation](./02-project-init.md) | `/mishkan-init` flow, scope choices, brownfield handling |
+| 01 | [Installation](./01-installation.md) | Prerequisites, `npx ares-harness install --target ...`, layout, uninstall |
+| 02 | [Project initialisation](./02-project-init.md) | `ares project init`, `/ares-init`, scope choices, brownfield handling |
 | 03 | [Orchestration](./03-orchestration.md) | Main-session-as-orchestrator, model routing, skills on-demand |
 | 04 | [Memory layer (cognee)](./04-memory-layer.md) | Per-project work stores + `cognee-memory` (`:7777`) + `cognee-curated` (`:7730`), `cognify`/`memify`/`search`, UIs |
-| 05 | [Selective ingest](./05-selective-ingest.md) | `mishkan-ingest`, frontmatter tagging, memory-is-opt-in |
+| 05 | [Selective ingest](./05-selective-ingest.md) | `ares knowledge ingest`, frontmatter tagging, memory-is-opt-in |
 | 06 | [LLM provider profiles](./06-llm-providers.md) | Gemini/NVIDIA/Ollama/OpenAI/Anthropic, rate vs daily caps |
 | 07 | [Troubleshooting](./07-troubleshooting.md) | Real gotchas + fixes from the build |
 | 08 | [Glossary](./08-glossary.md) | 45-agent roster (alias → role → team), key terms |
 | 09 | [Dynamic Workflows](./09-workflows.md) | 10 org-level + 10 team-level workflows, ADR D-010 portfolio discipline |
 | 10 | [Observability](./10-observability.md) | Cross-session daemon + Textual TUI; 8 tabs (Live · Agents · Workflows · Knowledge · Activity · Org-Ref · Usage · Skills), project filter (`p`) |
 | 11 | [Graphify](./11-graphify.md) | Code-structure graph; queries at ~1.8k tokens (88.1× reduction, POC-verified); D-008 + D-009 |
-| 12 | [The `mishkan` CLI](./12-cli.md) | One control surface — semantic `<object> <verb>`: `knowledge-stack` / `project-work-store` / `knowledge` (configure · ingest · curate · reset) / `model` (re-tier agents) / `observability` / `org`; D-015 · D-016 · D-017 |
+| 12 | [The `ares` CLI](./12-cli.md) | One control surface — semantic `<object> <verb>`: `knowledge-stack` / `project-work-store` / `knowledge` (configure · ingest · curate · reset) / `model` (re-tier agents) / `observability` / `org`; D-015 · D-016 · D-017 |
 | 12 | [Skill discovery](./12-skill-discovery.md) | Universal indexer + 3-bucket router across MISHKAN, user, plugin, and project skills; D-011 |
 
 ## Where to start

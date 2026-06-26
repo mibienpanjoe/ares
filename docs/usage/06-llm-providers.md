@@ -12,7 +12,7 @@ to use the same provider:
 | Population | What runs it | Where it's configured |
 |---|---|---|
 | **Agents** (the 45) | Claude Code's own model routing (Opus / Sonnet / Haiku) per tier | `payload/mishkan/config/model-routing.yaml` (enforced by `hooks/model-route.py`) |
-| **Cognee's `cognify` extraction + embeddings** | a provider you choose | `payload/mishkan/cognee/.env` (work box) and `.env.curated` (curated box) |
+| **Cognee's `cognify` extraction + embeddings** | a provider you choose | `~/.ares/cognee/.env` (memory/work profile) and `~/.ares/cognee/.env.curated` (curated box) |
 
 This chapter is about the second — the model that powers `cognify`/`memify`/`search`
 inside the cognee containers. The agents' Claude tiers are covered in
@@ -146,18 +146,18 @@ single oversized chunk. Lower cognee's `LLM_MAX_TOKENS` if you see persistent
 
 ## How to switch profiles
 
-1. Edit `~/.claude/mishkan/cognee/.env` — comment the active block, uncomment
+1. Edit `~/.ares/cognee/.env` — comment the active block, uncomment
    the chosen profile, set the key.
 2. If embedding dimensions changed, the vector store must be wiped:
    ```bash
-   docker exec mishkan-cognee-pg psql -U cognee -d cognee_db -c \
+   docker exec ares-cognee-pg psql -U cognee -d cognee_db -c \
      "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
    # then prune cognee's relational state
    ```
    (Documents will need to be re-ingested.)
 3. Recreate the services that read the env:
    ```bash
-   cd ~/.claude/mishkan/cognee
+   cd ~/.ares/cognee
    docker compose -f docker-compose.yml -f docker-compose.hardening.yml \
                   -f docker-compose.selfhosted.yml -f docker-compose.ui.yml \
                   --profile ui up -d --force-recreate --no-build \
@@ -191,6 +191,6 @@ already gone.
 - Throttle introduction: commit `70d3c2e`.
 - Provider profile cleanup + Gemini embedding model fix: commit `e17f2a9`.
 - Hybrid Gemini-LLM + Ollama-embed: live `.env` evolution during the build.
-- Cognee provider catalog: `~/.claude/mishkan/cognee/_src/cognee/.env.template`
+- Cognee provider catalog: `~/.ares/cognee/_src/cognee/.env.template`
   (read-only reference).
 - Why daily cap fixes are out of in-process scope: [Troubleshooting §RPD](./07-troubleshooting.md#daily-quota-rpd-wall).
