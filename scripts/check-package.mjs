@@ -91,6 +91,7 @@ try {
   assert(readFileSync(join(home, ".claude", "CLAUDE.md"), "utf8").includes("MISHKAN"), "packed Claude guidance install missing");
   assert(existsSync(join(home, ".claude", "commands", "ares-init.md")), "packed Claude /ares-init command missing");
   assert(readFileSync(join(home, ".codex", "AGENTS.md"), "utf8").includes("ARES Harness For Codex"), "packed Codex AGENTS install missing");
+  assert(!readFileSync(join(home, ".codex", "config.toml"), "utf8").includes("[mcp_servers.cognee_memory]"), "packed default install wrote Codex Cognee MCP");
   assert(existsSync(join(home, ".agents", "skills", "ares-init", "SKILL.md")), "packed Codex ares-init skill missing");
   assert(!existsSync(join(home, ".codex", "prompts")), "packed Codex install created removed custom prompts");
   assert(existsSync(join(home, ".agents", "skills", "ares-ingest", "SKILL.md")), "packed Codex ares-ingest skill missing");
@@ -104,7 +105,9 @@ try {
   runShell([ares, "project", "init", "--target", "all", "--dir", project], { env: runtimeEnv });
   runShell([ares, "runtime", "check", "--target", "all", "--dir", project], { env: runtimeEnv });
   assert(existsSync(join(project, "CLAUDE.md")), "packed project init Claude guidance missing");
+  assert(!existsSync(join(project, ".mcp.json")), "packed default project init wrote Claude Cognee MCP");
   assert(existsSync(join(project, ".codex", "config.toml")), "packed project init Codex config missing");
+  assert(!readFileSync(join(project, ".codex", "config.toml"), "utf8").includes("[mcp_servers.cognee_memory]"), "packed default project init wrote Codex Cognee MCP");
   assert(!existsSync(join(project, ".codex", "prompts")), "packed project init created removed Codex custom prompts");
   assert(existsSync(join(project, ".opencode", "commands", "ares-init.md")), "packed project init OpenCode command missing");
   assert(!existsSync(join(project, ".agents", "skills")), "packed project init duplicated shared Codex skills");

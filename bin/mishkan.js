@@ -65,6 +65,7 @@ function isLegacyInvocation() { return displayCommand() === LEGACY_BRAND; }
 function legacyWarning() { return `${LEGACY_BRAND} is a legacy alias; use ${BRAND}`; }
 
 const TARGET_SET = new Set([...TARGETS, "all"]);
+const MEMORY_MODES = new Set(["native", "cognee", "hybrid"]);
 
 function parseTargetOption(argv, fallback = "claude") {
   let target = fallback;
@@ -82,6 +83,28 @@ function parseTargetOption(argv, fallback = "claude") {
     process.exit(2);
   }
   return target;
+}
+
+function parseMemoryOption(argv, fallback = process.env.ARES_MEMORY || "native") {
+  let memory = fallback;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--memory") {
+      memory = argv[i + 1] || "";
+      i++;
+    } else if (arg.startsWith("--memory=")) {
+      memory = arg.slice("--memory=".length);
+    }
+  }
+  if (!MEMORY_MODES.has(memory)) {
+    console.error(c.red(`invalid memory backend '${memory || "(empty)"}' — valid: ${[...MEMORY_MODES].join(", ")}`));
+    process.exit(2);
+  }
+  return memory;
+}
+
+function usesCogneeMemory(memory) {
+  return memory === "cognee" || memory === "hybrid";
 }
 
 function optionValue(argv, name, fallback = null) {
@@ -916,10 +939,11 @@ function printBanner(version) {
 
 async function install(argv = []) {
   const target = parseTargetOption(argv, "claude");
+  const memory = parseMemoryOption(argv);
   for (const t of expandTargets(target)) {
-    if (t === "claude") await installClaudeTarget();
-    else if (t === "codex") installCodexTarget();
-    else if (t === "opencode") installOpenCodeTarget();
+    if (t === "claude") await installClaudeTarget({ memory });
+    else if (t === "codex") installCodexTarget({ memory });
+    else if (t === "opencode") installOpenCodeTarget({ memory });
     else installPendingTarget(t);
   }
 }
@@ -1088,7 +1112,7 @@ const CODEX_COMMAND_SKILLS = [
   { name: "promote", source: "promote.md", description: "Promote a learning into Cognee by blast radius." },
 ];
 
-function installCodexTarget() {
+function installCodexTarget({ memory = "native" } = {}) {
   const codexHome = targetHome("codex");
   const agentsDir = join(codexHome, "agents");
   const supportDir = join(codexHome, "ares");
@@ -1104,10 +1128,11 @@ function installCodexTarget() {
   writeCodexAgentsMd(codexHome);
   const agents = writeCodexAgents(agentsDir);
   const sharedSkills = installSharedSkills(skillsDir);
-  writeCodexMcpConfig(codexHome);
+  writeCodexMcpConfig(codexHome, memory);
   mergeCodexHooks(join(codexHome, "hooks.json"), ARES_HOME);
 
   log(`codex target installed into ${tilde(codexHome)}`);
+  log(`codex memory backend: ${memory}${usesCogneeMemory(memory) ? " (Cognee MCP wired)" : " (native runtime memory; Cognee MCP skipped)"}`);
   log(`codex artifacts: agents=${agents}, shared skills=${sharedSkills.copied + sharedSkills.commands}`);
   warn("codex SessionStart and safe PreToolUse/PostToolUse hooks are installed; review and trust them through /hooks on first use.");
 }
@@ -1143,7 +1168,7 @@ function adaptOpenCodeText(text) {
     .replaceAll("into `.claude/`", "into `.opencode/`");
 }
 
-function installOpenCodeTarget() {
+function installOpenCodeTarget({ memory = "native" } = {}) {
   const opencodeHome = targetHome("opencode");
   const agentsDir = join(opencodeHome, "agents");
   const commandsDir = join(opencodeHome, "commands");
@@ -1166,9 +1191,10 @@ function installOpenCodeTarget() {
   const removedLegacySkills = removeManagedSkillCopies(legacySkillsDir);
   const sharedSkills = installSharedSkills(skillsDir);
   const plugins = writeOpenCodePlugins(pluginsDir);
-  writeOpenCodeConfig(opencodeHome);
+  writeOpenCodeConfig(opencodeHome, memory);
 
   log(`opencode target installed into ${tilde(opencodeHome)}`);
+  log(`opencode memory backend: ${memory}${usesCogneeMemory(memory) ? " (Cognee MCP wired)" : " (native/runtime memory; Cognee MCP skipped)"}`);
   log(`opencode artifacts: agents=${agents}, commands=${commands}, shared skills=${sharedSkills.copied + sharedSkills.commands}, plugins=${plugins}`);
   if (removedLegacySkills) log(`opencode migration: removed ${removedLegacySkills} obsolete managed skill copies from ${tilde(legacySkillsDir)}`);
   warn("opencode session indexing and safe tool security/observability plugins are installed.");
@@ -1204,6 +1230,10 @@ OpenCode-native locations installed by \`${displayCommand()} install --target op
 - Shared skills: \`~/.agents/skills/*/SKILL.md\`
 - Session plugin: \`~/.config/opencode/plugins/ares-session.js\`
 - ARES support files: \`~/.config/opencode/ares/\`
+
+Memory policy: native/runtime memory is the default recall layer. Cognee is
+optional advanced knowledge infrastructure; it is wired only when install or
+project init is run with \`--memory cognee\` or \`--memory hybrid\`.
 
 Use top-level OpenCode commands such as \`/ares-init\`, \`/ares-resume\`,
 \`/sprint-close\`, \`/sefer-pull\`, \`/dependency-audit\`, and \`/promote\`.
@@ -1432,10 +1462,24 @@ function mergeJsonConfig(filePath, update) {
   writeFileSync(filePath, JSON.stringify(config, null, 2) + "\n");
 }
 
-function writeOpenCodeConfig(opencodeHome) {
+function removeManagedOpenCodeCognee(config) {
+  if (!config.mcp) return;
+  for (const key of ["cognee_memory", "cognee_curated"]) {
+    const entry = config.mcp[key];
+    if (entry?.url === "http://127.0.0.1:7777/mcp" || entry?.url === "http://127.0.0.1:7730/mcp") {
+      delete config.mcp[key];
+    }
+  }
+}
+
+function writeOpenCodeConfig(opencodeHome, memory = "native") {
   mergeJsonConfig(join(opencodeHome, "opencode.json"), (config) => {
     config.$schema ||= "https://opencode.ai/config.json";
     config.mcp ||= {};
+    if (!usesCogneeMemory(memory)) {
+      removeManagedOpenCodeCognee(config);
+      return;
+    }
     config.mcp.cognee_memory = {
       type: "remote",
       url: "http://127.0.0.1:7777/mcp",
@@ -1479,17 +1523,20 @@ function projectInitOptions(argv) {
   const root = resolve(rootOpt || process.cwd());
   const name = optionValue(argv, "--name", null) || existingProjectField(root, "Name") || basename(root) || "project";
   const stack = optionValue(argv, "--stack", null) || existingProjectField(root, "Stack") || "undetermined";
+  const memory = parseMemoryOption(argv);
   const slug = slugFromPath(root);
   return {
     root,
     name,
     stack,
+    memory,
     slug,
     wiringOnly: argv.includes("--wiring-only"),
     vars: {
       PROJECT_NAME: name,
       STACK: stack,
-      COGNEE_NAMESPACE: `ares:${slug}`,
+      MEMORY_BACKEND: memory,
+      COGNEE_NAMESPACE: usesCogneeMemory(memory) ? `ares:${slug}` : "not enabled (native runtime memory)",
       DATE: new Date().toISOString().slice(0, 10),
       SPRINT: "S0",
       MILESTONE: "project-init",
@@ -1520,7 +1567,11 @@ It is safe to regenerate; user-authored content outside this block is preserved.
 
 Use ${invocation} to run the full PRD -> Sprint S0 workflow. This command only
 lays down target-native wiring; it does not generate product documents, mutate
-git state, or start the Cognee work store.
+git state, or start stateful services.
+
+Memory backend: \`${opts.memory}\`. Native runtime memory is the default recall
+layer; Cognee MCP/work-store wiring is present only when this project was
+initialised with \`--memory cognee\` or \`--memory hybrid\`.
 
 ${renderProjectState(target, opts)}`;
 }
@@ -1591,8 +1642,10 @@ function writeProjectClaude(opts) {
   );
 
   let written = 1, skipped = 0;
-  if (writeFileIfAbsent(join(root, ".mcp.json"), projectClaudeMcpJson())) written++;
-  else skipped++;
+  if (usesCogneeMemory(opts.memory)) {
+    if (writeFileIfAbsent(join(root, ".mcp.json"), projectClaudeMcpJson())) written++;
+    else skipped++;
+  }
 
   const settings = adaptClaudeAresText(readFileSync(join(CORE_PAYLOAD, "templates", "settings.json"), "utf8"));
   const localSettings = adaptClaudeAresText(readFileSync(join(CORE_PAYLOAD, "templates", "settings.local.json"), "utf8"));
@@ -1607,8 +1660,9 @@ function writeProjectClaude(opts) {
   return { target: "claude", written, skipped };
 }
 
-function writeProjectCodexConfig(root) {
-  const body = `# The per-project Cognee work store is not added until
+function writeProjectCodexConfig(root, memory = "native") {
+  const body = usesCogneeMemory(memory)
+    ? `# The per-project Cognee work store is not added until
 # \`ares project-work-store up\` has provisioned a real port.
 
 [mcp_servers.cognee_memory]
@@ -1621,7 +1675,12 @@ tool_timeout_sec = 60
 url = "http://127.0.0.1:7730/mcp"
 enabled = true
 startup_timeout_sec = 10
-tool_timeout_sec = 60`;
+tool_timeout_sec = 60`
+    : `# ARES native-memory project mode.
+# Cognee MCP is intentionally not wired for this project.
+# Use Codex /memories for cross-session recall and keep required project
+# guidance in AGENTS.md/docs. Re-run project init with --memory cognee or
+# --memory hybrid when a queryable Cognee graph is needed.`;
   writeManagedBlock(
     join(root, ".codex", "config.toml"),
     "# ARES-HARNESS:BEGIN codex-project-mcp",
@@ -1751,7 +1810,7 @@ function writeProjectCodex(opts) {
     "<!-- ARES-HARNESS:END project-codex -->",
     projectStateBlock("codex", opts),
   );
-  writeProjectCodexConfig(root);
+  writeProjectCodexConfig(root, opts.memory);
   // Tool hooks are global to avoid duplicate execution when Codex merges user
   // and project hook layers. The project keeps only the indexing lifecycle hook.
   mergeCodexHooks(join(root, ".codex", "hooks.json"), ARES_HOME, false);
@@ -1822,6 +1881,10 @@ function writeProjectOpenCode(opts) {
     config.$schema ||= "https://opencode.ai/config.json";
     config.mcp ||= {};
     if (config.mcp.cognee?.url?.includes("__ARES_WORK_PORT__")) delete config.mcp.cognee;
+    if (!usesCogneeMemory(opts.memory)) {
+      removeManagedOpenCodeCognee(config);
+      return;
+    }
     config.mcp.cognee_memory = {
       type: "remote",
       url: "http://127.0.0.1:7777/mcp",
@@ -1848,7 +1911,7 @@ function writeProjectOpenCode(opts) {
 async function projectCmd(argv) {
   const sub = argv[0] || "init";
   if (sub !== "init") {
-    console.error(`usage: ${displayCommand()} project init [--target claude|codex|opencode|all] [--wiring-only] [--dir <path>] [--name <name>] [--stack <hint>]`);
+    console.error(`usage: ${displayCommand()} project init [--target claude|codex|opencode|all] [--memory native|cognee|hybrid] [--wiring-only] [--dir <path>] [--name <name>] [--stack <hint>]`);
     process.exit(1);
   }
   const rest = argv.slice(1);
@@ -1865,7 +1928,7 @@ async function projectCmd(argv) {
     else if (t === "opencode") results.push(writeProjectOpenCode(opts));
   }
 
-  log(`project init: ${tilde(opts.root)} (${opts.wiringOnly ? "wiring-only" : "full wiring"})`);
+  log(`project init: ${tilde(opts.root)} (${opts.wiringOnly ? "wiring-only" : "full wiring"}, memory=${opts.memory})`);
   for (const r of results) {
     log(`${r.target}: wrote/managed=${r.written}, preserved=${r.skipped}`);
   }
@@ -1900,6 +1963,11 @@ Codex-native locations installed by \`${displayCommand()} install --target codex
 - Custom agents: \`~/.codex/agents/*.toml\`
 - Skills: \`~/.agents/skills/*/SKILL.md\`
 - ARES support files: \`~/.codex/ares/\`
+
+Memory policy: native Codex memories are the default recall layer. Use
+\`/memories\` to enable or tune them per thread. Cognee is optional advanced
+knowledge infrastructure; it is wired only when install or project init is run
+with \`--memory cognee\` or \`--memory hybrid\`.
 
 Canonical reusable workflow invocation in Codex is through skills:
 \`$ares-init\`, \`$ares-resume\`, \`$sprint-close\`, \`$sefer-pull\`, and
@@ -1939,8 +2007,9 @@ function writeCodexAgents(agentsDir) {
   return count;
 }
 
-function writeCodexMcpConfig(codexHome) {
-  const body = `[mcp_servers.cognee_memory]
+function writeCodexMcpConfig(codexHome, memory = "native") {
+  const body = usesCogneeMemory(memory)
+    ? `[mcp_servers.cognee_memory]
 url = "http://127.0.0.1:7777/mcp"
 enabled = true
 startup_timeout_sec = 10
@@ -1950,7 +2019,11 @@ tool_timeout_sec = 60
 url = "http://127.0.0.1:7730/mcp"
 enabled = true
 startup_timeout_sec = 10
-tool_timeout_sec = 60`;
+tool_timeout_sec = 60`
+    : `# ARES native-memory mode.
+# Cognee MCP is not installed by default.
+# Codex memory is controlled by /memories or ~/.codex/config.toml.
+# Re-run install with --memory cognee or --memory hybrid to wire Cognee MCP.`;
   writeManagedBlock(
     join(codexHome, "config.toml"),
     "# ARES-HARNESS:BEGIN codex-mcp",
@@ -1959,7 +2032,7 @@ tool_timeout_sec = 60`;
   );
 }
 
-async function installClaudeTarget() {
+async function installClaudeTarget({ memory = "native" } = {}) {
   const runtimeRoot = ARES_HOME;
   const totalPhases = 7;
   log(`installing Claude target into ${tilde(CLAUDE)} with payload ${tilde(runtimeRoot)}`);
@@ -2129,8 +2202,8 @@ async function installClaudeTarget() {
   console.log("   " + c.bold(c.cyan("▸ Commands")) + (onPath ? c.dim("   on your PATH now — no npx needed") : ""));
   {
     const rows = [
-      ["knowledge configure", "LLM provider + cognee secrets"],
-      ["knowledge-stack up", "bring the knowledge layer up (guided)"],
+      ["project init --memory native", "runtime memory, no Cognee services"],
+      ["project init --memory cognee", "wire Cognee MCP for this project"],
       ["status", "install state + live stack health"],
       ["project-work-store up", "this project's own store"],
       ["knowledge ingest docs/…", "add docs to memory"],
@@ -2148,7 +2221,8 @@ async function installClaudeTarget() {
   // questions (D-008/D-012) — name each one plainly here, then the two bring-up
   // steps. The wizard + ACCESS.txt carry the full URL/cred detail.
   console.log();
-  console.log("   " + c.bold(c.cyan("▸ Knowledge")) + c.dim("   three cognee stores + your code graph — optional, opt-in"));
+  console.log("   " + c.bold(c.cyan("▸ Knowledge")) + c.dim(`   default memory backend: ${memory}; Cognee + code graph stay opt-in`));
+  console.log("       " + "native".padEnd(9)  + c.dim("runtime memory via Claude /memory or Codex /memories; no Docker/API setup"));
   console.log("       " + "memory".padEnd(9)  + c.cyan(":7777") + c.dim("   what you learn across your sessions — kept and shared"));
   console.log("       " + "curated".padEnd(9) + c.cyan(":7730") + c.dim("   a reference library you mostly read from"));
   console.log("       " + "work".padEnd(9)    + "     "          + c.dim("this project's private notes — never shared with other"));
@@ -2287,7 +2361,12 @@ function statusCodexTarget() {
   const skillCount = existsSync(skillsDir)
     ? readdirSync(skillsDir, { withFileTypes: true }).filter(e => e.isDirectory() && existsSync(join(skillsDir, e.name, "SKILL.md"))).length
     : 0;
-  const mcp = existsSync(configPath) && readFileSync(configPath, "utf8").includes("ARES-HARNESS:BEGIN codex-mcp");
+  const configText = existsSync(configPath) ? readFileSync(configPath, "utf8") : "";
+  const memoryConfig = configText.includes("[mcp_servers.cognee_memory]")
+    ? "cognee"
+    : configText.includes("ARES-HARNESS:BEGIN codex-mcp")
+      ? "native"
+      : "missing";
   let codexHooks = 0;
   const codexHookEvents = new Set();
   if (existsSync(hooksPath)) {
@@ -2309,7 +2388,7 @@ function statusCodexTarget() {
     ? `managed(${codexHooks}:${[...codexHookEvents].sort().join(",")})`
     : "missing";
   const toolHooks = codexHookEvents.has("PreToolUse") && codexHookEvents.has("PostToolUse") ? "enabled" : "missing";
-  log(`codex target: AGENTS=${existsSync(agentsMd) ? "present" : "missing"}, ares-home=${aresPayload ? tilde(ARES_HOME) : "missing"}, agents=${agentCount}, skills=${skillCount}, mcp=${mcp ? "managed" : "missing"}, hooks=${hooksStatus}, pre/post=${toolHooks}`);
+  log(`codex target: AGENTS=${existsSync(agentsMd) ? "present" : "missing"}, ares-home=${aresPayload ? tilde(ARES_HOME) : "missing"}, agents=${agentCount}, skills=${skillCount}, memory=${memoryConfig}, hooks=${hooksStatus}, pre/post=${toolHooks}`);
 }
 
 function statusOpenCodeTarget() {
@@ -2329,14 +2408,14 @@ function statusOpenCodeTarget() {
   const skillCount = existsSync(skillsDir)
     ? readdirSync(skillsDir, { withFileTypes: true }).filter(e => e.isDirectory() && existsSync(join(skillsDir, e.name, "SKILL.md"))).length
     : 0;
-  let mcp = false;
+  let memoryConfig = "missing";
   if (existsSync(configPath)) {
     try {
       const config = JSON.parse(readFileSync(configPath, "utf8"));
-      mcp = Boolean(config.mcp?.cognee_memory && config.mcp?.cognee_curated);
+      memoryConfig = config.mcp?.cognee_memory && config.mcp?.cognee_curated ? "cognee" : "native";
     } catch {}
   }
-  log(`opencode target: AGENTS=${existsSync(agentsMd) ? "present" : "missing"}, ares-home=${aresPayload ? tilde(ARES_HOME) : "missing"}, agents=${agentCount}, commands=${commandCount}, shared-skills=${skillCount}, mcp=${mcp ? "managed" : "missing"}, session-hook=${existsSync(join(opencodeHome, "plugins", "ares-session.js")) ? "installed" : "missing"}, tool-hooks=${existsSync(join(opencodeHome, "plugins", "ares-tool-hooks.js")) ? "enabled" : "missing"}`);
+  log(`opencode target: AGENTS=${existsSync(agentsMd) ? "present" : "missing"}, ares-home=${aresPayload ? tilde(ARES_HOME) : "missing"}, agents=${agentCount}, commands=${commandCount}, shared-skills=${skillCount}, memory=${memoryConfig}, session-hook=${existsSync(join(opencodeHome, "plugins", "ares-session.js")) ? "installed" : "missing"}, tool-hooks=${existsSync(join(opencodeHome, "plugins", "ares-tool-hooks.js")) ? "enabled" : "missing"}`);
 }
 
 function statusClaudeTarget() {
@@ -2415,7 +2494,6 @@ function runtimeCheckClaude(strict, projectRoot = null) {
   checkContains(join(CLAUDE, "settings.json"), "/.ares/hooks/", "Claude hooks point at ~/.ares", checks);
   if (projectRoot) {
     checkContains(join(projectRoot, "CLAUDE.md"), "ARES-HARNESS:BEGIN project-claude", "Project Claude CLAUDE.md", checks);
-    checkContains(join(projectRoot, ".mcp.json"), "cognee-memory", "Project Claude MCP config", checks);
     checkFile(join(projectRoot, ".claude", "settings.json"), "Project Claude settings", checks);
   }
   printRuntimeChecks("claude", checks, strict);
@@ -2428,14 +2506,14 @@ function runtimeCheckCodex(strict, projectRoot = null) {
   checks.push({ ok: Boolean(version), label: `Codex CLI ${version || "not found"}` });
   const codexHome = targetHome("codex");
   checkContains(join(codexHome, "AGENTS.md"), "ARES Harness For Codex", "Codex global AGENTS.md", checks);
-  checkContains(join(codexHome, "config.toml"), "ARES-HARNESS:BEGIN codex-mcp", "Codex managed MCP config", checks);
+  checkContains(join(codexHome, "config.toml"), "ARES-HARNESS:BEGIN codex-mcp", "Codex managed memory config", checks);
   checkContains(join(codexHome, "hooks.json"), "session-start-skill-index.sh", "Codex SessionStart hook", checks);
   checkContains(join(codexHome, "hooks.json"), "pre-tool-security.sh", "Codex PreToolUse security hook", checks);
   checkContains(join(codexHome, "hooks.json"), "post-tool-observe.sh", "Codex PostToolUse observability hook", checks);
   checkFile(join(HOME, ".agents", "skills", "ares-init", "SKILL.md"), "Codex skill $ares-init", checks);
   if (projectRoot) {
     checkContains(join(projectRoot, "AGENTS.md"), "ARES-HARNESS:BEGIN project-codex", "Project Codex AGENTS.md", checks);
-    checkContains(join(projectRoot, ".codex", "config.toml"), "[mcp_servers.cognee_memory]", "Project Codex MCP config", checks);
+    checkContains(join(projectRoot, ".codex", "config.toml"), "ARES-HARNESS:BEGIN codex-project-mcp", "Project Codex memory config", checks);
     checkContains(join(projectRoot, ".codex", "hooks.json"), "session-start-skill-index.sh", "Project Codex SessionStart hook", checks);
   }
   printRuntimeChecks("codex", checks, strict);
@@ -2448,7 +2526,7 @@ function runtimeCheckOpenCode(strict, projectRoot = null) {
   checks.push({ ok: Boolean(version), label: `OpenCode CLI ${version || "not found"}` });
   const opencodeHome = targetHome("opencode");
   checkContains(join(opencodeHome, "AGENTS.md"), "ARES Harness For OpenCode", "OpenCode global AGENTS.md", checks);
-  checkFile(join(opencodeHome, "opencode.json"), "OpenCode MCP config", checks);
+  checkFile(join(opencodeHome, "opencode.json"), "OpenCode config", checks);
   checkFile(join(opencodeHome, "commands", "ares-init.md"), "OpenCode /ares-init command", checks);
   checkFile(join(HOME, ".agents", "skills", "ares-init", "SKILL.md"), "Shared ARES skill ares-init", checks);
   checkFile(join(opencodeHome, "plugins", "ares-tool-hooks.js"), "OpenCode tool security/observability plugin", checks);
@@ -2456,7 +2534,7 @@ function runtimeCheckOpenCode(strict, projectRoot = null) {
   checkContains(join(opencodeHome, "plugins", "ares-session.js"), "session.created", "OpenCode session-created plugin", checks);
   if (projectRoot) {
     checkContains(join(projectRoot, "AGENTS.md"), "ARES-HARNESS:BEGIN project-opencode", "Project OpenCode AGENTS.md", checks);
-    checkContains(join(projectRoot, "opencode.json"), "cognee_memory", "Project OpenCode MCP config", checks);
+    checkFile(join(projectRoot, "opencode.json"), "Project OpenCode config", checks);
     checkFile(join(projectRoot, ".opencode", "commands", "ares-init.md"), "Project OpenCode /ares-init command", checks);
     checkFile(join(projectRoot, ".opencode", "agents", "nathan.md"), "Project OpenCode native agent files", checks);
   }
@@ -3074,14 +3152,15 @@ function printHelp() {
   }
   console.log("");
   console.log(c.bold("Manage the harness"));
-  console.log("  " + c.bold(`${prefix} install [--target claude|codex|opencode|all]`) + "  Install / refresh target files");
-  console.log("  " + c.bold(`${prefix} project init [--target claude|codex|opencode|all]`) + "  Scaffold target-native project wiring");
+  console.log("  " + c.bold(`${prefix} install [--target claude|codex|opencode|all] [--memory native|cognee|hybrid]`) + "  Install / refresh target files");
+  console.log("  " + c.bold(`${prefix} project init [--target claude|codex|opencode|all] [--memory native|cognee|hybrid]`) + "  Scaffold target-native project wiring");
   console.log("  " + c.bold(`${prefix} uninstall [--purge]`) + "                         Remove Claude target files");
   console.log("  " + c.bold(`${prefix} migrate legacy-mishkan`) + "                    Copy ~/.claude/mishkan into ~/.ares without deleting it");
   console.log("  " + c.bold(`${prefix} uninstall --legacy-mishkan`) + "              Remove only the old ~/.claude/mishkan runtime after migration");
   console.log("  " + c.bold(`${prefix} status [--target claude|codex|opencode|all]`)  + "   Install state + target health");
   console.log("  " + c.bold(`${prefix} runtime check [--target ...] [--dir <project>]`) + "  Non-destructive global/project readiness checklist");
   console.log("  " + c.dim("Target note: Claude, Codex, and OpenCode are active with their safe target-native hook adapters."));
+  console.log("  " + c.dim("Memory note: native is the default. Use --memory cognee or --memory hybrid only when you want Cognee MCP wiring."));
   console.log("");
   console.log(c.bold("Knowledge") + c.dim("   (you run these — agents never do)"));
   console.log("  " + c.bold(`${prefix} knowledge configure`)       + "        Wizard: LLM provider + cognee secrets");

@@ -4,17 +4,17 @@
 
 **A portable SWE R&D harness for Claude Code, Codex CLI, and OpenCode.**
 
-45 specialist agents · six teams · one research pipeline · one growing knowledge graph
+45 specialist agents · six teams · one research pipeline · native memory by default, Cognee when needed
 
 </div>
 
 ---
 
-ARES packages the current MISHKAN agent organisation as a portable harness. Quality and security aren't requested from the model — they're enforced by the environment: target-native guidance, skills, commands, MCP wiring, hooks where audited, and structural separation of generation from review. The knowledge graph (Cognee) persists what you learn so sessions pick up where the last one stopped. A code-structure graph (Graphify) answers "who calls X, who depends on Y" at 88× less token cost than loading source files.
+ARES packages the current MISHKAN agent organisation as a portable harness. Quality and security aren't requested from the model — they're enforced by the environment: target-native guidance, skills, commands, optional MCP wiring, hooks where audited, and structural separation of generation from review. Native runtime memory is the default recall layer; Cognee remains available when you need a queryable knowledge graph. A code-structure graph (Graphify) answers "who calls X, who depends on Y" at 88× less token cost than loading source files.
 
 It's personal, opinionated infrastructure built around one engineer's standards. To make it yours, replace `docs/engineer/profile.md` and re-sync — nothing else hardcodes the author.
 
-> **v0.2.7** — agent fleet, rules, hooks, installer stable. Unified semantic `ares <object> <verb>` CLI with legacy `mishkan` aliases, engineer-gated curated promotion (`knowledge curate`, D-016), user-editable model-tier routing (`model`, D-017), and a confirm-gated `knowledge reset`. Cognee knowledge stack (per-project work · memory `:7777` · curated `:7730`) + Graphify code graph. Observability stack (`ares-watchd` + `ares-watch`) as two `uv tool`-installable packages.
+> **v0.2.8** — agent fleet, rules, hooks, installer stable. Unified semantic `ares <object> <verb>` CLI with legacy `mishkan` aliases, native memory by default, optional Cognee wiring via `--memory cognee|hybrid`, engineer-gated curated promotion (`knowledge curate`, D-016), user-editable model-tier routing (`model`, D-017), and a confirm-gated `knowledge reset`. Cognee knowledge stack (per-project work · memory `:7777` · curated `:7730`) + Graphify code graph stay available for advanced retrieval. Observability stack (`ares-watchd` + `ares-watch`) as two `uv tool`-installable packages.
 
 ---
 
@@ -35,7 +35,7 @@ Full guide: [`docs/usage/01-installation.md`](docs/usage/01-installation.md).
 ```bash
 cd <project>
 claude                    # starts in exploration mode — Nehemiah + Bezalel
-/ares-init                # Claude Code: scaffold spec chain → docs/ → Cognee → Sprint S0
+/ares-init                # Claude Code: scaffold spec chain → docs/ → memory → Sprint S0
 ```
 
 In Codex, invoke `$ares-init` after install/project init, or select `ares-init`
@@ -68,8 +68,9 @@ flowchart TD
     MM -. gates .-> SE
 
     MS -. reads / writes .-> KN
-    subgraph KN["Knowledge — 4 surfaces"]
+    subgraph KN["Knowledge — native default + optional retrieval surfaces"]
       direction LR
+      NAT[("native memory<br/>Claude /memory · Codex /memories")]
       GFY[("Graphify<br/>code structure · per-project")]
       WORK[("cognee work<br/>per-project · isolated")]
       MEM[("cognee-memory :7777<br/>session memory · shared")]
@@ -99,13 +100,20 @@ A shared research pipeline (Jakin → Ezra → Caleb → Shaphan → Shemaiah �
 
 ---
 
-## Knowledge stack
+## Memory and Knowledge
 
-Wired by `/ares-init` into each project's target-native MCP/config files:
+Default mode uses the runtime's native memory and versioned project docs:
 
-**Cognee** — semantic knowledge graph. Per-project isolated work store (own port, Ladybug) + shared session memory (`cognee-memory`, `:7777`) + cross-project curated reference library (`cognee-curated`, `:7730`). Docker-based, pinned, SOPS-managed secrets. Three pillars wired per project by `/ares-init` (D-007 + D-012).
+- Claude Code: use `/memory`.
+- Codex: use `/memories`.
+- Required rules stay in `CLAUDE.md`, `AGENTS.md`, and `docs/`.
+
+Cognee is optional. Wire it when you need semantic search, a curated library, or a queryable graph:
+
+**Cognee** — semantic knowledge graph. Per-project isolated work store (own port, Ladybug) + shared session memory (`cognee-memory`, `:7777`) + cross-project curated reference library (`cognee-curated`, `:7730`). Docker-based, pinned, SOPS-managed secrets. The three pillars are wired only when you opt in with `--memory cognee` or `--memory hybrid` (D-007 + D-012).
 
 ```bash
+ares project init --target all --memory cognee
 ares knowledge configure           # wizard: LLM provider + credentials + .env
 ares knowledge-stack up            # memory :7777 + curated :7730 (guided; preflights config, seeds curated)
 ```
@@ -147,7 +155,7 @@ Governed by hard caps (10 org + 4 per team) and PM+CTO co-ownership per ADR D-01
 
 | Command | Purpose |
 |---|---|
-| `/ares-init` | Scaffold a project — spec chain, docs, Cognee, Sprint S0 |
+| `/ares-init` | Scaffold a project — spec chain, docs, memory, Sprint S0 |
 | `/ares-resume` | Restore sprint state + open blockers |
 | `/sprint-close` | Team reporters → aggregate → docs pull → graph promote |
 | `/ares-org-reference` | Print the 45-agent org inline |
@@ -165,7 +173,8 @@ Governed by hard caps (10 org + 4 per team) and PM+CTO co-ownership per ADR D-01
 ```bash
 ares help                                           # full reference
 ares install --target codex                         # install/refresh a target
-ares project init --target codex                    # scaffold target-native project wiring
+ares project init --target codex                    # scaffold target-native project wiring, native memory
+ares project init --target all --memory cognee       # opt into Cognee MCP wiring
 ares uninstall                                      # remove Claude target files
 ares knowledge configure                            # wizard: LLM provider + Cognee .env
 ares knowledge curate                               # approve research-found resources into curated (D-016)

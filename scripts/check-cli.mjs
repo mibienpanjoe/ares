@@ -152,10 +152,12 @@ function cleanTmp(path) {
 const projectDir = "/tmp/ares-project-check";
 const wiringOnlyDir = "/tmp/ares-project-wiring-only-check";
 const brownfieldDir = "/tmp/ares-project-brownfield-check";
+const cogneeProjectDir = "/tmp/ares-project-cognee-check";
 const defaultInstallHome = "/tmp/ares-check-home-default-install";
 const claudeHome = "/tmp/ares-check-home-claude";
 const codexHomeRoot = "/tmp/ares-check-home";
 const opencodeHomeRoot = "/tmp/ares-check-home-opencode";
+const cogneeInstallHome = "/tmp/ares-check-home-cognee";
 const legacyHomeRoot = "/tmp/ares-check-home-legacy";
 const legacyGuardHomeRoot = "/tmp/ares-check-home-legacy-guard";
 const missingProjectDir = "/tmp/ares-missing-project-check";
@@ -170,10 +172,12 @@ for (const dir of [
   projectDir,
   wiringOnlyDir,
   brownfieldDir,
+  cogneeProjectDir,
   defaultInstallHome,
   claudeHome,
   codexHomeRoot,
   opencodeHomeRoot,
+  cogneeInstallHome,
   legacyHomeRoot,
   legacyGuardHomeRoot,
   missingProjectDir,
@@ -182,6 +186,7 @@ for (const dir of [
 ]) cleanTmp(dir);
 mkdirSync(projectDir, { recursive: true });
 mkdirSync(wiringOnlyDir, { recursive: true });
+mkdirSync(cogneeProjectDir, { recursive: true });
 for (const dir of [...Object.values(targetProjectDirs), ...Object.values(targetWiringDirs)]) {
   mkdirSync(dir, { recursive: true });
 }
@@ -281,7 +286,7 @@ for (const target of ["claude", "codex", "opencode"]) {
 
   if (target === "claude") {
     assert(read(join(fullDir, "CLAUDE.md")).includes("ARES-HARNESS:BEGIN project-claude"), "isolated Claude project guidance missing");
-    assert(existsSync(join(fullDir, ".mcp.json")), "isolated Claude MCP config missing");
+    assert(!existsSync(join(fullDir, ".mcp.json")), "isolated Claude native init wrote Cognee MCP config");
     assert(existsSync(join(fullDir, ".claude", "rules", "y4nn-standards.md")), "isolated Claude rules missing");
     assert(!existsSync(join(fullDir, "AGENTS.md")), "isolated Claude init wrote AGENTS.md");
   } else if (target === "codex") {
@@ -303,11 +308,10 @@ for (const target of ["claude", "codex", "opencode"]) {
 const projectRuntimeCheck = runForOutput([node, "bin/ares.js", "runtime", "check", "--target", "all", "--dir", projectDir]);
 for (const expected of [
   "Project Claude CLAUDE.md",
-  "Project Claude MCP config",
   "Project Codex AGENTS.md",
-  "Project Codex MCP config",
+  "Project Codex memory config",
   "Project OpenCode AGENTS.md",
-  "Project OpenCode MCP config",
+  "Project OpenCode config",
   "Project OpenCode /ares-init command",
 ]) {
   assert(projectRuntimeCheck.includes(expected), `project runtime check missing: ${expected}`);
@@ -327,14 +331,16 @@ run([node, "bin/ares.js", "project", "init", "--target", "all", "--dir", brownfi
 assert(read(join(projectDir, "AGENTS.md")).includes("ARES-HARNESS:BEGIN project-codex"), "project Codex AGENTS block missing");
 assert(read(join(projectDir, "AGENTS.md")).includes("ARES-HARNESS:BEGIN project-opencode"), "project OpenCode AGENTS block missing");
 assert(read(join(projectDir, "CLAUDE.md")).includes("ARES-HARNESS:BEGIN project-claude"), "project Claude CLAUDE block missing");
-assert(read(join(projectDir, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "project Codex MCP config missing");
+assert(!existsSync(join(projectDir, ".mcp.json")), "project native mode wrote Claude Cognee MCP config");
+assert(read(join(projectDir, ".codex", "config.toml")).includes("ARES native-memory project mode"), "project Codex native memory config missing");
+assert(!read(join(projectDir, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "project Codex native mode wrote Cognee MCP config");
 assert(read(join(projectDir, ".codex", "hooks.json")).includes("session-start-skill-index.sh"), "project Codex SessionStart hook missing");
 assert(!read(join(projectDir, ".codex", "hooks.json")).includes("pre-tool-security.sh"), "project Codex duplicated global tool hooks");
 assert(!existsSync(join(projectDir, ".codex", "prompts")), "project init created removed Codex custom prompts");
 assertNoStaleRuntimeText(join(projectDir, ".codex", "agents"), "project Codex agents");
 assert(!existsSync(join(projectDir, ".agents", "skills")), "project init duplicated shared skills under .agents/skills");
 const projectOpenCode = JSON.parse(read(join(projectDir, "opencode.json")));
-assert(projectOpenCode.mcp?.cognee_memory?.url === "http://127.0.0.1:7777/mcp", "project OpenCode cognee_memory MCP missing");
+assert(!projectOpenCode.mcp?.cognee_memory, "project OpenCode native mode wrote Cognee MCP config");
 assert(existsSync(join(projectDir, ".opencode", "commands", "ares-init.md")), "project OpenCode /ares-init command missing");
 assert(existsSync(join(projectDir, ".opencode", "agents", "nathan.md")), "project OpenCode nathan agent missing");
 assertNoStaleRuntimeText(join(projectDir, ".opencode", "agents"), "project OpenCode agents");
@@ -342,8 +348,9 @@ assert(!existsSync(join(projectDir, ".opencode", "skills")), "project init dupli
 
 assert(read(join(wiringOnlyDir, "AGENTS.md")).includes("ARES-HARNESS:BEGIN project-codex"), "wiring-only Codex AGENTS block missing");
 assert(read(join(wiringOnlyDir, "CLAUDE.md")).includes("ARES-HARNESS:BEGIN project-claude"), "wiring-only Claude CLAUDE block missing");
-assert(read(join(wiringOnlyDir, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "wiring-only Codex MCP config missing");
-assert(read(join(wiringOnlyDir, "opencode.json")).includes("cognee_memory"), "wiring-only OpenCode MCP config missing");
+assert(read(join(wiringOnlyDir, ".codex", "config.toml")).includes("ARES native-memory project mode"), "wiring-only Codex native memory config missing");
+assert(!read(join(wiringOnlyDir, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "wiring-only Codex native mode wrote Cognee MCP config");
+assert(!read(join(wiringOnlyDir, "opencode.json")).includes("cognee_memory"), "wiring-only OpenCode native mode wrote Cognee MCP config");
 assert(!existsSync(join(wiringOnlyDir, "docs")), "wiring-only unexpectedly created docs/");
 assert(!existsSync(join(wiringOnlyDir, ".agents", "skills")), "wiring-only unexpectedly created Codex skills");
 assert(!existsSync(join(wiringOnlyDir, ".codex", "agents")), "wiring-only unexpectedly created Codex agents");
@@ -361,7 +368,7 @@ assert(read(join(brownfieldDir, ".mcp.json")).includes("127.0.0.1:9999"), "brown
 assert(read(join(brownfieldDir, ".claude", "settings.json")).includes("Bash(rm -rf *)"), "brownfield Claude settings overwritten");
 assert(read(join(brownfieldDir, ".codex", "agents", "nathan.toml")).includes("keep custom"), "brownfield Codex agent overwritten");
 assert(read(join(brownfieldDir, ".opencode", "commands", "ares-init.md")).includes("Keep custom OpenCode command."), "brownfield OpenCode command overwritten");
-assert(read(join(brownfieldDir, "opencode.json")).includes("cognee_memory"), "brownfield OpenCode MCP not merged");
+assert(!read(join(brownfieldDir, "opencode.json")).includes("cognee_memory"), "brownfield OpenCode native mode wrote Cognee MCP config");
 
 run([node, "bin/ares.js", "install", "--target", "claude"], {
   env: {
@@ -428,7 +435,8 @@ run([node, "bin/ares.js", "runtime", "check", "--target", "codex"], {
   },
 });
 assert(read(join(codexHomeRoot, ".codex", "AGENTS.md")).includes("ARES Harness For Codex"), "global Codex AGENTS missing");
-assert(read(join(codexHomeRoot, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "global Codex MCP config missing");
+assert(read(join(codexHomeRoot, ".codex", "config.toml")).includes("ARES native-memory mode"), "global Codex native memory config missing");
+assert(!read(join(codexHomeRoot, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "global Codex native mode wrote Cognee MCP config");
 assert(read(join(codexHomeRoot, ".codex", "hooks.json")).includes("session-start-skill-index.sh"), "global Codex SessionStart hook missing");
 assert(read(join(codexHomeRoot, ".codex", "hooks.json")).includes("pre-tool-security.sh"), "global Codex PreToolUse security hook missing");
 assert(read(join(codexHomeRoot, ".codex", "hooks.json")).includes("pre-tool-trace.sh"), "global Codex PreToolUse trace hook missing");
@@ -560,6 +568,24 @@ assertNoStaleRuntimeText(join(opencodeDir, "agents"), "global OpenCode agents");
 assertNoStaleRuntimeText(opencodeSharedSkills, "global OpenCode shared skills");
 assertUniqueSkillNames(opencodeSharedSkills, "global OpenCode shared skills");
 const opencodeConfig = JSON.parse(read(join(opencodeDir, "opencode.json")));
-assert(opencodeConfig.mcp?.cognee_memory?.url === "http://127.0.0.1:7777/mcp", "global OpenCode cognee_memory MCP missing");
+assert(!opencodeConfig.mcp?.cognee_memory, "global OpenCode native mode wrote Cognee MCP config");
+
+const cogneeInstallEnv = {
+  HOME: cogneeInstallHome,
+  CODEX_HOME: join(cogneeInstallHome, ".codex"),
+  OPENCODE_CONFIG_DIR: join(cogneeInstallHome, ".config", "opencode"),
+  ARES_HOME: join(cogneeInstallHome, ".ares"),
+  ARES_SKIP_OBSERVABILITY: "1",
+};
+run([node, "bin/ares.js", "install", "--target", "all", "--memory", "cognee"], { env: cogneeInstallEnv });
+assert(read(join(cogneeInstallHome, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "global Codex Cognee memory config missing");
+const cogneeOpenCodeConfig = JSON.parse(read(join(cogneeInstallHome, ".config", "opencode", "opencode.json")));
+assert(cogneeOpenCodeConfig.mcp?.cognee_memory?.url === "http://127.0.0.1:7777/mcp", "global OpenCode Cognee MCP missing");
+
+run([node, "bin/ares.js", "project", "init", "--target", "all", "--memory", "cognee", "--dir", cogneeProjectDir], { env: cogneeInstallEnv });
+assert(read(join(cogneeProjectDir, ".mcp.json")).includes("cognee-memory"), "project Claude Cognee MCP config missing");
+assert(read(join(cogneeProjectDir, ".codex", "config.toml")).includes("[mcp_servers.cognee_memory]"), "project Codex Cognee MCP config missing");
+const cogneeProjectOpenCode = JSON.parse(read(join(cogneeProjectDir, "opencode.json")));
+assert(cogneeProjectOpenCode.mcp?.cognee_memory?.url === "http://127.0.0.1:7777/mcp", "project OpenCode Cognee MCP missing");
 
 console.log("check:cli ok");

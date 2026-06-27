@@ -16,8 +16,8 @@ object is the tool itself (so `npx ares-harness install`, not the doubled
 
 | Command | Does |
 |---|---|
-| `ares install --target claude\|codex\|opencode\|all` | Install / refresh target files (idempotent) |
-| `ares project init --target claude\|codex\|opencode\|all` | Scaffold target-native project wiring |
+| `ares install --target claude\|codex\|opencode\|all [--memory native\|cognee\|hybrid]` | Install / refresh target files (idempotent). `native` is default. |
+| `ares project init --target claude\|codex\|opencode\|all [--memory native\|cognee\|hybrid]` | Scaffold target-native project wiring. Cognee MCP is written only with `cognee`/`hybrid`. |
 | `ares uninstall [--purge]` | Remove Claude target files (`--purge` also drops `y4nn-standards.md`) |
 | `ares migrate legacy-mishkan` | Copy `~/.claude/mishkan` into `~/.ares` without deleting the legacy runtime |
 | `ares uninstall --legacy-mishkan` | Remove only the old `~/.claude/mishkan` runtime after migration |
@@ -38,7 +38,7 @@ non-zero exit code.
 | `ares knowledge ingest [--tagged-only] [--dataset=X] [paths…]` | Add docs to **this project's** store (`add → cognify → memify`) |
 | `ares knowledge curate` | Review + approve research-found resources into the **shared curated library** (D-016). Walks the candidate queue Baruch fills; on approval, an *additive* (no-prune, dedup) write. Stateful — you run it. |
 | `ares knowledge reset` | **Destructive** — full reset of the knowledge layer to the stable baseline: wipes every work store (container + volume), prunes `cognee-memory`, re-seeds `cognee-curated` from the canonical YAML. Type-to-confirm. Stateful — you run it. Work stores recreate on the next `/ares-init`. |
-| `ares knowledge-stack up [--build]` | Bring the shared infra up (memory `:7777` + curated `:7730` + ollama/pg). **Guided:** preflights config, names any gap, stops — never a cryptic docker error. `--build` only for the first image build. |
+| `ares knowledge-stack up [--build]` | Bring the optional Cognee shared infra up (memory `:7777` + curated `:7730` + ollama/pg). **Guided:** preflights config, names any gap, stops — never a cryptic docker error. `--build` only for the first image build. |
 | `ares knowledge-stack down` | Stop it — containers down, volumes/data survive (confirms) |
 | `ares knowledge-stack restart` | down + up |
 | `ares knowledge-stack status` | Detailed per-container health |
@@ -86,9 +86,11 @@ clipboard (it shows the command — it never runs it).
 
 ## Project init composes the verbs
 
-`/ares-init` runs `knowledge-stack up` (ensure the shared infra, confirm-if-down)
-then `project-work-store up` (this project's store) — the same guided/preflight path,
-so a fresh project comes up working without you knowing the topology.
+With `--memory native` (default), `/ares-init` uses runtime memory and versioned
+docs; it does not run Cognee. With `--memory cognee|hybrid`, `/ares-init` may run
+`knowledge-stack up` (ensure the shared infra, confirm-if-down) then
+`project-work-store up` (this project's store) after human confirmation — the same
+guided/preflight path, but only for projects that opted into Cognee.
 
 ## Deprecated aliases
 

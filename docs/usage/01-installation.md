@@ -120,19 +120,25 @@ in the Codex CLI, inspect the ARES commands under `~/.codex/hooks.json`, and
 trust them explicitly. Do not use `--dangerously-bypass-hook-trust` for normal
 interactive work.
 
-## Bring the cognee memory stack up
+## Memory backend
 
-The harness ships the memory layer as a Docker Compose stack. Three pillars:
-**per-project work stores** (one isolated Ladybug container per project,
-provisioned at `/ares-init`), **cognee-memory** (`:7777`, shared per-client
-session memory), and **cognee-curated** (`:7730`, shared reference library).
-See [memory layer](./04-memory-layer.md) for the full design (D-007 + D-012).
+ARES defaults to native runtime memory. Use `/memory` in Claude Code and
+`/memories` in Codex for cross-session recall. Keep required rules and project
+facts in `CLAUDE.md`, `AGENTS.md`, and `docs/` so they are deterministic.
+
+Cognee is optional advanced infrastructure. Use it only when you need a
+queryable semantic graph, curated library, or explicit MCP retrieval surface.
+Three pillars are available: **per-project work stores** (one isolated Ladybug
+container per project), **cognee-memory** (`:7777`, shared per-client session
+memory), and **cognee-curated** (`:7730`, shared reference library). See
+[memory layer](./04-memory-layer.md) for the full design (D-007 + D-012).
 
 The guided path is one command — it preflights the config, names any gap, then
 brings up the shared stack (base + hardening + selfhosted overlays) and seeds the
 curated box:
 
 ```bash
+ares project init --target all --memory cognee
 ares knowledge configure           # wizard: LLM_API_KEY + provider profile → .env (see chapter 06)
 ares knowledge-stack up            # memory :7777 + curated :7730, idempotent (~5 min cold start)
 ```

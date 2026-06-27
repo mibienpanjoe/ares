@@ -36,7 +36,8 @@ const checks = [
     ],
     required: [
       "ares project init --target all",
-      "`cognee-memory` and",
+      "ares project init --target all --memory cognee",
+      "The default memory backend is `native`",
       "expected: ['cognee-memory', 'cognee-curated']",
       "In Codex, invoke `$ares-init` or select `ares-init` through `/skills`",
     ],
@@ -80,9 +81,11 @@ const checks = [
       "mishkan-cognee",
     ],
     required: [
+      "Native runtime memory",
+      "optional advanced infrastructure",
       "ares-work-<slug>",
       "ares project-work-store up",
-      "Every ARES-initialised Claude project declares the two shared servers",
+      "ARES projects initialized with `--memory cognee`",
       "\"cognee-memory\"",
       "\"cognee-curated\"",
       "~/.ares/cognee/.env",

@@ -1,6 +1,6 @@
 ---
 name: mishkan-init
-description: Initialise a project under MISHKAN. Runs the SWE-BASICS-BEFORE-CODE sequence through the right specialists (PRD → SRS → CONTRACT → ARCHITECTURE → THREAT_MODEL → C4 → docs scaffold), seeds Cognee, writes the project CLAUDE.md, and begins Sprint S0. Use once per project, triggered by /mishkan-init.
+description: Initialise a project under MISHKAN. Runs the SWE-BASICS-BEFORE-CODE sequence through the right specialists (PRD → SRS → CONTRACT → ARCHITECTURE → THREAT_MODEL → C4 → docs scaffold), sets the memory path, writes the project CLAUDE.md, and begins Sprint S0. Use once per project, triggered by /mishkan-init.
 ---
 
 # mishkan-init
@@ -25,40 +25,30 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
    `/plan` first.
 7. **Jehoshaphat** (Sefer) — scaffold `docs/README.md`, `docs/adr/`,
    `docs/runbooks/` (stub runbooks per team). `/plan` first.
-8. **Automated** — knowledge setup (decisions D-007 + D-012 + D-015). Init composes
-   the two control verbs (the human-facing equivalents of the scripts):
-   - **Knowledge stack (shared, idempotent):** ensure the shared infra is up —
-     `mishkan knowledge-stack up` (memory :7777 + curated :7730 + ollama/pg;
-     wraps the compose + `ensure-curated-box.sh`; no-op if already running; ~5min
-     cold start on first run; preflights `.env` and guides to `mishkan knowledge
-     configure` if unset). Confirm-if-down.
-   - **Project work store (per-project, ADR D-012):** each project gets its OWN
-     physically-isolated store (embedded Ladybug; own container + volume + port —
-     never the shared `:7777`). Human path: `mishkan project-work-store up` (slug
-     defaults to the project dir name). To capture the assigned port for `.mcp.json`
-     (step 9), the automation reads it from the underlying provisioner:
-     ```bash
-     WORK_PORT=$(bash ~/.claude/mishkan/scripts/ensure-work-store.sh)
-     ```
-     Isolation rides on this container/volume, not `datasets=`.
-   - **Ingest (opt-in, never bulk):** `mishkan knowledge ingest --tagged-only` adds
-     anything tagged `ares: ingest` into THIS project's store (add → cognify →
-     memify, throttled); the rest is added per-doc as you go. Never bulk-ingest the
-     tree, and scrub secrets/PII first (see the `ares-ingest` skill's security section
-     in Codex/OpenCode, or the legacy `mishkan-ingest` source skill in Claude).
-   If the knowledge stack isn't up, init brings it up first; agents still work
-   without it — persistence resumes when it's up.
+8. **Automated** — memory setup. Native runtime memory is the default path:
+   use `/memory` in Claude Code or `/memories` in Codex for cross-session recall,
+   and keep required rules in `CLAUDE.md` / `AGENTS.md` / `docs/`. If the project
+   state says `Memory backend: cognee` or `hybrid`, then Cognee is explicitly
+   enabled and init may compose the two control verbs after Y4NN confirmation:
+   - **Knowledge stack (shared, idempotent):** `mishkan knowledge-stack up`
+     (memory :7777 + curated :7730 + ollama/pg; preflights `.env` and guides to
+     `mishkan knowledge configure` if unset).
+   - **Project work store (per-project, ADR D-012):** `mishkan project-work-store up`
+     gives this project its own physically-isolated store (embedded Ladybug; own
+     container + volume + port — never the shared `:7777`). Isolation rides on
+     this container/volume, not `datasets=`.
+   - **Ingest (opt-in, never bulk):** `mishkan knowledge ingest --tagged-only`
+     adds only `ares: ingest`-tagged docs into THIS project's store. Never
+     bulk-ingest the tree, and scrub secrets/PII first.
+   If Cognee is not enabled, skip all Cognee commands; persistence comes from
+   native memory plus versioned project docs.
 9. **Automated** — write `./CLAUDE.md` from
    `~/.claude/mishkan/templates/project-CLAUDE.md`, fill placeholders, set Sprint
    S0. Copy `~/.claude/mishkan/templates/settings.json` → `.claude/settings.json`,
    the team rules from `~/.claude/mishkan/rules/*` → `.claude/rules/*` for
-   path-scoped loading, and **render** `~/.claude/mishkan/templates/mcp.json` →
-   `./.mcp.json`, substituting `__MISHKAN_WORK_PORT__` with the work-store port
-   captured in step 8 so the `cognee` MCP points at THIS project's own store:
-   ```bash
-   sed "s/__MISHKAN_WORK_PORT__/${WORK_PORT}/" \
-     ~/.claude/mishkan/templates/mcp.json > ./.mcp.json
-   ```
+   path-scoped loading. Cognee MCP config is written only when project init used
+   `--memory cognee` or `--memory hybrid`; native memory projects do not need
+   `.mcp.json` for ARES.
 10. **Automated — Graphify code graph** (the third store of the knowledge stack,
     per D-008): if `graphify` is on PATH (`uv tool install graphifyy` provides
     it), run an initial scan so the project has a structure graph from Sprint
@@ -82,8 +72,8 @@ docs/{PRD,SRS,CONTRACT,ARCHITECTURE,THREAT_MODEL,README}.md
 docs/adr/  docs/runbooks/  docs/diagrams/C4/
 ./CLAUDE.md  (sprint S0)
 .claude/settings.json  .claude/rules/{common,frontend,backend,infrastructure,documentation}/
-.mcp.json  (cognee = this project's OWN per-project work store, cognee-curated = shared reference)
-Cognee: curated box ensured (:7730) + this project's per-project work store provisioned (own port) + tagged docs ingested
+.mcp.json  (only when Cognee is enabled: cognee-memory + cognee-curated; project work store is explicit)
+Memory: native runtime memory by default; Cognee stores only when enabled (`--memory cognee|hybrid`)
 ```
 
 ## Constraints

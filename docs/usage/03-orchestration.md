@@ -189,8 +189,10 @@ via `Task`) can only call MCP tools that appear in its own `tools:` frontmatter
 allowlist. If you see *"MCP tool not in subagent context"* during a research
 run, this is the cause.
 
-Tool names follow the pattern `mcp__<server>__<tool>`. The four MISHKAN agents
-whose job *is* cognee work have the relevant entries pre-wired:
+Tool names follow the pattern `mcp__<server>__<tool>`. These tools are relevant
+only when the project was initialized with `--memory cognee` or `--memory hybrid`.
+The four MISHKAN agents whose job *is* cognee work have the relevant entries
+pre-wired for that mode:
 
 | Agent | Cognee tools in its allowlist |
 |---|---|

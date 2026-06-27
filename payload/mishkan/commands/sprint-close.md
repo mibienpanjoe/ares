@@ -1,9 +1,10 @@
 ---
-description: Close the current sprint — reporters surface, Nehemiah aggregates, Bezalel reviews, Sefer pulls, Cognee promotes, next sprint begins.
+description: Close the current sprint — reporters surface, Nehemiah aggregates, Bezalel reviews, Sefer pulls, memory promotion, next sprint begins.
 ---
 
 Close the current sprint milestone. First **produce a `/plan`** of what will be
-promoted to Cognee and what will be closed, and surface it to Y4NN for approval.
+closed, what should be promoted to memory/docs, and whether Cognee is enabled for
+this project. Surface the plan to Y4NN for approval.
 Then run:
 
 1. Each **Team Reporter** surfaces its `team-report.json` (Maaseiah, Igal,
@@ -12,8 +13,10 @@ Then run:
 3. **Bezalel** reviews architectural and security flags.
 4. **Sefer** runs a sequential pull (**sefer-pull** skill, Mode A) — changelogs,
    ADRs, API docs, runbooks, team docs updated in `docs/`.
-5. Resolved research + decisions promoted to the Cognee project graph
-   (**cognee-promote** skill) — gated by Nehemiah + Bezalel.
+5. Resolved research + decisions promoted by blast radius. In native mode, update
+   `CLAUDE.md` / `AGENTS.md` / `docs/` and rely on runtime memory. In
+   `cognee`/`hybrid` mode, use the **cognee-promote** skill to write the Cognee
+   project graph — gated by Nehemiah + Bezalel.
 6. Observability aggregation runs (`bash {{MISHKAN}}/scripts/observability-aggregate.sh`)
    to produce per-tool and per-outcome counts plus per-session activity from
    `logs/*.jsonl`. Improvement-layer queries refresh from the produced summary.

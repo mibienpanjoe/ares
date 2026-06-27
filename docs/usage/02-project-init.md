@@ -8,6 +8,7 @@
 ```bash
 cd <project root>
 ares project init --target all   # writes target-native project wiring
+ares project init --target all --memory cognee   # optional: also wire Cognee MCP
 ```
 
 Inside a runtime session, use the native workflow entrypoint:
@@ -27,9 +28,9 @@ is an explicit precondition check.
 
 | Target | Files |
 |---|---|
-| Claude Code | `CLAUDE.md`, `.mcp.json`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/rules/*` |
+| Claude Code | `CLAUDE.md`, `.claude/settings.json`, `.claude/settings.local.json`, `.claude/rules/*`; `.mcp.json` only with `--memory cognee|hybrid` |
 | Codex | `AGENTS.md`, `.codex/config.toml`, `.codex/hooks.json`, `.codex/agents/*` |
-| OpenCode | `AGENTS.md`, `opencode.json`, `.opencode/agents/*`, `.opencode/commands/*` |
+| OpenCode | `AGENTS.md`, `opencode.json`, `.opencode/agents/*`, `.opencode/commands/*`; Cognee MCP entries only with `--memory cognee|hybrid` |
 
 Shared workflow skills remain global under `~/.agents/skills`; project init does
 not duplicate them into `.agents/skills` or `.opencode/skills`. This avoids
@@ -56,7 +57,7 @@ The full sequence (when chosen):
 5. **Benaiah** (Mishmar) writes `docs/THREAT_MODEL.md` (STRIDE).
 6. **Meshullam** (Migdal) writes `docs/diagrams/C4/` (Context, Container, Component).
 7. **Jehoshaphat** (Sefer) scaffolds `docs/README.md`, `docs/adr/`, `docs/runbooks/`.
-8. **Automated** cognee setup (see below).
+8. **Automated** memory setup (native by default; optional Cognee, see below).
 9. **Automated** project `CLAUDE.md` write + sprint S0.
 
 ```mermaid
@@ -67,16 +68,26 @@ flowchart TD
     ARC --> TM["5 · Benaiah<br/>docs/THREAT_MODEL.md · STRIDE"]
     TM --> C4["6 · Meshullam<br/>docs/diagrams/C4/"]
     C4 --> DOCS["7 · Jehoshaphat<br/>README · adr · runbooks"]
-    DOCS --> KN["8 · automated<br/>cognee setup"]
+    DOCS --> KN["8 · automated<br/>memory setup"]
     KN --> CL["9 · automated<br/>CLAUDE.md + Sprint S0"]
 ```
 
 Each step that touches a contract requires `/plan` to run first — nothing is generated
 without its upstream artifact.
 
-## Knowledge Setup At Init
+## Memory Setup At Init
 
-The current CLI wiring declares the shared knowledge servers and leaves the
+The default memory backend is `native`. That means the project relies on the
+runtime memory layer plus versioned repo docs:
+
+- Claude Code: use `/memory`.
+- Codex: use `/memories`.
+- Required team/project rules stay in `CLAUDE.md`, `AGENTS.md`, and `docs/`.
+
+No Cognee container, API key, or MCP config is required for the default path.
+
+When you need a queryable graph, run project init with `--memory cognee` or
+`--memory hybrid`. That writes the shared Cognee MCP aliases and leaves the
 per-project work store explicit.
 
 1. Bring up the shared stack when needed:
@@ -97,7 +108,7 @@ per-project work store explicit.
    ares knowledge ingest --tagged-only
    ```
 
-The whole point is memory is opt-in: see [Selective ingest](./05-selective-ingest.md).
+The whole point is graph memory is opt-in: see [Selective ingest](./05-selective-ingest.md).
 
 ## What `CLAUDE.md` carries
 
@@ -107,9 +118,8 @@ A lean, dynamic file that loads **after** the user-level identity. It carries:
   main session needs every turn.
 - Sprint slot — *current sprint*, *what's in flight*, *blockers*. Updated by
   `/ares-resume`, `/sprint-close`, and you.
-- Note that init provisions shared MCP aliases (`cognee-memory` and
-  `cognee-curated`). The per-project work store is provisioned separately by
-  `ares project-work-store up`.
+- Memory backend (`native`, `cognee`, or `hybrid`). Cognee MCP aliases are
+  present only when the project was initialized with `--memory cognee|hybrid`.
 - A pointer to the existing `docs/` if there is one (does not duplicate).
 
 ## Brownfield handling — what does *not* happen
@@ -130,7 +140,7 @@ After `ares project init --target all` completes:
 
 ```bash
 # Claude wiring
-ls -la .mcp.json CLAUDE.md .claude/settings.json .claude/settings.local.json
+ls -la CLAUDE.md .claude/settings.json .claude/settings.local.json
 
 # Codex/OpenCode wiring
 ls -la AGENTS.md .codex/config.toml .codex/hooks.json opencode.json
@@ -138,15 +148,16 @@ ls -la AGENTS.md .codex/config.toml .codex/hooks.json opencode.json
 # settings.local.json gitignored
 grep -E '\.claude/settings\.local\.json' .gitignore
 
-# shared cognee aliases written to .mcp.json
+# Cognee mode only: shared aliases written to .mcp.json
 python3 -c "import json; print(list(json.load(open('.mcp.json'))['mcpServers'].keys()))"
 # expected: ['cognee-memory', 'cognee-curated']
 ```
 
 ## Verifying the MCP connections (next session)
 
-MCP servers connect **at session start**. After changing MCP config, open a new
-session in the same directory:
+MCP servers connect **at session start**. This section applies only when you
+initialized with `--memory cognee` or `--memory hybrid`. After changing MCP
+config, open a new session in the same directory:
 
 ```bash
 exit          # leave the current session
@@ -156,9 +167,9 @@ claude        # fresh session
 
 ## Common edge cases
 
-- **No remote / private repo:** `.mcp.json` is tracked; do not put secrets in
-  it. The cognee MCP URLs point at local ports on your own host — no
-  third-party endpoints. The per-project work store runs on a dynamically
+- **No remote / private repo:** in Cognee mode, `.mcp.json` is tracked; do not
+  put secrets in it. The cognee MCP URLs point at local ports on your own host
+  — no third-party endpoints. The per-project work store runs on a dynamically
   assigned port; `cognee-memory` is `:7777`; `cognee-curated` is `:7730`.
 - **Multiple projects on one host:** safe. Each project has its own physically
   isolated work store container (`ares-work-<slug>`) provisioned by
@@ -174,5 +185,5 @@ claude        # fresh session
   (still the legacy payload path during the ARES transition).
 - [Orchestration](./03-orchestration.md) — how the main session routes work
   once init has run.
-- [Memory layer](./04-memory-layer.md) — the three cognee stores (work,
-  memory, curated) and what they hold.
+- [Memory layer](./04-memory-layer.md) — when to use native memory vs the three
+  cognee stores (work, memory, curated).

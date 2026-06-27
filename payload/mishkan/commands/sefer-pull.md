@@ -16,4 +16,6 @@ update only the affected docs:
 - `schema-change` → data docs + migration runbook (Joah).
 
 Sefer writes to `docs/` only — never code. Every doc dated, Diátaxis quadrant
-declared, sourced from Cognee/reporters. English only.
+declared, sourced from reporters and Cognee when the project uses
+`--memory cognee|hybrid`. In native mode, source from runtime memory plus
+versioned docs. English only.

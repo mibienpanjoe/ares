@@ -85,8 +85,8 @@ try {
     OPENCODE_CONFIG_DIR: join(home, ".config", "opencode"),
     ARES_SKIP_OBSERVABILITY: "1",
   };
-  run(node, ["bin/ares.js", "install", "--target", "all"], { env: runtimeEnv });
-  run(node, ["bin/ares.js", "project", "init", "--target", "all", "--dir", project], { env: runtimeEnv });
+  run(node, ["bin/ares.js", "install", "--target", "all", "--memory", "cognee"], { env: runtimeEnv });
+  run(node, ["bin/ares.js", "project", "init", "--target", "all", "--memory", "cognee", "--dir", project], { env: runtimeEnv });
   const runtimeSkills = join(home, ".ares", "skills");
   const portableSkills = join(home, ".agents", "skills");
   for (const entry of readdirSync(portableSkills, { withFileTypes: true })) {

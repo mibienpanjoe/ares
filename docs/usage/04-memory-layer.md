@@ -1,8 +1,22 @@
-# 04 — Memory layer (cognee)
+# 04 — Memory layer
 
 > Goal: explain what the harness stores, where, how it gets there, and how
 > agents query it. This is the layer that makes MISHKAN *accumulate* rather
 > than just function.
+
+ARES now has two memory paths:
+
+- **Native runtime memory** is the default. Claude Code uses `/memory`; Codex
+  uses `/memories`. This is enough for preferences, recurring workflows, project
+  conventions, and recent cross-session recall.
+- **Cognee** is optional advanced infrastructure. Use it when you need semantic
+  search over ingested docs, a curated reference library, explicit MCP tools, or
+  graph-backed retrieval. Enable it per install/project with
+  `--memory cognee` or `--memory hybrid`.
+
+Required rules still belong in `CLAUDE.md`, `AGENTS.md`, checked-in docs, and
+skills. Native memory and Cognee are recall/retrieval layers, not the only
+source of mandatory behavior.
 
 ## Three physically-isolated pillars (decisions D-007 + D-012)
 
@@ -124,8 +138,8 @@ manually.
 
 ## The MCP — how agents reach memory
 
-Every ARES-initialised Claude project declares the two shared servers in
-`.mcp.json`:
+ARES projects initialized with `--memory cognee` or `--memory hybrid` declare
+the two shared servers in `.mcp.json`:
 
 ```json
 {

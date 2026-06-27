@@ -8,6 +8,7 @@
 
 - **Name:** {{PROJECT_NAME}}
 - **Stack:** {{STACK}}
+- **Memory backend:** {{MEMORY_BACKEND}}
 - **Cognee namespace:** {{COGNEE_NAMESPACE}}
 - **Initialised:** {{DATE}}
 
@@ -44,4 +45,4 @@
 
 ---
 
-*Updated at milestones by Nehemiah. Mirrored to Cognee. Restored by `/mishkan-resume`.*
+*Updated at milestones by Nehemiah. Mirrored to Cognee only when Cognee is enabled. Restored by `/mishkan-resume`.*

@@ -1,5 +1,5 @@
 ---
-description: Initialise the current project under MISHKAN (PRD→SRS→CONTRACT→ARCHITECTURE→THREAT_MODEL→C4→docs→Cognee→Sprint S0).
+description: Initialise the current project under MISHKAN (PRD→SRS→CONTRACT→ARCHITECTURE→THREAT_MODEL→C4→docs→memory→Sprint S0).
 argument-hint: "[optional one-line project intent]"
 ---
 
@@ -18,10 +18,12 @@ Nehemiah → `docs/PRD.md`
 → Benaiah → `docs/THREAT_MODEL.md` (plan first)
 → Meshullam → `docs/diagrams/C4/` (plan first)
 → Jehoshaphat → `docs/README.md`, `docs/adr/`, `docs/runbooks/` (plan first)
-→ knowledge setup (D-007 + D-012 + D-015): `mishkan knowledge-stack up` (shared
-  infra, idempotent) + `mishkan project-work-store up` (this project's isolated
-  store) + `mishkan knowledge ingest --tagged-only` (ONLY `ares: ingest`-tagged
-  docs — never bulk-ingest the tree; selective by design, prevents PII bleed)
+→ memory setup: use the runtime's native memory by default (`/memory` in Claude
+  Code, `/memories` in Codex). If this project state says `Memory backend:
+  cognee` or `hybrid`, ask Y4NN before running `mishkan knowledge-stack up`,
+  `mishkan project-work-store up`, and `mishkan knowledge ingest --tagged-only`
+  (ONLY `ares: ingest`-tagged docs — never bulk-ingest the tree; selective by
+  design, prevents PII bleed)
 → write `./CLAUDE.md` (Sprint S0), copy settings + team rules into `.claude/`
 
 Sequence before implementation: no code is written during init. Stateful

@@ -6,9 +6,10 @@
 
 A Claude Code, Codex, or OpenCode session, turned into a 45-agent
 software-engineering organisation with deterministic constraints, an
-asymmetric AI-vs-human delegation boundary, and four knowledge surfaces that
-accumulate as you work: one code-structure surface (Graphify) plus three cognee
-stores (per-project work · session memory · curated reference).
+asymmetric AI-vs-human delegation boundary, native runtime memory by default,
+and optional retrieval surfaces for larger projects: one code-structure surface
+(Graphify) plus three cognee stores (per-project work · session memory ·
+curated reference).
 
 ## In five minutes
 
@@ -18,19 +19,23 @@ flowchart TD
     MS -->|Task| TL["Team Lead / Specialist"]
     MS -->|Task| OPS["aiobi-ops / other project agents"]
     MS -->|Task| RP["research pipeline"]
-    MS -. reads / writes .-> WORK[("cognee work · per-project<br/>ares-work-{slug} · Ladybug, own port+volume")]
-    MS -. reads / writes .-> MEM[("cognee-memory :7777<br/>per-client session memory · shared")]
-    MS -. reads / writes .-> CUR[("cognee-curated :7730<br/>reference library · shared, read-mostly")]
+    MS -. recalls .-> NAT[("native memory<br/>Claude /memory · Codex /memories")]
+    MS -. optional retrieval .-> GFY[("Graphify<br/>code structure")]
+    MS -. optional retrieval .-> WORK[("cognee work · per-project<br/>ares-work-{slug}")]
+    MS -. optional retrieval .-> CUR[("cognee-curated :7730<br/>reference library")]
 ```
 
 *The main session is the one orchestrator — it delegates one level deep (siblings) and
-reads/writes three Cognee stores. (Diagrams render on GitHub.)*
+uses runtime memory by default. Cognee and Graphify are opt-in retrieval surfaces
+for larger projects. (Diagrams render on GitHub.)*
 
 - **Main session is leadership.** It loads MISHKAN identity from
   `~/.claude/CLAUDE.md` and routes work one level deep.
 - **45 agents** across **6 teams** + **2 orchestrators** + a **6-stage research
   pipeline**.
-- **Four knowledge surfaces** total — 1 code-structure + 3 cognee stores:
+- **Native memory first.** Claude Code `/memory` and Codex `/memories` carry
+  preferences, conventions, and cross-session recall without Docker/API setup.
+- **Optional retrieval surfaces** — 1 code-structure + 3 cognee stores:
   - **Graphify** (per-project, `graphify-out/`) — code structure: call graphs,
     dependents, blast-radius. AST-derived, deterministic, re-derivable. D-008.
     Not installed by `ares install`; run `uv tool install "graphifyy>=0.8.33"`.
@@ -46,7 +51,7 @@ reads/writes three Cognee stores. (Diagrams render on GitHub.)*
   making the total four. The `cognify → memify` (extraction → enrichment) and
   `search` operations are exposed via MCP for the three cognee stores. See
   D-007 + D-008 + D-012.
-- **Selective ingest**: docs enter the work graph only when tagged
+- **Selective ingest**: docs enter the Cognee work graph only when tagged
   (`ares: ingest`) or explicitly invoked. No bulk-ingest, no PII bleed.
 
 ## Chapter index
@@ -56,7 +61,7 @@ reads/writes three Cognee stores. (Diagrams render on GitHub.)*
 | 01 | [Installation](./01-installation.md) | Prerequisites, `npx ares-harness install --target ...`, layout, uninstall |
 | 02 | [Project initialisation](./02-project-init.md) | `ares project init`, `/ares-init`, scope choices, brownfield handling |
 | 03 | [Orchestration](./03-orchestration.md) | Main-session-as-orchestrator, model routing, skills on-demand |
-| 04 | [Memory layer (cognee)](./04-memory-layer.md) | Per-project work stores + `cognee-memory` (`:7777`) + `cognee-curated` (`:7730`), `cognify`/`memify`/`search`, UIs |
+| 04 | [Memory layer](./04-memory-layer.md) | Native runtime memory by default; optional Cognee work + `cognee-memory` (`:7777`) + `cognee-curated` (`:7730`) |
 | 05 | [Selective ingest](./05-selective-ingest.md) | `ares knowledge ingest`, frontmatter tagging, memory-is-opt-in |
 | 06 | [LLM provider profiles](./06-llm-providers.md) | Gemini/NVIDIA/Ollama/OpenAI/Anthropic, rate vs daily caps |
 | 07 | [Troubleshooting](./07-troubleshooting.md) | Real gotchas + fixes from the build |
