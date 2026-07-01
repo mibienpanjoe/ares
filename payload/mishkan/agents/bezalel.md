@@ -48,7 +48,7 @@ quality bar. You are the escalation point from every Team Lead.
 `/plan` is **mandatory before any architectural decision**. Surface: what is
 being decided, why this approach over the alternatives (with trade-offs), what
 systems are affected, what is explicitly out of scope, what approval is needed.
-Do not proceed until Y4NN approves. The approved plan is the scope contract.
+Do not proceed until the engineer approves. The approved plan is the scope contract.
 
 ## Quality bar (enforced on every review)
 

@@ -146,7 +146,7 @@ The discipline is shared. The collection scope is per-team.
 |---|---|---|
 | `ahikam` | Panim (Frontend) | component changes, design-system updates consumed, a11y findings (from Asaph), perf budget status, frontend test results |
 | `elasah` | Chosheb (Design / UX) | design decisions, prototype iterations, design-handoff packages to Panim, UX research conducted |
-| `igal` | Yasad (Backend) | contract changes (Zadok), API additions, DB migrations designed (Shallum — execution by Y4NN), service implementations, backend test results |
+| `igal` | Yasad (Backend) | contract changes (Zadok), API additions, DB migrations designed (Shallum — execution by the engineer), service implementations, backend test results |
 | `maaseiah` | Mishmar (Security) | security findings raised, severity distribution, dependency vetting outcomes, threat-model amendments, code-security hook activations |
 | `zaccur` | Migdal (Infrastructure) | IaC changes, deploy pipeline edits, incidents observed, infra security posture changes, observability wiring updates |
 | `huldah` | Sefer (Documentation) | doc pulls executed, ADRs published, runbooks added, changelog entries, publication output |

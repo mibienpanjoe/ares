@@ -151,7 +151,7 @@ advice:
       cons: "<...>"
   recommendation: "<the option Hushai recommends, with the force-resolution
                    in one sentence>"
-  decision_belongs_to: "Phinehas (gate) + Bezalel (technical) + Y4NN (final)"
+  decision_belongs_to: "Phinehas (gate) + Bezalel (technical) + the engineer (final)"
 ```
 
 Three rules:
@@ -162,7 +162,7 @@ Three rules:
 - **The options are real.** Two options with no Bad is not a
   deliberation. Each option has trade-offs named.
 - **The decision routes elsewhere.** Hushai's recommendation is
-  input; Phinehas / Bezalel / Y4NN decide.
+  input; Phinehas / Bezalel / the engineer decide.
 
 ---
 
@@ -219,7 +219,7 @@ options:
 >
 > Decision belongs to Phinehas (gate: does the medium finding block?
 > recommend yes-with-Option-B); Bezalel (technical sign-off);
-> Y4NN (final).
+> the engineer (final).
 
 What Hushai did:
 
@@ -252,7 +252,7 @@ What Hushai did NOT:
    Risk acceptance is documented. Period.
 
 5. **"I'll decide for the team since they're busy."** §1. The
-   decision belongs to Phinehas + Bezalel + Y4NN.
+   decision belongs to Phinehas + Bezalel + the engineer.
 
 6. **"This recommendation is final."** §6. The recommendation is
    input. Final is someone else's call.

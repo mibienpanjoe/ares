@@ -29,7 +29,7 @@ Three corollaries:
   NIST SSDF, SLSA, OSV.dev. No vibes-based threats; no fabricated
   CVEs.
 - **No prod execution.** Same asymmetric-delegation rule. Benaiah
-  prepares; Y4NN runs.
+  prepares; the engineer runs.
 
 ---
 
@@ -113,7 +113,7 @@ land.
 
 ### 3.2 Portfolio audit (the `dependency-audit` skill)
 
-Periodically across all Y4NN projects:
+Periodically across all the engineer's projects:
 
 - **Shared CVEs across projects.** A vulnerability in a shared
   dependency affects multiple projects; the patch sequence is
@@ -257,7 +257,7 @@ with PyPI's own infrastructure (medium trust). **Pass with note.**
 >    maintainer-of-one risk materialises (no releases for 12
 >    months while CVEs accumulate), reach for an alternative or
 >    fork.
-> 5. Hand to Y4NN for the actual `pyproject.toml` edit and lockfile
+> 5. Hand to the engineer for the actual `pyproject.toml` edit and lockfile
 >    update (asymmetric delegation; Benaiah does not execute
 >    package installs that affect the project).
 
@@ -303,7 +303,7 @@ What Benaiah did NOT:
    finding. Inline note + CVE id + rationale.
 
 7. **"I'll just run the deploy to test the hardening."** §1. Prepare;
-   Y4NN runs.
+   the engineer runs.
 
 ---
 

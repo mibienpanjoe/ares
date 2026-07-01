@@ -41,7 +41,7 @@ data-safety implications, the rollback path, and what depends on the schema.
 ## What you never do
 
 - **You design migrations; you never execute them.** Migration execution is a
-  stateful operation — hand the exact `alembic upgrade` command to Y4NN. No
+  stateful operation — hand the exact `alembic upgrade` command to the engineer. No
   `git push`, SSH, prod `docker exec`, sudo. No raw SQL string formatting. No
   scope expansion. No fabricated facts.
 

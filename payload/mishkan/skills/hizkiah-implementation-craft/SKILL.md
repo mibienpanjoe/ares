@@ -594,7 +594,7 @@ Node.js — but the *shape* is identical.
   within Nathan's bounded contexts; he does not move the seams.
 - **Shallum → Hizkiah.** Schema and migrations are Shallum's. Hizkiah
   does not author migrations under any circumstances. The schema
-  change is requested; Shallum designs the migration; Y4NN executes.
+  change is requested; Shallum designs the migration; the engineer executes.
 - **Uriah → Hizkiah.** Uriah evaluates the implementation against the
   contract. Findings come back as structured QA output; Hizkiah
   remediates against them, does not argue them.

@@ -5,33 +5,35 @@ serves. It is meant to be edited or replaced by the engineer.
 
 | File | Role |
 |---|---|
-| `profile.md` | Canonical, agent-loadable profile. This is what MISHKAN agents load as engineer context (copied at install/sync to `~/.claude/mishkan/profile.md`). |
-| `profile-readable.md` | Human-readable narrative companion. Reference, not loaded by agents. |
+| `profile.example.md` | Sanitized template committed to the repo. Copy this first. |
+| `profile.md` | Canonical, agent-loadable profile. Gitignored. This is what ARES agents load as engineer context after install/sync to `~/.ares/profile.md`. |
+| `profile-readable.md` | Optional local human-readable narrative companion. Gitignored. Reference only; not loaded by agents. |
 
 ## How it propagates
 
-`profile.md` is the source. Two layers consume it:
+Your local `profile.md` is the source. Two layers consume it:
 
-1. **Mechanical (a script):** `scripts/sync-profile.sh` copies `profile.md` →
-   `~/.claude/mishkan/profile.md` (the runtime path every reference points at) and
+1. **Mechanical (a script):** `~/.ares/scripts/sync-profile.sh` copies `profile.md` →
+   `~/.ares/profile.md` (the runtime path every reference points at) and
    audits the harness for stale references. Run it after any edit, or at install.
 
 2. **Semantic (an agent):** **Seraiah** (Sefer org-layer) owns re-deriving the
-   digests that were drawn *from* the profile when it materially changes — the
-   non-negotiables block in the user-level `CLAUDE.md` and any engineering-identity
-   docs. The script moves bytes; Seraiah keeps meaning in sync.
+   digests that were drawn *from* the profile when it materially changes — target
+   runtime guidance (`CLAUDE.md` / `AGENTS.md`) and any engineering-identity docs.
+   The script moves bytes; Seraiah keeps meaning in sync.
 
-## Replacing the profile (another engineer adopting MISHKAN)
+## Replacing the profile
 
-Drop your own `profile.md` here (keep the section structure — identity, how you
-think, stack, practice, AI-collaboration, strengths), run `scripts/sync-profile.sh`,
-then ask Seraiah to re-derive the user-level `CLAUDE.md` non-negotiables. Nothing
+Copy `profile.example.md` to `profile.md`, replace the placeholders, keep the section
+structure — identity, how you think, stack, practice, AI-collaboration, strengths —
+then run `~/.ares/scripts/sync-profile.sh`,
+then ask Seraiah to re-derive the target runtime guidance. Nothing
 else in the harness hardcodes the previous engineer.
 
 ## What references this profile
 
-- `~/.claude/CLAUDE.md` (user-level identity → non-negotiables digest)
-- `~/.claude/mishkan/agents/seraiah.md` (org-layer identity owner)
-- runtime load path: `~/.claude/mishkan/profile.md`
+- `~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` / `~/.config/opencode/AGENTS.md` (user-level identity → non-negotiables digest)
+- `~/.ares/agents/seraiah.md` and target-native copies (org-layer identity owner)
+- runtime load path: `~/.ares/profile.md`
 
-Run `scripts/sync-profile.sh --check` to list current references and flag drift.
+Run `~/.ares/scripts/sync-profile.sh --check` to list current references and flag drift.

@@ -76,7 +76,7 @@ Each entry carries an `origin` field: `mishkan`, `user`, `plugin`, `project`.
 
 **Rule.** Never auto-load a non-MISHKAN skill for a stateful operation
 (anything in y4nn-standards §5: `git push`, SSH to production, `docker exec`
-on prod, `sudo`, schema migration, log forensics). Surface them; ask Y4NN
+on prod, `sudo`, schema migration, log forensics). Surface them; ask the engineer
 before loading.
 
 For generative work (boilerplate, doc draft, refactor sketch), non-MISHKAN

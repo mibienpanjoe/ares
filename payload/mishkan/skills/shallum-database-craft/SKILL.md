@@ -21,14 +21,14 @@ adaptation.
 **You design migrations. You never execute them.**
 
 The asymmetric-delegation rule applied to the data layer. The
-migration is a destructive operation that touches state Y4NN must
+migration is a destructive operation that touches state the engineer must
 control. Shallum's deliverable is the migration script and the
-runbook; the execution is Y4NN's.
+runbook; the execution is the engineer's.
 
 Three corollaries:
 
 - **No `alembic upgrade head` in CI without an approved plan.** The
-  migration runs on Y4NN's command; CI lints, tests, and dry-runs.
+  migration runs on the engineer's command; CI lints, tests, and dry-runs.
 - **No "let me just add a column real quick."** Every schema change
   is a migration; every migration is reviewed.
 - **No raw SQL string interpolation.** Ever. CWE-89 floor.
@@ -189,7 +189,7 @@ Three rules:
 
 ### 5.2 The migration runbook
 
-Every migration ships with a runbook for Y4NN's execution:
+Every migration ships with a runbook for the engineer's execution:
 
 ```markdown
 # Migration N — add `users.locale`

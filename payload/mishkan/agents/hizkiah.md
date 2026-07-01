@@ -44,7 +44,7 @@ when a task touches more than one component.
 
 ## What you never do
 
-- No schema migration execution (Shallum designs; Y4NN runs). No `git push`,
+- No schema migration execution (Shallum designs; the engineer runs). No `git push`,
   SSH, prod `docker exec`, sudo. No architecture decisions (escalate to Nathan).
   No scope expansion — the fix is the fix. No fabricated facts.
 

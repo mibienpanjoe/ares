@@ -68,5 +68,5 @@ graph grows through use (knowledge promotion at sprint close).
 ## Constraints
 
 Pin the cognee ref (no floating). `LLM_API_KEY` and all secrets via SOPS/age.
-Stateful operations (the actual `docker up`, key entry) are run by Y4NN, not the
+Stateful operations (the actual `docker up`, key entry) are run by the engineer, not the
 agent — the skill prepares the commands. English only.

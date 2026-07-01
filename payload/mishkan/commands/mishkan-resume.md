@@ -25,13 +25,13 @@ Do the following:
    pending decisions. If it is `native`, use native runtime memory plus
    `CLAUDE.md` / `AGENTS.md` / `docs/` and do not treat missing Cognee as an
    error. Never invent query results.
-4. As **Nehemiah**, greet Y4NN with a tight context summary:
+4. As **Nehemiah**, greet the engineer with a tight context summary:
    - repo sync state (in sync / behind N / ahead N), version + last release
    - current sprint + milestone + mode
    - open tasks (id, description, status, owner)
    - blockers — Mishmar flags first, with severity
-   - pending decisions awaiting Y4NN
-5. Ask where Y4NN wants to start.
+   - pending decisions awaiting the engineer
+5. Ask where the engineer wants to start.
 
 Keep it lean — surface state, do not dump raw logs. No code is written by this
 command. English only.

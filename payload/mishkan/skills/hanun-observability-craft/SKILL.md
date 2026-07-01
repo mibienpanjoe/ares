@@ -25,7 +25,7 @@ Three corollaries:
 - **No one-time hardening.** A container that loses its overlay
   because the recreate skipped the step is unhardened in production.
   The overlay is part of the create.
-- **No prod execution.** Hanun prepares; Y4NN runs.
+- **No prod execution.** Hanun prepares; the engineer runs.
 - **Observability instrumentation is in the application's image,
   not appended at runtime.** A side-loaded agent is a future
   divergence.

@@ -128,9 +128,10 @@ Concerns:
 What Seraiah owns that the others do not:
 
 - **Profile propagation.** When `docs/engineer/profile.md` changes,
-  Seraiah runs the sync script, then re-derives the digests in the
-  user-level `~/.claude/CLAUDE.md` non-negotiables block and any
-  engineering-identity references. Mechanical recopy is the script;
+  Seraiah runs `~/.ares/scripts/sync-profile.sh`, then re-derives the digests in
+  target runtime guidance (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`,
+  `~/.config/opencode/AGENTS.md`) and any engineering-identity references.
+  Mechanical recopy is the script;
   re-derivation when the profile materially changes is Seraiah.
 - **Curated library upkeep.** When research promotes a learning to
   cross-harness, Seraiah documents the entry in the curated library

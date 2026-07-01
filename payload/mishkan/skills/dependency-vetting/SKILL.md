@@ -56,4 +56,4 @@ conditions: [...]        # e.g. "pin to >=X.Y.Z", "add OSV-Scanner gate"
 
 No fabricated CVEs — anchor to OSV/NVD ids. Stateful operations hard stop (the
 agent never runs the install; it prepares the pinned manifest change and hands
-the install command to Y4NN). English only.
+the install command to the engineer). English only.

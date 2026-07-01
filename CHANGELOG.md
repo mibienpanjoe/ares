@@ -6,6 +6,16 @@ All notable changes to MISHKAN are documented here. Format:
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-07-01
+
+### Changed
+
+- Align developer profile docs and runtime guidance on `~/.ares/profile.md`.
+- Document the gitignored local profile flow from `docs/engineer/profile.example.md`.
+- Refresh npm package metadata and README ownership links to `mibienpanjoe/ares`.
+- Replace active personal identity references in installed prompts with generic
+  engineer wording.
+
 ### Added
 
 - **ARES runtime portability.** Introduce the `ares-harness` package identity
@@ -599,11 +609,14 @@ Initial npm release. The harness becomes distributable via
 - Dependency-free `npx` installer with idempotent + non-clobbering semantics.
 - ADRs D-001 through D-007.
 
-[Unreleased]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.7...HEAD
-[0.2.7]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.6...v0.2.7
-[0.2.6]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.5...v0.2.6
-[0.2.5]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.4...v0.2.5
-[0.2.4]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.3...v0.2.4
-[0.2.3]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.2.0...v0.2.3
-[0.2.0]: https://github.com/Y4NN777/mishkan-cc-harness/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/Y4NN777/mishkan-cc-harness/releases/tag/v0.1.0
+[Unreleased]: https://github.com/mibienpanjoe/ares/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/mibienpanjoe/ares/compare/v0.2.9...v0.2.10
+[0.2.9]: https://github.com/mibienpanjoe/ares/compare/v0.2.8...v0.2.9
+[0.2.8]: https://github.com/mibienpanjoe/ares/compare/v0.2.7...v0.2.8
+[0.2.7]: https://github.com/mibienpanjoe/ares/compare/v0.2.6...v0.2.7
+[0.2.6]: https://github.com/mibienpanjoe/ares/compare/v0.2.5...v0.2.6
+[0.2.5]: https://github.com/mibienpanjoe/ares/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/mibienpanjoe/ares/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/mibienpanjoe/ares/compare/v0.2.0...v0.2.3
+[0.2.0]: https://github.com/mibienpanjoe/ares/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/mibienpanjoe/ares/releases/tag/v0.1.0

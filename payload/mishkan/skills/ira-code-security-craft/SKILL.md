@@ -233,7 +233,7 @@ Four steps, in order. Anything short is a workaround:
 2. Add the env var to `.env.example` *without* the real value.
 3. Confirm `.env` is in `.gitignore`.
 4. **Revoke the leaked secret.** It is in git history; rotation is
-   mandatory, not optional. Hand the revoke command to Y4NN.
+   mandatory, not optional. Hand the revoke command to the engineer.
 
 (Examples in §9 use the placeholder string `<PLACEHOLDER_FAKE_KEY>` for
 the leaked-secret string. Real keys never appear in this skill.)
@@ -383,7 +383,7 @@ Update `.env.example`:
 GEMINI_API_KEY=
 ```
 
-**Hand to Y4NN** (asymmetric delegation):
+**Hand to the engineer** (asymmetric delegation):
 
 ```bash
 # Revoke the leaked key — required, the key is in git history.
@@ -548,6 +548,6 @@ Three rules:
 *Cross-references: `~/.claude/rules/y4nn-standards.md`
 (verify-before-fix §2, durable rule §3, no-fabrication §6,
 asymmetric-delegation §5 — Ira never executes a rotation, hands the
-command to Y4NN), `payload/mishkan/agents/ira.md` (the agent that
+command to the engineer), `payload/mishkan/agents/ira.md` (the agent that
 invokes this skill), `payload/mishkan/hooks/pre-tool-security.sh`
 (the runtime side; Ira is its live intelligence).*

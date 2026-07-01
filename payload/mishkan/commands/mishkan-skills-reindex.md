@@ -30,4 +30,4 @@ After the rebuild, surface:
   (read the last 5 lines if the file exists).
 
 If the rebuild fails (non-zero exit, parse error), do **not** retry blindly —
-surface the error to Y4NN.
+surface the error to the engineer.
