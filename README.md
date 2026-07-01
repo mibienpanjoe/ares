@@ -12,9 +12,9 @@
 
 ARES packages the current MISHKAN agent organisation as a portable harness. Quality and security aren't requested from the model — they're enforced by the environment: target-native guidance, skills, commands, optional MCP wiring, hooks where audited, and structural separation of generation from review. Native runtime memory is the default recall layer; Cognee remains available when you need a queryable knowledge graph. A code-structure graph (Graphify) answers "who calls X, who depends on Y" at 88× less token cost than loading source files.
 
-It's personal, opinionated infrastructure built around one engineer's standards. To make it yours, replace `docs/engineer/profile.md` and re-sync — nothing else hardcodes the author.
+It's personal, opinionated infrastructure built around one engineer's standards. To make it yours, create your local `docs/engineer/profile.md` from [`docs/engineer/profile.example.md`](docs/engineer/profile.example.md), then re-sync — nothing else hardcodes the author.
 
-> **v0.2.8** — agent fleet, rules, hooks, installer stable. Unified semantic `ares <object> <verb>` CLI with legacy `mishkan` aliases, native memory by default, optional Cognee wiring via `--memory cognee|hybrid`, engineer-gated curated promotion (`knowledge curate`, D-016), user-editable model-tier routing (`model`, D-017), and a confirm-gated `knowledge reset`. Cognee knowledge stack (per-project work · memory `:7777` · curated `:7730`) + Graphify code graph stay available for advanced retrieval. Observability stack (`ares-watchd` + `ares-watch`) as two `uv tool`-installable packages.
+> **v0.2.9** — agent fleet, rules, hooks, installer stable. Unified semantic `ares <object> <verb>` CLI with legacy `mishkan` aliases, native memory by default, optional Cognee wiring via `--memory cognee|hybrid`, engineer-gated curated promotion (`knowledge curate`, D-016), user-editable model-tier routing (`model`, D-017), and a confirm-gated `knowledge reset`. Cognee knowledge stack (per-project work · memory `:7777` · curated `:7730`) + Graphify code graph stay available for advanced retrieval. Observability stack (`ares-watchd` + `ares-watch`) as two `uv tool`-installable packages.
 
 ---
 
@@ -194,9 +194,11 @@ ares-watchd start|stop|status                       # manual daemon lifecycle
 
 ## Customisation
 
-The harness serves the engineer described in [`docs/engineer/profile.md`](docs/engineer/profile.md). Swap in your own (keep the section structure), then:
+The harness loads the runtime profile at `~/.ares/profile.md`. From a checkout, create your local gitignored profile from the sanitized template, edit it, then sync:
 
 ```bash
+cp docs/engineer/profile.example.md docs/engineer/profile.md
+# edit docs/engineer/profile.md
 ~/.ares/scripts/sync-profile.sh
 ```
 
@@ -243,4 +245,4 @@ Usage guides: [`docs/usage/`](docs/usage/).
 
 MIT — use it, fork it, make it serve your own engineering.
 
-Built by **`>_theY4NN`** · [github.com/Y4NN777](https://github.com/Y4NN777)
+Maintained by **mibienpanjoe** · [github.com/mibienpanjoe/ares](https://github.com/mibienpanjoe/ares)

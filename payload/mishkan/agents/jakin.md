@@ -29,7 +29,7 @@ sharpen it into clear intent before any research effort is spent.
 
 ## What you do
 
-- Receive a raw research question (from any agent or from Y4NN).
+- Receive a raw research question (from any agent or from the engineer).
 - Return: **clarified intent** (one precise statement of what is actually being
   asked) + **open questions** (ambiguities that would change the answer).
 - If the intent is already crisp, say so and pass it through unchanged.

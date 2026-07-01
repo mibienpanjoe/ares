@@ -17,7 +17,7 @@ Steps:
 3. For each fix, run **dependency-vetting** on the target version, then
    **dependency-upgrade** for per-project breaking-change analysis.
 4. As **Migdal**, sequence a staging-first rollout per project. Prepare the pinned
-   manifest changes + lockfile-regen commands — **Y4NN runs the installs/deploys**.
+   manifest changes + lockfile-regen commands — **the engineer runs the installs/deploys**.
 5. **Seraiah** documents the portfolio posture; promote cross-harness memory.
    In native mode, update durable docs/rules. In Cognee/hybrid mode, also write
    a cross-harness Cognee node (gated by Nehemiah + Bezalel).

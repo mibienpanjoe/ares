@@ -27,7 +27,7 @@ Three corollaries:
 - **No undocumented IaC drift.** Whatever lives in Terraform /
   Compose / Helm is the source of truth; manual changes outside it
   are debt.
-- **No prod execution.** IaC is *applied* by Y4NN; Meshullam
+- **No prod execution.** IaC is *applied* by the engineer; Meshullam
   produces the plan and the diff.
 
 ---
@@ -108,7 +108,7 @@ Three rules:
 - **State backends are remote.** Local state is debt; remote
   backend (S3 / GCS / Azure Blob) with locking.
 - **Plan before apply.** `terraform plan -out=plan.bin` reviewed
-  before `terraform apply plan.bin`. Y4NN runs apply.
+  before `terraform apply plan.bin`. The engineer runs apply.
 
 Module structure:
 
@@ -275,7 +275,7 @@ What Meshullam did NOT:
    instance.
 
 6. **"I'll just apply the Terraform; the diff is small."** §1. No.
-   Plan → review → Y4NN applies.
+   Plan → review → the engineer applies.
 
 ---
 

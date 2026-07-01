@@ -6,11 +6,11 @@ description: Initialise a project under MISHKAN. Runs the SWE-BASICS-BEFORE-CODE
 # mishkan-init
 
 Initialise a new project under MISHKAN. Run once per project. Surface a `/plan`
-to Y4NN before the first doc is written — the plan is the scope contract for init.
+to the engineer before the first doc is written — the plan is the scope contract for init.
 
 ## Preconditions
 
-- Y4NN has converged on intent in exploration mode (Nehemiah + Bezalel).
+- the engineer has converged on intent in exploration mode (Nehemiah + Bezalel).
 - Working directory is the project root.
 
 ## Sequence (each phase feeds the next — do not skip, do not reorder)
@@ -29,7 +29,7 @@ to Y4NN before the first doc is written — the plan is the scope contract for i
    use `/memory` in Claude Code or `/memories` in Codex for cross-session recall,
    and keep required rules in `CLAUDE.md` / `AGENTS.md` / `docs/`. If the project
    state says `Memory backend: cognee` or `hybrid`, then Cognee is explicitly
-   enabled and init may compose the two control verbs after Y4NN confirmation:
+   enabled and init may compose the two control verbs after the engineer confirmation:
    - **Knowledge stack (shared, idempotent):** `mishkan knowledge-stack up`
      (memory :7777 + curated :7730 + ollama/pg; preflights `.env` and guides to
      `mishkan knowledge configure` if unset).

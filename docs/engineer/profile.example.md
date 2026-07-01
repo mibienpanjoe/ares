@@ -1,6 +1,6 @@
 ---
 name: engineer-profile
-description: Canonical engineer profile loaded as context by MISHKAN agents. THIS IS A SANITIZED EXAMPLE — copy to profile.md and fill with your own details. profile.md is gitignored; never commit real names, employers, hosts, IPs, or credentials.
+description: Canonical engineer profile loaded as context by ARES agents. THIS IS A SANITIZED EXAMPLE — copy to profile.md and fill with your own details. profile.md is gitignored; never commit real names, employers, hosts, IPs, or credentials.
 type: developer_profile
 version: 1.0
 scope: agent-loadable
@@ -10,9 +10,10 @@ language: en
 # Engineer Profile — EXAMPLE
 
 > Copy this file to `profile.md` (same directory) and replace every placeholder
-> with your own details, then run `scripts/sync-profile.sh`. `profile.md` is
-> gitignored so your real profile never enters the public repo. Keep the section
-> structure — agents rely on it.
+> with your own details, then run `~/.ares/scripts/sync-profile.sh` after install
+> (or `payload/mishkan/scripts/sync-profile.sh` from this checkout). `profile.md`
+> is gitignored so your real profile never enters the public repo. Keep the
+> section structure — agents rely on it.
 >
 > **Never put secrets, production IPs, internal hostnames, or other people's names
 > in a profile that will be published.** Operational specifics belong in your local

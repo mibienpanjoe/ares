@@ -28,7 +28,7 @@ Three corollaries:
 
 - **No guess-based reasoning.** Exact stacktrace / status / log line /
   ip-route output / iptables count *before* any proposed solution.
-- **No prod execution.** Palal prepares configs and commands; Y4NN
+- **No prod execution.** Palal prepares configs and commands; the engineer
   runs anything on a live host (SSH, prod `docker exec`, sudo,
   iptables changes).
 - **The fix is the fix.** No "while we're rebooting, also adjust
@@ -210,7 +210,7 @@ against current data sizes.**
   staging data sizes. Meremoth owns.
 - Infra-side: none. The infra performed as expected.
 
-**Commands prepared (for Y4NN):**
+**Commands prepared (for the engineer):**
 
 ```bash
 # rollback (run on the host)
@@ -250,7 +250,7 @@ What Palal did NOT:
 
 4. **"`:latest` for the OS image is fine."** No. Pinned.
 
-5. **"I'll ssh into the host to check."** §1. No. Prepare; Y4NN
+5. **"I'll ssh into the host to check."** §1. No. Prepare; the engineer
    ssh's.
 
 6. **"This is just a one-off restart; no need to document."** No.
@@ -267,7 +267,7 @@ What Palal did NOT:
 - **Two causes named.** First and second; structural is usually
   the second.
 - **Commands prepared.** Every prod-touching action is a command
-  Y4NN can copy and run, with the verification step.
+  the engineer can copy and run, with the verification step.
 
 ---
 

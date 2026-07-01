@@ -12,7 +12,7 @@ than guessing. The pipeline is six stages, run in order, each a separate subagen
 
 - An agent faces a problem it cannot resolve from its own knowledge or the
   curated library.
-- Y4NN explicitly requests research.
+- the engineer explicitly requests research.
 
 ## Stages
 

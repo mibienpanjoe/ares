@@ -150,7 +150,7 @@ Ladybug graph + SQLite + LanceDB — no Postgres, no shared graph. So:
   docs), tear it down, drop its volume, re-provision, and re-ingest:
 
 ```bash
-cd ~/theY4NN/<project>
+cd ~/projects/<project>
 ares project-work-store reset          # drops this project's work-store volume
 ares project-work-store up             # re-provision (fresh graph)
 ares knowledge ingest --tagged-only    # re-ingest tagged docs

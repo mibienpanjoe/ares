@@ -27,9 +27,9 @@ Steps:
 5. If buckets are all empty, surface that fact — the miss is already logged
    to `~/.claude/mishkan/skill-discovery/misses.jsonl` for tuning.
 6. **Do not auto-load** any non-`mishkan` skill for a stateful operation;
-   ask Y4NN first. Generative work may be loaded after reading the skill's
+   ask the engineer first. Generative work may be loaded after reading the skill's
    description.
 
 This command is advisory. The actual loading decision stays with the model
-and with Y4NN. Apply the skill-discovery skill (`~/.claude/mishkan/skills/skill-discovery/`)
+and with the engineer. Apply the skill-discovery skill (`~/.claude/mishkan/skills/skill-discovery/`)
 for interpretation rules.

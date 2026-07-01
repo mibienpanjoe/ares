@@ -119,7 +119,7 @@ Three rules:
 - **Anchor → severity, never the other way.** Pick the anchor first;
   the severity follows. "It feels major" is the inversion that produces
   noise.
-- **Blockers must be defensible to Y4NN.** If you cannot explain to Y4NN
+- **Blockers must be defensible to the engineer.** If you cannot explain to the engineer
   why a blocker blocks, downgrade.
 - **Minor findings are not optional reading.** They are the early
   signal of drift. A pile of minor findings is itself a major finding

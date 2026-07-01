@@ -176,13 +176,13 @@ in settings.json and `projects.yaml`. The installer removes all machine-binding.
 
 **Decision:** the engineer the harness serves is described in
 `docs/engineer/profile.md` — a single, replaceable source of truth. The runtime
-load path is the generic `~/.claude/mishkan/profile.md` (not a person-specific
-filename), so any engineer can adopt the harness by replacing one file.
+load path is the generic `~/.ares/profile.md` (not a person-specific filename),
+so any engineer can adopt the harness by replacing one file.
 
-**Propagation is two-layer:** `scripts/sync-profile.sh` does the mechanical
+**Propagation is two-layer:** `~/.ares/scripts/sync-profile.sh` does the mechanical
 copy + reference/drift audit; **Seraiah** (Sefer org-layer agent) owns the
 semantic re-derivation of digests drawn from the profile (the user-level
-`CLAUDE.md` non-negotiables, engineering-identity docs) when it materially changes.
+runtime guidance, engineering-identity docs) when it materially changes.
 
 ## D-007 — Curated library is a separate cognee store from project knowledge (added 2026-05-28)
 

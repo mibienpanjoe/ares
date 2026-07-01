@@ -21,8 +21,8 @@ is in scope.
 
 The asymmetric-delegation rule on the delivery layer. CI runs lint,
 test, build, image push — those are reversible by re-running.
-*Applying* the deploy to a live environment touches state Y4NN
-controls. The deploy job emits the command; Y4NN runs.
+*Applying* the deploy to a live environment touches state the engineer
+controls. The deploy job emits the command; the engineer runs.
 
 Three corollaries:
 
@@ -145,7 +145,7 @@ Three rules:
 For projects that deploy via SSH (not Kubernetes / managed PaaS):
 
 ```bash
-# CI prepares the artefact, then hands the command to Y4NN
+# CI prepares the artefact, then hands the command to the engineer
 echo "Release v$VERSION ready. Run on the host:"
 echo
 echo "ssh prod 'cd /opt/app && git fetch && git checkout v$VERSION && \\"
@@ -154,7 +154,7 @@ echo "  ./deploy.sh $CONFIG_HASH'"
 
 Three rules:
 
-- **SSH-direct deploys are commands Y4NN runs.** §1.
+- **SSH-direct deploys are commands the engineer runs.** §1.
 - **The remote script is idempotent.** Re-running the deploy with
   the same release ID is a no-op.
 - **Health check after deploy.** The script returns non-zero if

@@ -120,7 +120,7 @@ The `/plan` shape (the same shape Nehemiah uses; see
 - Why this approach (alternatives with trade-offs).
 - What is affected (files, services, teams).
 - What is explicitly out of scope (mandatory — at least three things).
-- What approval is needed (Y4NN; Bezalel for architecture; Phinehas
+- What approval is needed (the engineer; Bezalel for architecture; Phinehas
   for security cross-cuts).
 - How we will know it is done (acceptance criteria).
 
@@ -130,7 +130,7 @@ Two rules:
   executes exactly that. New issues mid-flight surface to the Lead;
   the Lead decides whether to re-plan or defer.
 - **The plan is surfaced through Nehemiah where it affects sprint
-  state**, not direct-to-Y4NN. Team-internal plans the Lead may
+  state**, not direct-to-the engineer. Team-internal plans the Lead may
   approve themselves; cross-team or roadmap-affecting plans route
   through Nehemiah.
 

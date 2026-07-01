@@ -48,15 +48,15 @@
     "research",
     "cognee"
   ],
-  "author": ">_theY4NN (https://github.com/Y4NN777)",
+  "author": "mibienpanjoe",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Y4NN777/mishkan-cc-harness.git"
+    "url": "git+https://github.com/mibienpanjoe/ares.git"
   },
   "bugs": {
-    "url": "https://github.com/Y4NN777/mishkan-cc-harness/issues"
+    "url": "https://github.com/mibienpanjoe/ares/issues"
   },
-  "homepage": "https://github.com/Y4NN777/mishkan-cc-harness#readme",
+  "homepage": "https://github.com/mibienpanjoe/ares#readme",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

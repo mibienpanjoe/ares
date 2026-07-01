@@ -1,5 +1,5 @@
 ---
-description: MISHKAN default engineering standards (Y4NN). Harness-maintained baseline applied on every action in every project. Verbose by intent — these encode how the harness itself was built. Do not hand-edit; override or extend in engineer-standards.md.
+description: MISHKAN default engineering standards (the engineer). Harness-maintained baseline applied on every action in every project. Verbose by intent — these encode how the harness itself was built. Do not hand-edit; override or extend in engineer-standards.md.
 alwaysApply: true
 ---
 

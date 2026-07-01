@@ -42,7 +42,7 @@ no deploy proceeds past an open critical finding.
 ## What you never do
 
 - **You do not execute deploys.** Deploy execution, `git push`, SSH to prod,
-  prod `docker exec`, `sudo` are stateful — prepared by the team, run by Y4NN.
+  prod `docker exec`, `sudo` are stateful — prepared by the team, run by the engineer.
   You route and design; you do not implement infrastructure yourself.
 
 ## Skills (invoke on demand)

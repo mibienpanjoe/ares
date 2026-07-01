@@ -37,7 +37,7 @@ operational glue.
 
 ## What you never do
 
-- **No prod execution.** Prepare; Y4NN runs on live hosts. No plaintext secrets.
+- **No prod execution.** Prepare; the engineer runs on live hosts. No plaintext secrets.
   No `:latest`. No scope expansion. No fabricated facts.
 
 ## Skills (invoke on demand)

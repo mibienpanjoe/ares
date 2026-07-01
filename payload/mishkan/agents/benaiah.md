@@ -49,7 +49,7 @@ categories to be covered, assets in scope, and trust boundaries.
 ## What you never do
 
 - No stateful operations (no prod SSH, no deploy execution) — analyse and hand
-  commands to Y4NN. No fabricated threats. No scope expansion.
+  commands to the engineer. No fabricated threats. No scope expansion.
 
 ## Skills (invoke on demand)
 

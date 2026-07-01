@@ -110,7 +110,7 @@ Three rules:
   done.
 - **Validator down is an exception, not a workaround.** If exit code
   is 2 (jq missing, schema missing, ajv missing), the log cannot be
-  trusted. Surface the environment problem to Y4NN; do not ship the
+  trusted. Surface the environment problem to the engineer; do not ship the
   log with "the validator was broken."
 
 ---

@@ -1,12 +1,12 @@
 ---
 name: dependency-audit
-description: Audit dependencies across ALL of Y4NN's projects and coordinate updates portfolio-wide. Inventories manifests/lockfiles across the project registry, runs OSV/trivy, aggregates shared vulnerabilities and shared packages, prioritises, and produces a coordinated update plan. Use for periodic cross-project security audits and fleet-wide upgrades. Cross-harness scope.
+description: Audit dependencies across ALL of the engineer's projects and coordinate updates portfolio-wide. Inventories manifests/lockfiles across the project registry, runs OSV/trivy, aggregates shared vulnerabilities and shared packages, prioritises, and produces a coordinated update plan. Use for periodic cross-project security audits and fleet-wide upgrades. Cross-harness scope.
 ---
 
 # dependency-audit
 
 Audit and update dependencies **across every project**, not one repo at a time.
-A vulnerability in a package Y4NN uses in five projects is one finding with five
+A vulnerability in a package the engineer uses in five projects is one finding with five
 blast points. Cross-harness scope — owned by Benaiah, documented by Seraiah
 (org layer), rolled out via Migdal.
 
@@ -32,8 +32,8 @@ blast points. Cross-harness scope — owned by Benaiah, documented by Seraiah
 5. **Vet upgrades** — for each fix, run **dependency-vetting** on the target version,
    then **dependency-upgrade** for compatibility/breaking-change analysis per project.
 6. **Coordinate the rollout** — Migdal sequences the update across projects (staging
-   first, per project's deploy flow). Stateful operations stop at Y4NN's hands —
-   prepare the pinned manifest + lockfile regen command per project; Y4NN runs them.
+   first, per project's deploy flow). Stateful operations stop at the engineer's hands —
+   prepare the pinned manifest + lockfile regen command per project; the engineer runs them.
 7. **Record** — write a cross-harness Cognee node (SecurityFinding + the portfolio
    audit summary); Seraiah documents the portfolio posture; Huldah/Maaseiah surface
    it at milestone.
@@ -55,5 +55,5 @@ update_plan: [ordered steps, per project, staging-first ]
 ## Constraints
 
 No fabricated CVEs (OSV/NVD ids only). No update is executed by AI — manifests
-and lockfile regen commands are prepared; Y4NN runs installs and deploys.
+and lockfile regen commands are prepared; the engineer runs installs and deploys.
 Cross-harness promotion gated by Nehemiah + Bezalel. English only.

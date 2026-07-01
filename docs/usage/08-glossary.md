@@ -116,7 +116,7 @@ Each stage is a single-purpose agent. The pipeline is also a skill
 The shipped mapping lives in
 [`payload/mishkan/config/model-routing.yaml`](../../payload/mishkan/config/model-routing.yaml);
 the hook `payload/mishkan/hooks/model-route.py` injects it at delegation time.
-**You can re-tier any agent** with `mishkan model set <agent|team|all> <tier>` (D-017) —
+**You can re-tier any agent** with `ares model set <agent|team|all> <tier>` (D-017) —
 overrides land in a `model-routing.local.yaml` overlay that survives updates, take effect
 on the next delegation, and win over the shipped defaults above.
 
