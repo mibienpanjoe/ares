@@ -1,6 +1,6 @@
 {
   "name": "ares-harness",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "ARES harness — a portable SWE R&D agent harness for Claude Code, Codex CLI, and OpenCode. Keeps the current MISHKAN organization model while installing target-native agents, skills, commands, MCP, and knowledge tooling.",
   "type": "module",
   "bin": {

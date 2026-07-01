@@ -14,7 +14,7 @@ ARES packages the current MISHKAN agent organisation as a portable harness. Qual
 
 It's personal, opinionated infrastructure built around one engineer's standards. To make it yours, create your local `docs/engineer/profile.md` from [`docs/engineer/profile.example.md`](docs/engineer/profile.example.md), then re-sync — nothing else hardcodes the author.
 
-> **v0.2.9** — agent fleet, rules, hooks, installer stable. Unified semantic `ares <object> <verb>` CLI with legacy `mishkan` aliases, native memory by default, optional Cognee wiring via `--memory cognee|hybrid`, engineer-gated curated promotion (`knowledge curate`, D-016), user-editable model-tier routing (`model`, D-017), and a confirm-gated `knowledge reset`. Cognee knowledge stack (per-project work · memory `:7777` · curated `:7730`) + Graphify code graph stay available for advanced retrieval. Observability stack (`ares-watchd` + `ares-watch`) as two `uv tool`-installable packages.
+> **v0.2.10** — public package cleanup on the stable ARES runtime: developer profile guidance now consistently routes through `~/.ares/profile.md`, package metadata points at `mibienpanjoe/ares`, and active prompts use generic engineer wording. Unified semantic `ares <object> <verb>` CLI with legacy `mishkan` aliases, native memory by default, optional Cognee wiring via `--memory cognee|hybrid`, Cognee knowledge stack, Graphify, and observability remain available.
 
 ---
 
