@@ -124,9 +124,11 @@ esac
 # This catches additionalProperties, type mismatches, and format violations
 # that the layer-2 fast checks do not.
 if command -v ajv >/dev/null 2>&1; then
-  if ! ajv validate -s "$SCHEMA_PATH" -d "$LOG_PATH" --strict=false >/dev/null 2>&1; then
+  # The schema declares Draft 2020-12. ajv-cli defaults to Draft 7 unless the
+  # spec is explicit, which makes CI reject the schema before validating data.
+  if ! ajv validate -s "$SCHEMA_PATH" -d "$LOG_PATH" --spec=draft2020 --strict=false >/dev/null 2>&1; then
     echo "invalid: schema validation failed (ajv):" >&2
-    ajv validate -s "$SCHEMA_PATH" -d "$LOG_PATH" --strict=false >&2 || true
+    ajv validate -s "$SCHEMA_PATH" -d "$LOG_PATH" --spec=draft2020 --strict=false >&2 || true
     exit 1
   fi
 elif command -v check-jsonschema >/dev/null 2>&1; then
